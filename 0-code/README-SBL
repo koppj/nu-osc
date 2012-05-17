@@ -1,0 +1,16 @@
+Updates to SBL code:
+- adjust #define PATH in definitions.h to ./sbl/
+- Make declaration of "Fit fit" in class_react-fit.cc non-extern
+- Same with "Flux flux" in class_react-flux.cc
+- Optional: Add definition of Ip3pI to definitions.h
+- Optional: Update dm2k to produce more useful error messages
+- Replace
+    if (logD > LDM2MAX) logD = LDM2MAX;
+  by
+    if (logD > LDM2MAX-1.00001*DM_STEP) logD = LDM2MAX-1.00001*DM_STEP; // JK
+  for the 1+3+1 case. This has to be done in bugey.cc, cdhs.cc, karmen.cc,
+  lsnd.cc, minib-anti.cc, miniboone.cc, nomad.cc sbl_reactors.cc
+  (and possibly other files)
+- Implement temporary fix for th14=0.0 problem in lsnd.cc
+
+

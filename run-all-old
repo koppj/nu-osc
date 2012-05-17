@@ -1,0 +1,110 @@
+#!/bin/bash
+globes=$HOME/software/installed/globes-devel/bin/globes
+SUFFIX=""
+
+cd 0-code/
+
+echo "******** Warnings in C code **************"
+grep "FIXME" *
+echo "******************************************"
+echo
+
+
+# MINOS debugging
+# ---------------
+
+# Event spectra (standard oscillations)
+export GLB_PATH="glb/minos-nc"
+export OSC_PARAMS="0.60,0.0,0.7854,0.0,7.6e-5,2.43e-3"
+export OSC_PARAMS="0,0,0.7854,0,0,2.35e-3"
+#$globes -p $OSC_PARAMS -r0 -s -S -m MINOS-NC-near.glb > ../1-spectra/minos-nc-near$SUFFIX.dat &
+#$globes -p $OSC_PARAMS -r0 -s -S -m MINOS-NC-far.glb  > ../1-spectra/minos-nc-far$SUFFIX.dat &
+#export OSC_PARAMS="0,0,0.7854,0,0,2.43e-3"
+#$globes -p $OSC_PARAMS -r1 -s -S -m MINOS-NC-near.glb > ../1-spectra/minos-cc-near$SUFFIX.dat &
+#$globes -p $OSC_PARAMS -r1 -s -S -m MINOS-NC-far.glb  > ../1-spectra/minos-cc-far$SUFFIX.dat &
+unset OSC_PARAMS
+
+# Event spectra (including th13 or sterile oscillations)
+#./nu -a SPECTRUM -t "DM31=2.35e-3,TH13=0.2,DELTA_0=3.14159"   -e MINOS_NC > \
+#  ../1-spectra/minos-th13$SUFFIX.dat
+#./nu -a SPECTRUM -t "DM31=2.35e-3,TH13=0.0,DM41=0.5,TH24=0.2" -e MINOS_NC > \
+#  ../1-spectra/minos-th24$SUFFIX.dat
+#./nu -a SPECTRUM -t "DM31=2.35e-3,TH13=0.0,DM41=0.5,TH34=0.9" -e MINOS_NC > \
+#  ../1-spectra/minos-th34$SUFFIX.dat
+
+#./nu -a SPECTRUM -t "DM31=2.35e-3,TH13=0.0,TH15=0.115255,TH25=0.14344,TH14=0.13226,TH24=0.1764,DM41=0.47,DM51=0.93" -e MINOS_NC > ../1-spectra/minos-bf-thomas$SUFFIX.dat
+
+# Standard model fit of atmospheric parameters
+#./nu -e MINOS_NC -a PARAM_SCAN -p "TH23,0.3,1.2,18" -p "DM31,0.0015,0.006,18" \
+#      > ../3-std-fits/minos-th23dm31$SUFFIX.dat
+
+# Fits of sterile neutrino models to MINOS data (to compare to plots from 1001.0336)
+#./nu -e MINOS_NC -a PARAM_SCAN \
+#    -t "TH12=0.0,DM21=0.0,TH13=0.0,DM41=0.5" -m "DM31" \
+#    -p "TH23,0.5236,1.0472,10" \
+#    -p "TH34,0,1.2217,10" \
+#    -p "TH24,0,0.20944,6" > ../2-sterile-fit/minos-m4ggm3-th13-0$SUFFIX.dat &
+#./nu -e MINOS_NC -a PARAM_SCAN \
+#    -t "TH12=0.0,DM21=0.0,DELTA_0=4.71239,TH13=0.2094395,DM41=0.5" -m "DM31" \
+#    -p "TH23,0.5236,1.0472,10" \
+#    -p "TH34,0,1.2217,10" \
+#    -p "TH24,0,0.20944,6" > ../2-sterile-fit/minos-m4ggm3-th13-12deg$SUFFIX.dat &
+
+
+# My MiniBooNE implementation - outdated syntax
+# ---------------------------------------------
+
+#TRUE_PARAMS="TH23=0.0,TH13=0.0,DM31=0.0" NU_SCENARIO="MBanti200-nu2010.glb" \
+#NU_ACTION=PARAM_SCAN ./nu > ../2-sterile-fit/mb-nuebar.dat
+
+
+# Global fits using Thomas' code
+# ------------------------------
+
+export SCAN_RANGE="-p "DM41,-2,2,40,LOGSCALE" -p "TH14,-3,0,30,LOGSCALE" -p "TH24,-3,0,30,LOGSCALE""
+# LSND fit
+#./nu -a PARAM_SCAN -e LSND   $SCAN_RANGE > ../2-sterile-fit/lsnd$SUFFIX.dat &
+
+# MiniBooNE fit (neutrinos)
+#./nu -a PARAM_SCAN -e MB     $SCAN_RANGE > ../2-sterile-fit/mb$SUFFIX.dat &
+
+# MiniBooNE fit (anti-neutrinos)
+#./nu -a PARAM_SCAN -e MBANTI $SCAN_RANGE > ../2-sterile-fit/mbanti$SUFFIX.dat &
+
+# LSND + MB \bar\nu combined fit
+#./nu -a PARAM_SCAN -e LSND -e MBANTI $SCAN_RANGE > ../2-sterile-fit/lsnd-mbanti$SUFFIX.dat &
+
+# Short baseline reactor experiments
+#./nu -a PARAM_SCAN -e SBL    $SCAN_RANGE > ../2-sterile-fit/sbl$SUFFIX.dat &
+
+# Karmen
+#./nu -a PARAM_SCAN -e KARMEN $SCAN_RANGE > ../2-sterile-fit/karmen$SUFFIX.dat &
+
+# Nomad
+#./nu -a PARAM_SCAN -e NOMAD  $SCAN_RANGE > ../2-sterile-fit/nomad$SUFFIX.dat &
+
+# CDHS
+#./nu -a PARAM_SCAN -e CDHS   $SCAN_RANGE > ../2-sterile-fit/cdhs$SUFFIX.dat &
+
+# Short baseline reactors, Karmen, Nomad, CDHS (nev = no evidence)
+#./nu -a PARAM_SCAN -e SBL -e KARMEN -e NOMAD -e CDHS $SCAN_RANGE \
+#      > ../2-sterile-fit/nev$SUFFIX.dat &
+
+# + atm
+#./nu -a PARAM_SCAN -e SBL -e KARMEN -e NOMAD -e CDHS -e MB -e ATM_TABLE $SCAN_RANGE \
+#      > ../2-sterile-fit/nev-atm$SUFFIX.dat &
+
+# + MINOS NC
+#./nu -a PARAM_SCAN -e SBL -e KARMEN -e NOMAD -e CDHS -e MB -e ATM_TABLE -e MINOS_NC $SCAN_RANGE \
+#      > ../2-sterile-fit/nev-atm-minos$SUFFIX.dat &
+
+unset SCAN_RANGE
+
+
+# Producing input for Thomas' code
+# --------------------------------
+
+#NU_SIZE=13 OUT_FILE=chi2table-minos.dat ./nu-batch -e MINOS_NC -a CHI2_TABLE
+
+NU_SIZE=13 OUT_FILE=chi2table-minos-atm.dat ./nu-batch -e MINOS_NC -e ATM_COMP -a CHI2_TABLE
+

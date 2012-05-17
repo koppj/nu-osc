@@ -1,0 +1,287 @@
+%!GLoBES
+
+/* Copyright 2008 The GLoBES Team
+ *
+ * If you modify this file you have to rename it.
+ *
+ * If you are using this file for producing a scientific publication
+ * or a talk please cite the following references and check the supporting
+ * files for a similar comment.
+ *
+ #* @Article{Huber:2002mx,
+ #*     author    = "Huber, Patrick and Lindner, Manfred and Winter, Walter",
+ #*     title     = "Superbeams versus neutrino factories",
+ #*     journal   = "Nucl. Phys.",
+ #*     volume    = "B645",
+ #*     year      = "2002",
+ #*     pages     = "3-48",
+ #*     eprint    = "hep-ph/0204352",
+ #*     SLACcitation  = "%%CITATION = HEP-PH 0204352;%%"
+ #* }
+ *
+ #* %The disappearance efficiency w/o CID is taken from
+ #* @Article{Ables:1995wq,
+ #*    author    = "Ables, E. and others",
+ #*    collaboration = "MINOS",
+ #*    title     = "P-875: A Long baseline neutrino oscillation experiment at
+ #*                 Fermilab",
+ #*    note     = "FERMILAB-PROPOSAL-0875"
+ #* }
+ #* %Silver Channel is based on
+ #* @Article{Autiero:2003fu,
+ #*    author    = "Autiero, D. and others",
+ #*    title     = "The synergy of the golden and silver channels at the
+ #*                 Neutrino Factory",
+ #*    journal   = "Eur. Phys. J.",
+ #*   volume    = "C33",
+ #*    year      = "2004",
+ #*    pages     = "243-260",
+ #*    eprint    = "hep-ph/0305185",
+ #*    SLACcitation  = "%%CITATION = HEP-PH 0305185;%%"
+ #* }
+    
+  % Silver "star" is based on
+  @Article{Huber:2006wb,
+     author    = "Huber, P. and Lindner, M. and Rolinec, M. and Winter, W.",
+     title     = "Optimization of a neutrino factory oscillation experiment",
+     journal   = "Phys. Rev.",
+     volume    = "D74",
+     year      = "2006",
+     pages     = "073003",
+     eprint    = "hep-ph/0606119",
+     SLACcitation  = "%%CITATION = HEP-PH/0606119;%%"
+   }
+
+  % Updated MID efficiencies/eres are based on:
+  IDS baseline setup
+ 
+ *
+ * Last modified Jan. 21, 2008 by Walter Winter
+ */
+
+/* this glb-file contains disappearance channels without CID! */
+
+$version="3.0"
+
+
+/* AEDL variable needed for initialization: 
+
+EMAX = muon energy 
+BASELINE = baseline 
+BGF = Background scaling factor; usually 1
+
+File should work in range 
+EMAX: 5 ... 100 GeV,
+BASELINE: 100 ... 10000 km
+
+ */
+
+BGF = 1
+
+/* 	 Beam data 	 */
+
+nuflux(#one)<
+@builtin = 2
+@parent_energy = EMAX
+@stored_muons = 2.5e+20
+@time = 10
+>
+
+nuflux(#two)<
+@builtin = 1
+@parent_energy = EMAX
+@stored_muons = 2.5e+20
+@time = 10
+>
+
+/* stretching factor */
+sf = (EMAX-1)/(50-1)
+
+$target_mass = 	        MASS
+
+$emin = 	         1.0
+$emax = 	        EMAX
+$binsize = 		{1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,
+			 1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,
+			 2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,
+			 2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf}
+
+$sampling_min =          1.0
+$sampling_max =         EMAX
+$sampling_stepsize =    {1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,
+			 1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,1.0*sf,
+			 2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf,
+			 2.0*sf,2.0*sf,2.0*sf,2.0*sf,2.0*sf}
+
+
+
+/* 	 Baseline 	 */
+
+$profiletype = 1
+$baseline = BASELINE
+
+/* 	 Technical information 	 */
+
+$filter_state = 	0
+/* filter value: must be smaller than energy resolution at low energies (otherwise segmentation fault)
+                  should be at least as large as sampling stepsize to avoid aliasing esp. for long baselines at low E
+		  should be larger than Fermi motion cutoff */
+$filter_value = 	0.190
+/* note that bin size may decrease for lower emax; but energy resolution is still about 300 MeV at first significant peak */
+
+/* Energy resolution changed according to Anselmo's talk; sqrt(E) seems to be more accurate; at least 700 MeV (at 0.5 GeV),
+   therefore no filter problems */
+energy(#sm0)<
+	@type = 1  /* deduce filter value from energy resolution; switch off for NSI and VL baseline */
+	@sigma_e = {0,0.55,0}   
+>
+
+
+/* 	 Cross sections 	 */
+
+cross(#CC)<
+	@cross_file = "XCC.dat"
+>
+
+cross(#NC)<
+	@cross_file = "XNC.dat"
+
+>
+
+
+/* 	 Channels 	 */
+
+
+/* ####### Energy dependent efficiencies ###### */
+/* Modified; according to Anselmo's talk for Lmu > 150 cm cut */
+
+%energanselmo={0, 0.5, 2., 4., 6., 8., 10., 12.5, 15.5, 18.5, 22., 26., 30., 34.5, 39.5, 46., 100.0}
+
+%bc=bincenter()
+
+%CIDthreshold = {0, 0, 0.056, 0.256, 0.541, 0.637, 0.684, 0.703, 0.691, 0.705, 0.719, 0.717, 0.727, 0.711, 0.726, 0.739, 0.739}
+
+%CIDeffs=interpolation(%energanselmo,%CIDthreshold,1,%bc)
+
+/* background scaling for IDS baseline */
+
+%CCbg={0, 0, 0, 1.28e-4, 3.22e-4, 3.26e-4, 3.69e-4, 1.73e-4, 1.18e-4, 0.207e-4, 0.265e-4, 0.104e-4, 0.0504e-4, 0.124e-4,0, 0,0}
+
+%NCbg={0, 0, 0.671e-4, 1.68e-4, 2.23e-4, 1.45e-4, 0.783e-4, 1.21e-4, 1.56e-4, 0.67e-4, 0.171e-4, 0, 0, 0, 0, 0, 0}
+
+%CCeffs=interpolation(%energanselmo,%CCbg,1,%bc)
+
+%NCeffs=interpolation(%energanselmo,%NCbg,1,%bc)
+
+/* Appearance cuts: */
+
+channel(#nu_mu_appearance)<
+	@channel = 	#two:	+:	e:	m:	#CC:    #sm0
+	@post_smearing_efficiencies = copy(%CIDeffs)	
+>
+
+channel(#nu_mu_bar_appearance)<
+	@channel = 	#one:	-:	e:	m:	#CC:    #sm0
+	@post_smearing_efficiencies = copy(%CIDeffs)	
+>
+
+/* These two channels only appear as CID backgrounds */
+
+channel(#nu_mu_bar_disappearance)<
+	@channel = 	#two:	-:	m:	m:	#CC:    #sm0
+	@post_smearing_efficiencies = copy(%CCeffs)	
+>
+
+channel(#nu_mu_disappearance)<
+	@channel = 	#one:	+:	m:	m:	#CC:    #sm0
+	@post_smearing_efficiencies = copy(%CCeffs)	
+>
+
+/* Disappearance cuts, here only difference in appearnce channels to avoid double counting: */
+
+channel(#nu_mu_bar_disappearance2)<
+	@channel = 	#two:	-:	m:	m:	#CC:    #sm0
+>
+
+channel(#nu_mu_disappearance2)<
+	@channel = 	#one:	+:	m:	m:	#CC:    #sm0
+>
+
+channel(#nu_NC_bckg)<
+	@channel = 	#one:	+:	NOSC_m:	NOSC_m:	#NC:    #sm0
+	@post_smearing_efficiencies = copy(%NCeffs)	
+>
+
+channel(#nu_bar_NC_bckg)<
+	@channel = 	#two:	-:	NOSC_m:	NOSC_m:	#NC:    #sm0
+	@post_smearing_efficiencies = copy(%NCeffs)	
+>
+
+
+
+
+/* 	 Rules  APPEARANCE RULES FIRST BECAUSE DEGFINDER EXPECTS THEM TO BE RULES 0 AND 1! */
+
+rule(#Nu_Mu_Appearance)<
+	@signal =	      1.0@#nu_mu_appearance 
+	@signalerror =	     0.025  :	    0.0001
+
+	@background =	     BGF@#nu_bar_NC_bckg : BGF@#nu_mu_bar_disappearance
+	@backgrounderror = 	     0.2  :	    0.0001
+	@backgroundcenter = 	         1  :	         0
+
+	@errordim_sys_on = 	0
+	@errordim_sys_off = 	2
+	@energy_window = 	         1  :	        EMAX
+>
+
+rule(#Nu_Mu_Bar_Appearance)<
+	@signal =	      1.0@#nu_mu_bar_appearance 
+	@signalerror =	     0.025  :	    0.0001
+
+	@background =	     BGF@#nu_NC_bckg : BGF@#nu_mu_disappearance
+	@backgrounderror = 	     0.2  :	    0.0001
+	@backgroundcenter = 	         1  :	         0
+
+	@errordim_sys_on = 	0
+	@errordim_sys_off = 	2
+	@energy_window = 	         1  :	        EMAX
+>
+
+/* Now overall efficiencies from MINOS, because no CID cut */
+
+rule(#Nu_Mu_Disappearance)<
+	@signal =	      0.9@#nu_mu_disappearance2 
+	@signalerror =	     0.025  :	    0.0001
+
+	@background =	         1@#nu_NC_bckg 
+	@backgrounderror = 	     0.2  :	    0.0001
+	@backgroundcenter = 	     1    :	         0
+
+	@errordim_sys_on = 	0
+	@errordim_sys_off = 	2
+	@energy_window = 	         1  :	        EMAX
+>
+
+rule(#Nu_Mu_Bar_Disappearance)<
+	@signal =	      0.9@#nu_mu_bar_disappearance2 
+	@signalerror =	     0.025  :	    0.0001
+
+	@background =	         1@#nu_bar_NC_bckg
+	@backgrounderror = 	     0.2    :	    0.0001
+	@backgroundcenter = 	     1      :	         0
+
+	@errordim_sys_on = 	0
+	@errordim_sys_off = 	2
+	@energy_window = 	         1  :	        EMAX
+>
+
+
+
+
+
+
+
+
+
+/**********************END**********************/

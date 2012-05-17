@@ -1,0 +1,24 @@
+#!/bin/bash
+# Compute event rates *without* including background efficiencies.
+# This is needed when converting MINOS sample purities to BG efficiencies
+globes=$HOME/software/installed/globes-devel/bin/globes
+SUFFIX=""
+
+cd 0-code/
+
+# Create temporary GLoBES files not including efficiencies
+sed -e "s/\(1.0@#ch_.*_BG\)/\1_noeff/" \
+    glb/minos-nc/MINOS-NC-near.glb > glb/minos-nc/MINOS-NC-near-noeff.glb
+sed -e "s/\(1.0@#ch_.*_BG\)/\1_noeff/" \
+    glb/minos-nc/MINOS-NC-far.glb > glb/minos-nc/MINOS-NC-far-noeff.glb
+
+export GLB_PATH="glb/minos-nc"
+$globes -N -r0 -s -S -m MINOS-NC-near-noeff.glb > ../1-spectra/minos-nc-near-noosc.dat
+$globes -N -r1 -s -S -m MINOS-NC-near-noeff.glb > ../1-spectra/minos-cc-near-noosc.dat
+$globes -N -r0 -s -S -m MINOS-NC-far-noeff.glb  > ../1-spectra/minos-nc-far-noosc.dat
+$globes -N -r1 -s -S -m MINOS-NC-far-noeff.glb  > ../1-spectra/minos-cc-far-noosc.dat
+export OSC_PARAMS=""
+
+rm -f glb/minos-nc/MINOS-NC-near-noeff.glb
+rm -f glb/minos-nc/MINOS-NC-far-noeff.glb
+

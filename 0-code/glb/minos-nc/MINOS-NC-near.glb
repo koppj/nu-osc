@@ -1,0 +1,182 @@
+%!GLoBES
+/*
+ * GLoBES implementation of MINOS NC analysis from arXiv:1001.0336
+ * ---------------------------------------------------------------
+ *
+ * Author: Joachim Kopp (jkopp@fnal.gov)
+ * Date:   Feb 2011
+ *
+ * If you modify this file, please rename it
+ *
+ * If you are using this file for producing a scientific publication
+ * or a talk please cite the following references and check the supporting
+ * files for a similar comment.
+ *
+ #* @Article{
+ #* }
+ *
+ */
+
+$version="3.1.10"        // Minimal GLoBES version required for this file
+
+// Beam data
+// ---------
+nuflux(#NUMI_nu)<
+  @flux_file = "fluka05_le010z185i_735km_flux.txt"
+  @time      = 1
+  @power     = 3.18e20   // pot
+  @norm      = 1.08e-5
+>
+
+nuflux(#Flux_Flat)<
+  @flux_file = "flux_flat.dat"
+  @time      = 1
+  @power     = 7.2e20    // pot
+  @norm      = 0.39e-20
+>
+
+
+// Detector properties
+// -------------------
+$target_mass = 0.980     // kt
+
+$profiletype = 3
+//FIXME $densitytab  = {2.8}     // g/cm^3
+$densitytab  = {0.0}     // g/cm^3
+$lengthtab   = {1.04}    // km
+
+// Cross sections
+cross(#XCC)<
+  @cross_file = "XCC.dat"
+>
+
+cross(#XNC)<
+  @cross_file = "XNC_fe56.dat"
+>
+
+cross (#XFlat)<
+  @cross_file = "XFlat.dat"
+>
+
+// Binning
+$emin            =   0.0 // GeV
+$emax            =  20.0 // GeV
+$bins            =  20
+
+$sampling_min    =   0.0 // GeV
+$sampling_max    = 120.0 // GeV
+$sampling_stepsize = { // 0.25 GeV steps from 0-10 GeV, 0.5 GeV to 30 GeV, 1 GeV steps above
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+}
+
+// Use low pass filter to smoothen rapid oscillations?
+$filter_state = 1
+$filter_value = 0.3
+
+// Energy resolution for CC events, taken from Pedro's code for CC
+energy(#ERES_CC)<
+        @type = 1
+        @sigma_e = {0.16,0.07,0.0}
+>
+
+// Energy resolution for NC events
+include "smear_NC_MC-near.dat"
+
+
+// Oscillation channels
+// --------------------
+
+// Efficiencies for NC selection (from fig. 5 of 1001.0336)
+%bc           = bincenter()
+//%E_table_NC   = { 0.33,     0.53576,  1.48472,  3.70281,  6.36605,  7.37991,  9.34564, 10.54968,
+//                 12.51481, 13.33919, 14.28966, 16.38248, 17.39603, 19.29838, 22.40425,
+//                 27.72902, 32.10291, 37.36509 }
+//%eff_table_NC = { 0.0,      0.83820,  0.88415,  0.89878,  0.87961,  0.88934,  0.87496,  0.88470,
+//                  0.88482,  0.87762,  0.88734,  0.86573,  0.88270,  0.86832,  0.87575,
+//                  0.87849,  0.88117,  0.86458 }
+//%eff_NC       = interpolation(%E_table_NC, %eff_table_NC, 1, %bc)
+
+// Efficiencies for CC selection (from fig. 6 of 1001.0336)
+%E_table_CC   = { 0.33,     0.50794,  1.52381,  2.47619,  3.55556,  4.50794,  5.46032,  7.55556,
+                 13.01587, 14.79365, 16.25397, 17.65079, 18.34921, 19.74603, 27.93651,
+                 32.38095, 37.33333 }
+%eff_table_CC = { 0.0,      0.26329,  0.64734,  0.74879,  0.77295,  0.75362,  0.74879,  0.80435,
+                  0.85507,  0.85507,  0.86715,  0.86473,  0.87198,  0.86957,  0.88164,
+                  0.88164,  0.88889 }
+%eff_CC       = interpolation(%E_table_CC, %eff_table_CC, 1, %bc)
+
+
+// Channel definitions
+channel(#ch_NC_e)<       // NC signal from \nu_e
+  @channel = #Flux_Flat : + :      m :      e : #XFlat : #ERES_NC
+>
+channel(#ch_NC_mu)<      // NC signal from \nu_\mu
+  @channel = #Flux_Flat : + :      m :      m : #XFlat : #ERES_NC
+>
+channel(#ch_NC_tau)<     // NC signal from \nu_\tau
+  @channel = #Flux_Flat : + :      m :      t : #XFlat : #ERES_NC
+>
+
+channel(#ch_CC_BG)<      // CC \nu_\mu BG in NC sample
+  @channel = #NUMI_nu : + :      m :      m : #XCC : #ERES_CC
+  @post_smearing_efficiencies =            // derived from data provided by Alex Sousa
+{1.12466,0.435997,0.318037,0.309596,0.328685,0.345146,0.356098,0.337814,0.300697,0.28817,0.266693,0.249046,0.245356,0.224797,0.216089,0.206548,0.197618,0.198483,0.190414,0.185443}
+>
+
+channel(#ch_CC_BG_e)<    // CC \nu_e BG in NC sample
+  @channel = #NUMI_nu : + :      m :      e : #XCC : #ERES_CC
+>
+
+
+channel(#ch_CC)<         // CC signal
+  @channel = #NUMI_nu : + :      m :      m : #XCC : #ERES_CC
+  @post_smearing_efficiencies = copy(%eff_CC)
+>
+
+channel(#ch_NC_BG)<      // NC BG in CC sample - we neglect oscillations into \nu_s here
+  @channel = #NUMI_nu : + : NOSC_m : NOSC_m : #XNC : #ERES_NC
+  @post_smearing_efficiencies =            // derived from purities shown in fig. 6 of 1001.0336
+{4.04701e-7,7.98211e-7,4.52343e-7,3.87917e-7,5.80404e-7,9.06235e-7,1.2551e-6,1.58662e-6,1.72093e-6,1.9359e-6,2.3753e-6,2.89925e-6,3.4374e-6,4.09129e-6,4.8391e-6,5.83318e-6,6.14974e-6,7.35302e-6,8.47596e-6,0.0000101564}
+>
+
+// The following channels are used only when computing efficiencies
+channel(#ch_CC_BG_noeff)<  // CC BG in NC sample
+  @channel = #NUMI_nu : + :      m :      m : #XCC : #ERES_CC
+>
+
+channel(#ch_NC_BG_noeff)<  // NC BG in CC sample
+  @channel = #NUMI_nu : + : NOSC_m : NOSC_m : #XNC : #ERES_NC
+>
+
+
+// Rules
+// -----
+rule(#rule_NC)<
+  @signal           = 1.0@#ch_NC_e : 1.0@#ch_NC_mu : 1.0@#ch_NC_tau
+  @background       = 1.0@#ch_CC_BG : 1.0@#ch_CC_BG_e
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = {}
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = {}
+>
+
+rule(#rule_CC)<
+  @signal           = 1.0@#ch_CC
+  @background       = 1.0@#ch_NC_BG
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = {}
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = {}
+>
+
+

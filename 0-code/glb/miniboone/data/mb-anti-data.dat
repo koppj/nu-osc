@@ -1,0 +1,16 @@
+# MiniBooNE data from http://arxiv.org/abs/1007.1150
+# Based on data files from http://www-boone.fnal.gov/for_physicists/data_release/nuebar2010/
+#
+#  Energy [MeV]   Observed events   Expected Background
+      250               49                44.38
+      337.5             41                26.6 
+      425               29                28.45
+      512.5             25                16.46
+      612.5             39                21.41
+      737.5             21                17.23
+      875               13                17.73
+     1025               12                14.3 
+     1200               12                14.11
+     1400               12                10   
+     2250               24                21.03
+

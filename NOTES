@@ -1,0 +1,75 @@
+TODO
+----
+
+- Understand why including ATM_COMP rather than ATM_TAB changes the PG
+  test by so much.
+
+
+chi^2_min results
+-----------------
+
+see worksheet sterile-nu.nb, section "Parameter goodness of fit test"
+
+
+"all experiments" means:    SBL KARMEN NOMAD CDHS MB MBANTI LSND ATM_COMP MINOS_NC
+"all appearance" means:     KARMEN MB MBANTI LSND
+"all disappearance" means:  SBL NOMAD CDHS ATM_COMP MINOS_NC
+
+
+degrees of freedom (see 1103.4570, Thomas' code, and Thomas' email from Apr 6, 2011):
+  Bugey-3 spectra:         60  (25 @ 15m, 25 @ 40 m, 10 @ 90 m)
+  SBL rate measurements:    9
+  Chooz + Palo Verde:      15
+
+  LSND:                    11
+  MiniBooNE (anti-nu):      8 (above 475 MeV)
+  MiniBooNE (nu):           8 (above 475 MeV)
+  KARMEN:                   9
+  NOMAD:                    1
+  CDHS:                    15
+
+  Atmospheric neutrinos:   80 (see Michele's email from Mar 29, 2011)
+  MINOS_NC:                40 (20 NC, 20 CC)
+
+  (in Thomas' analysis for 1103.4570, 1 dof is included for atmospherics)
+
+
+parameter counting in my simulation:
+------------------------------------
+  DM41
+  DM51
+  TH14
+  TH24
+  TH15
+  TH25
+  TH34
+  TH35
+  TH23
+  DM31
+  TH13
+  DELTA_0  |
+  DELTA_1  |  only one physically relevant phase
+  DELTA_2  |
+
+parameter counting in Thomas' simulation:
+-----------------------------------------
+
+available parameters:
+  Ue4
+  Um4
+  Ue5
+  Um5
+  \delta
+  dm41
+  dm51
+(Ue3 is kept fixed at zero)
+
+LSND+MBanti measure two mixing angles, two dm^2's, one phase
+the rest measures Ue4, Um4, Ue5, Um5, dm41, dm51, one phase
+
+Appearance measures two mixing angles, two dm^2's, one phase
+Disappearance measures Ue4, Um4, Ue5, Um5, dm41, dm51
+
+
+
+
