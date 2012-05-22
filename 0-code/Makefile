@@ -58,7 +58,7 @@ export CXXFLAGS = -Wall -g -O2 $(INCFLAGS)
 
 BIN     = nu
 OBJ     = nu.o const.o sys.o snu.o degfinder.o sensitivities.o prem.o \
-	  mb.o prior.o iface.o
+	  mb.o e776.o karmen-c12.o lsnd-c12.o prior.o iface.o
 HEADER  = nu.h const.h snu.h sbl/definitions.h sbl/def-reactors.h
 SUBDIRS = sbl
 

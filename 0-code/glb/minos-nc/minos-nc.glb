@@ -1,0 +1,46 @@
+%!GLoBES
+
+include "minos-nc-far.glb"
+
+#DETECTOR#
+
+// Detector properties
+$target_mass = 0.980     // kt
+
+$profiletype = 3
+$densitytab  = {0.0}     // g/cm^3
+$lengthtab   = {1.04}    // km
+
+
+// Energy resolution for NC events
+include "smear_nc_mc-near-1001.0336.dat"
+
+
+// Oscillation channels
+// --------------------
+
+// Channel definitions
+channel(#ch_NC_e)<       // NC signal from \nu_e
+  @channel = #Flux_Flat : + :      m :      e : #XFlat : #ERES_NC_1001_0336_near
+>
+channel(#ch_NC_mu)<      // NC signal from \nu_\mu
+  @channel = #Flux_Flat : + :      m :      m : #XFlat : #ERES_NC_1001_0336_near
+>
+channel(#ch_NC_tau)<     // NC signal from \nu_\tau
+  @channel = #Flux_Flat : + :      m :      t : #XFlat : #ERES_NC_1001_0336_near
+>
+
+
+// Rules
+// -----
+ND_EFF1 = 1.08e-5 / 0.22e-3 // Empirical factors, copied from simulations based on 1001.0336
+ND_EFF2 = 0.39e-20 / 9.8e-20
+rule(#rule_NC_near)<
+  @signal           = ND_EFF2@#ch_NC_e : ND_EFF2@#ch_NC_mu : ND_EFF2@#ch_NC_tau
+  @background       = ND_EFF1@#ch_CC_BG : ND_EFF1@#ch_CC_BG_e
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = {}
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = {}
+>
+

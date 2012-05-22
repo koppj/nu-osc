@@ -1014,7 +1014,7 @@ double chiDCNorm(int exp, int rule, int n_params, double *x, double *errors,
 double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
                 void *user_data)
 // -------------------------------------------------------------------------
-// Calculate chi^2 for NC events in the MINOS sterile neutrino search.
+// Calculate chi^2 for NC or CC events in the MINOS sterile neutrino search.
 // The function produces sensible results for n_params=0 (systematics OFF)
 // and for n_params=5 (systematics ON). In the latter case, the following
 // nuisance parameters are included:
@@ -1023,6 +1023,7 @@ double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
 //   x[2]: Error in BG normalization - far
 //   x[3]: Signal energy calibration error - far
 //   x[4]: BG energy calibration error - far
+// user_data should be pointing to an integer 
 // -------------------------------------------------------------------------
 { 
   // NC data set from 1001.0336
@@ -1041,30 +1042,44 @@ double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
       12, 8, 9, 10, 2, 8, 8, 2 };
 
   // CC data set from 1001.0336
-  static const double data_CC_N[] = { 1.96970e4, 20.77135e4, 50.67493e4, 56.04683e4,
-    34.91735e4, 20.59229e4, 14.86226e4, 12.35537e4, 11.10193e4, 10.20661e4, 9.49036e4,
-     8.59504e4,  7.87879e4,  7.16253e4,  6.62534e4,  5.73003e4,  5.19284e4, 4.47658e4,
-     3.93939e4,  3.58127e4 };
-  static const double data_CC_F[] = { 2, 11, 51, 80, 64, 21, 31, 28, 22, 22, 12, 21, 16,
-    20, 19, 17, 20, 11, 14, 7 };
+//  static const double data_CC_N[] = { 1.96970e4, 20.77135e4, 50.67493e4, 56.04683e4,
+//    34.91735e4, 20.59229e4, 14.86226e4, 12.35537e4, 11.10193e4, 10.20661e4, 9.49036e4,
+//     8.59504e4,  7.87879e4,  7.16253e4,  6.62534e4,  5.73003e4,  5.19284e4, 4.47658e4,
+//     3.93939e4,  3.58127e4 };
+//  static const double data_CC_F[] = { 2, 11, 51, 80, 64, 21, 31, 28, 22, 22, 12, 21, 16,
+//    20, 19, 17, 20, 11, 14, 7 };
+
+  // CC data set from 1103.0340 - rebinned to 1 GeV bins between 0 and 20 GeV
+  static const double data_CC_N[] = { 79474.4, 1.08292e6, 2.75959e6, 2.9265e6,
+    1.66333e6, 957837., 722416., 638357., 582196., 526039., 477828., 429627., 393376.,
+     361109.,  320876., 280643., 248376., 220098., 199777., 175483.};
+  static const double data_CC_F[] = { 8.59002, 28.308, 145.64, 237.007, 175.705,
+    94.8805, 86.2907, 89.0238, 92.9283, 89.0239, 86.6811, 64.8156, 68.7202, 51.5401,
+    56.2256, 63.2538, 46.8547, 42.9501, 40.6074, 32.7983, 163.991, 109.328 };
 
   const double *data_N, *data_F;
 //  const char *rule_name = glbValueToName(exp, "rule", rule);
 //  if (strcmp(rule_name, "#rule_NC") == 0)
-  if (rule == 0) // Beware: This is error-prone if the rules in the glb file change FIXME
+  if (user_data)
   {
-    data_N = data_NC_N;
-    data_F = data_NC_F;
-  }
-  else if (rule == 1)
-  {
-    data_N = data_CC_N;
-    data_F = data_CC_F;
+    switch (*((int *) user_data))
+    {
+      case MINOS_NC:
+        data_N = data_NC_N;
+        data_F = data_NC_F;
+        break;
+      case MINOS_CC:
+        data_N = data_CC_N;
+        data_F = data_CC_F;
+        break;
+      default:
+        return -2e-10;
+    }
   }
   else
     return -1e10;
 
-  int exp_near = exp - 1;
+  int exp_near = exp + 1;
   int exp_far  = exp;
   int n_bins = glbGetNumberOfBins(exp);
   double *sig_N = glbGetSignalFitRatePtr(exp_near, rule);

@@ -1,4 +1,4 @@
-Updates to SBL code:
+Updates to SBL code (2011 version):
 - adjust #define PATH in definitions.h to ./sbl/
 - Make declaration of "Fit fit" in class_react-fit.cc non-extern
 - Same with "Flux flux" in class_react-flux.cc
@@ -13,4 +13,8 @@ Updates to SBL code:
   (and possibly other files)
 - Implement temporary fix for th14=0.0 problem in lsnd.cc
 
+
+Adjustment for reactor code (2012 version):
+- Remove reactor-related stuff from old sbl/ directory
+-
 

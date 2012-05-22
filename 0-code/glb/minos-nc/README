@@ -1,0 +1,49 @@
+/*
+ * GLoBES implementation of MINOS NC analysis from arXiv:1001.0336
+ * ---------------------------------------------------------------
+ *
+ * Author: Joachim Kopp (jkopp@fnal.gov)
+ * Date:   Feb 2011
+ *
+ * If you modify this file, please rename it
+ *
+ * If you are using this file for producing a scientific publication
+ * or a talk please cite the following references and check the supporting
+ * files for a similar comment.
+ *
+ #* @article{Adamson:2010wi,
+ #*      author         = "Adamson, P. and others",
+ #*      title          = "{Search for sterile neutrino mixing in the MINOS long
+ #*                        baseline experiment}",
+ #*      collaboration  = "The MINOS Collaboration",
+ #*      journal        = "Phys.Rev.",
+ #*      volume         = "D81",
+ #*      pages          = "052004",
+ #*      doi            = "10.1103/PhysRevD.81.052004",
+ #*      year           = "2010",
+ #*      eprint         = "1001.0336",
+ #*      archivePrefix  = "arXiv",
+ #*      primaryClass   = "hep-ex",
+ #* } 
+ * 
+ #* @Article{Kopp:2011qd,
+ #*      author         = "Kopp, Joachim and Maltoni, Michele and Schwetz, Thomas",
+ #*      title          = "{Are there sterile neutrinos at the eV scale?}",
+ #*      journal        = "Phys.Rev.Lett.",
+ #*      volume         = "107",
+ #*      pages          = "091801",
+ #*      doi            = "10.1103/PhysRevLett.107.091801",
+ #*      year           = "2011",
+ #*      eprint         = "1103.4570",
+ #*      archivePrefix  = "arXiv",
+ #*      primaryClass   = "hep-ph",
+ #*      reportNumber   = "FERMILAB-PUB-11-064-T, IFT-UAM-CSIC-11-12",
+ #*}
+ *
+ * Changelog:
+ *   May 2012 - JK - Implemented CC analysis from 1103.0340. Split things into
+ *                   separate files for NC and CC analysis
+ */
+
+
+

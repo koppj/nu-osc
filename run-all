@@ -1,6 +1,6 @@
 #!/bin/bash
 globes=$HOME/software/installed/globes-devel/bin/globes
-SUFFIX="-new"
+SUFFIX=""
 
 cd 0-code/
 
@@ -15,13 +15,17 @@ echo
 
 # Event spectra (standard oscillations)
 export GLB_PATH="glb/minos-nc"
-export OSC_PARAMS="0.60,0.0,0.7854,0.0,7.6e-5,2.43e-3"
-export OSC_PARAMS="0,0,0.7854,0,0,2.35e-3"
-#$globes -p $OSC_PARAMS -r0 -s -S -m MINOS-NC-near.glb > ../1-spectra/minos-nc-near$SUFFIX.dat &
-#$globes -p $OSC_PARAMS -r0 -s -S -m MINOS-NC-far.glb  > ../1-spectra/minos-nc-far$SUFFIX.dat &
-#export OSC_PARAMS="0,0,0.7854,0,0,2.43e-3"
-#$globes -p $OSC_PARAMS -r1 -s -S -m MINOS-NC-near.glb > ../1-spectra/minos-cc-near$SUFFIX.dat &
-#$globes -p $OSC_PARAMS -r1 -s -S -m MINOS-NC-far.glb  > ../1-spectra/minos-cc-far$SUFFIX.dat &
+export OSC_PARAMS="0,0,0.7854,0,0,2.32e-3"
+#export OSC_PARAMS="0,0,0.0,0,0,2.43e-3"
+#$globes -p $OSC_PARAMS -r0 -s -S -m -e 1 minos-nc.glb > ../1-spectra/minos-nc-near$SUFFIX.dat &
+#$globes -p $OSC_PARAMS -r0 -s -S -m -e 0 minos-nc.glb > ../1-spectra/minos-nc-far$SUFFIX.dat &
+#$globes -p $OSC_PARAMS -r0 -s -S -m -e 1 minos-cc.glb > ../1-spectra/minos-cc-near$SUFFIX.dat &
+#$globes -p $OSC_PARAMS -r0 -s -S -m -e 0 minos-cc.glb > ../1-spectra/minos-cc-far$SUFFIX.dat &
+unset OSC_PARAMS
+
+# NC event rates w/o efficiencies (used for computing efficiencies)
+export OSC_PARAMS="0,0,0.0,0,0,2.43e-3"
+#$globes -p $OSC_PARAMS -c3 -s -S -m minos-cc-far.glb > ../1-spectra/minos-cc-far-NCnoeff.dat &
 unset OSC_PARAMS
 
 # Event spectra (including th13 or sterile oscillations)
@@ -36,8 +40,8 @@ unset OSC_PARAMS
 #./nu -a SPECTRUM -t "DM31=2.35e-3,TH13=0.0,TH15=0.115255,TH25=0.14344,TH14=0.13226,TH24=0.1764,DM41=0.47,DM51=0.93" -e MINOS_NC > ../1-spectra/minos-bf-thomas$SUFFIX.dat
 
 # Standard model fit of atmospheric parameters
-#./nu -e MINOS_NC -a PARAM_SCAN -p "TH23,0.3,1.2,18" -p "DM31,0.0015,0.006,18" \
-#      > ../2-smparams/th23dm31-minos$SUFFIX.dat
+./nu -e MINOS_CC -a PARAM_SCAN -p "TH23,0.55,1.05,20" -p "DM31,0.0015,0.0035,20" \
+      > ../2-smparams/th23dm31-minos$SUFFIX.dat
 
 # Fits of sterile neutrino models to MINOS data (to compare to plots from 1001.0336)
 #./nu -f 4 -e MINOS_NC -a PARAM_SCAN \
@@ -140,19 +144,22 @@ unset SCAN_PARAMS
 # th14-th24-dm41 plots
 # --------------------
 
-export SCAN_PARAMS="-v -f 4 -a PARAM_SCAN \
+export SCAN_PARAMS="-f 4 -a PARAM_SCAN \
                     -p "DM41,-1.8,1.8,36,LOGSCALE" \
                     -p "TH14,-3,-0.2,28,LOGSCALE" \
                     -p "TH24,-3,-0.2,28,LOGSCALE""
-#./nu -e LSND     $SCAN_PARAMS > ../3-3p1/dm41th14th24-lsnd$SUFFIX.dat &
-#./nu -e MB       $SCAN_PARAMS > ../3-3p1/dm41th14th24-mb$SUFFIX.dat &
-#./nu -e MBANTI   $SCAN_PARAMS > ../3-3p1/dm41th14th24-mbanti$SUFFIX.dat &
-#./nu -e SBL      $SCAN_PARAMS > ../3-3p1/dm41th14th24-sbl$SUFFIX.dat &
-#./nu -e KARMEN   $SCAN_PARAMS > ../3-3p1/dm41th14th24-karmen$SUFFIX.dat &
-#./nu -e NOMAD    $SCAN_PARAMS > ../3-3p1/dm41th14th24-nomad$SUFFIX.dat &
-#./nu -e CDHS     $SCAN_PARAMS > ../3-3p1/dm41th14th24-cdhs$SUFFIX.dat &
+#./nu -e LSND       $SCAN_PARAMS > ../3-3p1/dm41th14th24-lsnd$SUFFIX.dat &
+#./nu -e LSND-C12   $SCAN_PARAMS > ../3-3p1/dm41th14th24-lsnd-c12$SUFFIX.dat &
+#./nu -e MB         $SCAN_PARAMS > ../3-3p1/dm41th14th24-mb$SUFFIX.dat &
+#./nu -e MBANTI     $SCAN_PARAMS > ../3-3p1/dm41th14th24-mbanti$SUFFIX.dat &
+#./nu -e SBL        $SCAN_PARAMS > ../3-3p1/dm41th14th24-sbl$SUFFIX.dat &
+#./nu -e KARMEN     $SCAN_PARAMS > ../3-3p1/dm41th14th24-karmen$SUFFIX.dat &
+#./nu -e KARMEN-C12 $SCAN_PARAMS > ../3-3p1/dm41th14th24-karmen-c12$SUFFIX.dat &
+#./nu -e NOMAD      $SCAN_PARAMS > ../3-3p1/dm41th14th24-nomad$SUFFIX.dat &
+#./nu -e CDHS       $SCAN_PARAMS > ../3-3p1/dm41th14th24-cdhs$SUFFIX.dat &
 #./nu -e ATM_COMP -m "TH34" $SCAN_PARAMS > ../3-3p1/dm41th14th24-atm$SUFFIX.dat &
 #./nu -e MINOS_NC -m "TH34" $SCAN_PARAMS > ../3-3p1/dm41th14th24-minos$SUFFIX.dat &
+#./nu -e E776       $SCAN_PARAMS > ../3-3p1/dm41th14th24-e776$SUFFIX.dat &
 
 #./nu -e LSND -e MBANTI $SCAN_PARAMS > ../3-3p1/dm41th14th24-lsnd-mbanti$SUFFIX.dat &
 #./nu -e KARMEN -e NOMAD -e MB -m "TH34" \
@@ -289,20 +296,20 @@ export SCAN_PARAMS="-v -f 5 -a PARAM_SCAN \
 
 
 # Switching off one experiment at a time
-EXPS="SBL KARMEN NOMAD CDHS MB MBANTI LSND ATM_COMP MINOS_NC"
-ALL_EXPS="-e SBL -e KARMEN -e NOMAD -e CDHS -e MB -e MBANTI -e LSND -e ATM_COMP -e MINOS_NC "
-EVID="-e MBANTI -e LSND "
-NEVID="-e SBL -e KARMEN -e NOMAD -e CDHS -e MB -e ATM_COMP -e MINOS_NC "
-APP="-e KARMEN -e NOMAD -e MB -e MBANTI -e LSND "
-DISAPP="-e SBL -e CDHS -e ATM_COMP -e MINOS_NC "
-for THIS_EXP in $EXPS; do
-  echo "Run without $THIS_EXP ..."
-  ./nu ${ALL_EXPS/"-e $THIS_EXP "/} $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-all$SUFFIX.dat &
-  ./nu ${EVID/"-e $THIS_EXP "/}     $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-evid$SUFFIX.dat &
-  ./nu ${NEVID/"-e $THIS_EXP "/}    $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-nevid$SUFFIX.dat &
-  ./nu ${APP/"-e $THIS_EXP "/}      $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-app$SUFFIX.dat &
-  ./nu ${DISAPP/"-e $THIS_EXP "/}   $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-disapp$SUFFIX.dat
-done
+#EXPS="SBL KARMEN NOMAD CDHS MB MBANTI LSND ATM_COMP MINOS_NC"
+#ALL_EXPS="-e SBL -e KARMEN -e NOMAD -e CDHS -e MB -e MBANTI -e LSND -e ATM_COMP -e MINOS_NC "
+#EVID="-e MBANTI -e LSND "
+#NEVID="-e SBL -e KARMEN -e NOMAD -e CDHS -e MB -e ATM_COMP -e MINOS_NC "
+#APP="-e KARMEN -e NOMAD -e MB -e MBANTI -e LSND "
+#DISAPP="-e SBL -e CDHS -e ATM_COMP -e MINOS_NC "
+#for THIS_EXP in $EXPS; do
+#  echo "Run without $THIS_EXP ..."
+#  ./nu ${ALL_EXPS/"-e $THIS_EXP "/} $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-all$SUFFIX.dat &
+#  ./nu ${EVID/"-e $THIS_EXP "/}     $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-evid$SUFFIX.dat &
+#  ./nu ${NEVID/"-e $THIS_EXP "/}    $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-nevid$SUFFIX.dat &
+#  ./nu ${APP/"-e $THIS_EXP "/}      $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-app$SUFFIX.dat &
+#  ./nu ${DISAPP/"-e $THIS_EXP "/}   $SCAN_PARAMS > ../$BF_DIR/no-$THIS_EXP-disapp$SUFFIX.dat
+#done
 
 unset SCAN_PARAMS
 

@@ -1,0 +1,170 @@
+%!GLoBES
+
+$version="3.0.0"
+
+/*****************************************************************
+ * Author: PAN Machado 
+ * Date: Mar 2012
+ *
+ * AEDL file for E776 - Borodovsky et al, PRL 68 274 (1992)
+ *
+ * POSSIBLE IMPROVEMENTS AND FIXES:
+ * The normalization should not be different for + and - 
+ * polarities. The efficiencies can be different for each polarity 
+ * (is it true?). Play with the efficiency to see what happens.
+ * The first bins have some impact in the low dm square region.
+ *
+ *****************************************************************/
+
+len = 0.93
+
+/* ####### flux ####### */
+
+nuflux(#PositivePolarity)<
+        @flux_file = "glb_E776_pospolar.dat"
+        @time      =  1.43E19	/* POT */
+        @power     =  1 	/* dummy */
+        @norm      =  1. * len*len* 31.7708496E-14
+>
+
+nuflux(#NegativePolarity)<
+        @flux_file = "glb_E776_negpolar.dat"
+        @time      =  1.55E19	/* POT */
+        @power     =  1	/* dummy */
+        @norm      =  1. * len*len* 35.1895824E-14
+>
+
+
+/* ######## Baseline setting ######## */
+
+$profiletype = 3
+$densitytab  = { 1e-6 }
+$lengthtab   = { len  } /* km - see comments below*/
+
+
+/* ####### Detector settings ####### */
+
+$target_mass = 230  /* tons (fiducial mass) */
+
+
+/* ####### Energy window ####### */
+
+$emin        = 0.25	/* GeV */
+$emax        = 7	/* GeV */
+$binsize     = { 0.25, 0.5, 0.5, 0.5, 0.5, 
+	         0.5,  0.5, 0.5, 0.5, 0.5, 
+	     	 0.5,  0.5, 0.5 ,0.5}
+
+$sampling_points = 42 /* better not to go below 35 pts */
+
+/* ######## Technical information ######## */
+
+/* For globes probability engine */
+$filter_state = 0
+$filter_value = 1E-1
+
+/* For my probability engine */
+//$filter_state = 1
+//$filter_value = 30
+
+/* ####### Energy resolution ####### */
+
+energy(#nue)<
+        @type = 1
+        @sigma_e = {0, 0.20, 0}
+>
+
+energy(#numu)<
+        @type = 1
+        @sigma_e = {0.15, 0., 0}
+>
+
+/* ####### Cross sections ####### */
+
+cross(#QE)<
+	@cross_file = "glb_xsec_CCQE.dat"
+>
+cross(#NQE)<
+	@cross_file = "glb_xsec_CCNQE.dat"
+>
+cross(#XCC)<
+        @cross_file = "XCC.dat"
+>
+
+
+/* ####### Channel definitions ####### */
+
+/* SIGNALS */
+channel(#pospolar_mu_e)<
+        @channel   =    #PositivePolarity:      +  :      mu  :      e : #QE : #nue
+        @post_smearing_efficiencies = {0, 0.28, .4, .41, .45,   .45, .48, .6, .63, .8,   .8, 1, 1,1}
+>
+
+channel(#pospolar_mu_e_bar)<
+        @channel   =    #NegativePolarity:      -  :      mu  :      e : #QE : #nue
+        @post_smearing_efficiencies = {0, .28, .4, .41, .45,   .45, .48, .6, .63, .8,   .8, 1, 1,1}
+>
+
+/* BACKGROUNDS */
+channel(#pospolar_e_e)<
+        @channel   =    #PositivePolarity:      +  :      NOSC_e  :      e : #QE : #nue
+        @post_smearing_efficiencies = {0, .28, .4, .41, .45,   .45, .48, .6, .63, .8,   .8, 1, 1,1}
+>
+channel(#pospolar_eb_eb)<
+        @channel   =    #PositivePolarity:      -  :      NOSC_e  :      e : #QE : #nue
+        @post_smearing_efficiencies = {0, .28, .4, .41, .45,   .45, .48, .6, .63, .8,   .8, 1, 1,1}
+>
+
+channel(#pospolar_e_e_bar)<
+        @channel   =    #NegativePolarity:      +  :      NOSC_e  :      e : #QE : #nue
+        @post_smearing_efficiencies = {0, .28, .4, .41, .45,   .45, .48, .6, .63, .8,   .8, 1, 1,1}
+>
+channel(#pospolar_eb_eb_bar)<
+        @channel   =    #NegativePolarity:      -  :      NOSC_e  :      e : #QE : #nue
+        @post_smearing_efficiencies = {0, .28, .4, .41, .45,   .45, .48, .6, .63, .8,   .8, 1, 1,1}
+>
+
+/* ####### Setting the rules ####### */
+
+rule(#NU_E_App)<
+        @signal     = 1@#pospolar_mu_e
+        @background = 1@#pospolar_e_e : 1@#pospolar_eb_eb
+
+        @sys_on_function  = "chi_E776"
+	@sys_on_errors = {0.27,0.39,0.11,0.11} /* pi0 +, pi0 -, nue beam */
+        @sys_off_function = "chiZero"
+        @energy_window = 0.0 : 7.0
+>
+
+rule(#NU_E_BAR_App)<
+        @signal     = 1.0@#pospolar_mu_e_bar
+        @background = 1@#pospolar_e_e_bar : 1@#pospolar_eb_eb_bar
+   
+        @sys_on_function  = "chiZero"
+        @sys_off_function = "chiZero"
+        @energy_window = 0.0 : 7.0
+>
+
+/*********************************************************************
+
+			GENERAL COMMENTS
+
+# FLUXES:
+# PAN Machado
+# 2012-mar
+# Fluxes taken from Borodovsky et al., PRL 68 274 (1992)
+# UNITS: neutrinos/m^2/POT/GeV
+# Note: 1Mt of water has 5.97864E35 target nucleon.
+# Filenames: glb_E776_pospolar.dat glb_E776_negpolar.dat 
+
+# DISTANCE:
+# In the paper they only quote "approximately 1 km". I found that the
+# decay pipe length is 50 m (see
+# http://nufact06.physics.uci.edu/School/Slides/kopp-neutrino-beams.pdf)
+
+# In any case, looking at the chi2 plot in the paper, there are two "peaks"
+# limiting the low dm region (at about 2.5 an 6 eV^2). This looks like 
+# separate contributions from positive and negative polarity.
+# It is a bit strange, since the anti-nu channel has less events and larger
+# systematics.
+*********************************************************************/

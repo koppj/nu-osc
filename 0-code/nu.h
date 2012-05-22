@@ -117,6 +117,10 @@ extern int EXP_REACTOR_FAR;
 #define WBB_1ST_MAX_TOTAL_RATES 0x04 
 #define WBB_2ND_MAX_TOTAL_RATES 0x08
 
+/* Flags identifying NC and CC events, respectively, in MINOS */
+#define MINOS_NC            1
+#define MINOS_CC            2
+
 
 /* Starting values for systematics minimization */
 #define MAX_SYS             200
@@ -168,6 +172,22 @@ int chiMB_init();
 int chiMB_clear();
 double chiMBanti_nu2010(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
+
+/* e776.c */
+double chi_E776(int exp, int rule, int n_params, double *x,
+              double *errors, void *user_data);
+double chi_E776_rates(int exp, int rule, int n_params, double *x,
+              double *errors, void *user_data);
+
+/* lsnd-c12.c */
+double chi_lsnd_c12(int exp, int rule, int n_params,
+              double *x, double *errors, void *user_data);
+
+/* karmen-c12.c */
+double chi_karmen_c12_JR(int exp, int rule, int n_params,
+              double *x, double *errors, void *user_data);
+double chi_karmen_c12(int exp, int rule, int n_params,
+              double *x, double *errors, void *user_data);
 
 /* sensitivities.c */
 double sample(double min, double max, int steps, int i);

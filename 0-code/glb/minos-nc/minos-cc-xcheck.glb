@@ -1,0 +1,22 @@
+%!GLoBES
+
+include "minos-cc.glb"
+
+
+// Different binning for x-check against fig. 1 of 1103.0340
+$emin =  0.0
+$emax = 20.0
+$binsize = { 0.5, 0.5,  0.5, 0.5,  0.5, 0.5,  0.5, 0.5,  0.5, 0.5,
+             0.5, 0.5,  0.5, 0.5,  0.5, 0.5,  0.5, 0.5,  0.5, 0.5,
+             0.5, 0.5,  0.5, 0.5,  0.5, 0.5,  0.5, 0.5,  0.5, 0.5,
+             0.5, 0.5,  0.5, 0.5,  0.5, 0.5,  0.5, 0.5,  0.5, 0.5 }
+
+// Overwrite (unused) FD smearing matrix to avoid wrong binning
+//energy(#ERES_NC_1103_0340_far)<
+//        @type = 1
+//        @sigma_e = {0.1, 0.0, 0.0}
+//>
+
+// Energy resolution for NC events
+include "smear_nc_mc-near-1103.0340-xcheck.dat"
+

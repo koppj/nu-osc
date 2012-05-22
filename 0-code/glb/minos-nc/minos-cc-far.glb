@@ -1,0 +1,137 @@
+%!GLoBES
+// See README file for citation and version information
+
+$version="3.1.10"        // Minimal GLoBES version required for this file
+
+// Beam data
+// ---------
+nuflux(#NUMI_nu)<
+  @flux_file = "flugg_le010z185i_run1_735km_0kmoa_flux.txt"
+  @time      = 1
+  @power     = 7.25e20  // pot
+  @norm      = 2.8e-4
+>
+
+
+// Detector properties
+// -------------------
+$target_mass = 5.4       // kt
+
+$profiletype = 3
+//FIXME$densitytab  = {2.8}     // g/cm^3
+$densitytab  = {0.0}     // g/cm^3
+$lengthtab   = {735}     // km
+
+// Cross sections
+cross(#XCC)<
+  @cross_file = "XCC.dat"
+>
+
+cross(#XNC)<
+  @cross_file = "XNC_fe56.dat"
+>
+
+cross (#XFlat)<
+  @cross_file = "XFlat.dat"
+>
+
+// Binning
+$emin            =   0.0 // GeV
+$emax            =  20.0 // GeV
+$bins            =  20
+//$emin            =   0.0 // GeV
+//$emax            =  40.0 // GeV
+//$binsize         = { // a 1 GeV bin from 0-1 GeV, 0.25 GeV steps to 5 GeV,
+//                     // 0.5 GeV to 10 GeV, 1 GeV to 20 GeV, larger steps above
+//  1,
+//  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+//  0.25, 0.25, 0.25, 0.25,  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+//  0.5, 0.5,   1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  10,  20
+//}
+
+$sampling_min    =   0.0 // GeV
+$sampling_max    = 120.0 // GeV
+$sampling_stepsize = { // 0.25 GeV steps from 0-10 GeV, 0.5 GeV to 30 GeV, 1 GeV steps above
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+}
+
+// Use low pass filter to smoothen rapid oscillations?
+$filter_state = 1
+$filter_value = 0.3
+
+// Energy resolution for CC events, taken from Pedro's code for CC
+energy(#ERES_CC)<
+  @type = 1
+  @sigma_e = {0.16,0.07,0.0}
+>
+
+// Energy resolution for NC events
+//include "smear_nc_mc-far-1103.0340.dat"  // Use this file for nonlinear binning
+include "smear_nc_mc-far-1001.0336.dat"
+
+
+// Oscillation channels
+// --------------------
+
+// Efficiencies for CC selection (from fig. 6 of 1001.0336)
+%bc           = bincenter()
+%E_table_CC   = { 0.33,     0.50794,  1.52381,  2.47619,  3.55556,  4.50794,  5.46032,  7.55556,
+                 13.01587, 14.79365, 16.25397, 17.65079, 18.34921, 19.74603, 27.93651,
+                 32.38095, 37.33333 }
+%eff_table_CC = { 0.0,      0.26329,  0.64734,  0.74879,  0.77295,  0.75362,  0.74879,  0.80435,
+                  0.85507,  0.85507,  0.86715,  0.86473,  0.87198,  0.86957,  0.88164,
+                  0.88164,  0.88889 }
+%eff_CC       = interpolation(%E_table_CC, %eff_table_CC, 1, %bc)
+
+
+// Channel definitions
+channel(#ch_CC_nu)<         // CC signal
+  @channel = #NUMI_nu : + :      m :      m : #XCC : #ERES_CC
+//  @post_smearing_efficiencies = copy(%eff_CC)
+  @post_smearing_efficiencies = { 0.187058, 0.561346, 0.659981, 0.707164,
+    0.696433, 0.735949, 0.880982, 1.01628, 1.08786, 1.14316, 1.17478, 1.21328,
+    1.22777, 1.16513, 1.16045, 1.19857, 1.20144, 1.16118, 1.14911, 1.20549 }
+>
+channel(#ch_CC_nubar)<      // Wrong sign muons in the beam
+  @channel = #NUMI_nu : - :      m :      m : #XCC : #ERES_CC
+//  @post_smearing_efficiencies = copy(%eff_CC)
+  @post_smearing_efficiencies = { 0.187058, 0.561346, 0.659981, 0.707164,
+    0.696433, 0.735949, 0.880982, 1.01628, 1.08786, 1.14316, 1.17478, 1.21328,
+    1.22777, 1.16513, 1.16045, 1.19857, 1.20144, 1.16118, 1.14911, 1.20549 }
+>
+
+channel(#ch_NC_BG)<      // NC BG in CC sample - we neglect oscillations into \nu_s here
+  @channel = #NUMI_nu : + : NOSC_m : NOSC_m : #XNC : #ERES_NC_1001_0336_far
+  @post_smearing_efficiencies = // Derived from NC contamination shown in fig. 2 of 1103.0340
+  { 2.11933e-7, 3.66763e-7, 4.79433e-7, 6.13481e-7, 9.85216e-7, 2.08878e-6, 2.97771e-6,
+    2.77602e-6, 6.9601e-6,  5.52704e-6, 7.25806e-6, 0.0000158291, 0., 0., 0., 0., 0., 0., 0., 0.}
+>
+
+// The following channels are used only when computing efficiencies
+channel(#ch_NC_BG_noeff)<  // NC BG in CC sample
+  @channel = #NUMI_nu : + : NOSC_m : NOSC_m : #XNC : #ERES_NC_1001_0336_far
+>
+
+
+// Rules
+// -----
+rule(#rule_CC)<
+  @signal           = 1.0@#ch_CC_nu : 1.0@#ch_CC_nubar
+  @background       = 1.0@#ch_NC_BG
+  @sys_on_function  = "chiMINOS-CC"
+//FIXME FIXME  @sys_on_errors    = { 0.1, 0.2, 0.2, 0.05, 0.05 }
+  @sys_on_errors    = { 0.1, 0.2, 0.2, 0.05, 0.05 }
+  @sys_off_function = "chiMINOS-nosys-CC"
+  @sys_off_errors   = {}
+>
+

@@ -633,13 +633,32 @@ int load_exps(const int n_exps, char **exps)
       L_opt[1] = 0;
     }
 
-    // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336)
+    // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
     else if (strcasecmp(exps[i], "MINOS_NC") == 0)
     {
-      glbInitExperiment("MINOS-NC-near.glb",&glb_experiment_list[0],&glb_num_of_exps);
-      glbInitExperiment("MINOS-NC-far.glb",&glb_experiment_list[0],&glb_num_of_exps);
-      L_opt[0] = 0;
+      glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      L_opt[1] = L_opt[3] = 0;
     }
+
+    // MINOS CC \nu_\mu analysis (http://arxiv.org/abs/1103.0340)
+    else if (strcasecmp(exps[i], "MINOS_CC") == 0)
+    {
+      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      L_opt[1] = 0;
+    }
+
+    // E776 \nu_e appearance search
+    else if (strcasecmp(exps[i], "E776") == 0)
+      glbInitExperiment("E776.glb", &glb_experiment_list[0], &glb_num_of_exps);
+
+    // KARMEN \nu_e--C-12 scattering data
+    else if (strcasecmp(exps[i], "KARMEN-C12") == 0)
+      glbInitExperiment("KARMEN-nuecarbon.glb", &glb_experiment_list[0], &glb_num_of_exps);
+
+    // LSND \nu_e--C-12 scattering data
+    else if (strcasecmp(exps[i], "LSND-C12") == 0)
+      glbInitExperiment("LSND-nuecarbon.glb", &glb_experiment_list[0], &glb_num_of_exps);
 
     // Dummy scenario that doesn't do anything
     else if (strcasecmp(exps[i], "DUMMY") == 0)
@@ -797,7 +816,7 @@ int main(int argc, char *argv[])
   // Initialize libglobes 
   setenv("GLB_PATH", "glb/nova:glb/t2k:glb/bbeam:glb/dchooz:glb/wbb_wc:"
                      "glb/wbb_lar:glb/nufact:glb/minos-nc:glb/miniboone:"
-                     "glb/kamland:glb/lsnd", 1);
+                     "glb/kamland:glb/lsnd:glb/e776:glb/karmen-c12:glb/lsnd-c12", 1);
   glbInit(argv[0]);
   glbSelectMinimizer(GLB_MIN_POWELL); // Parts of code work ONLY with GLB_MIN_POWELL !!! 
 
@@ -834,17 +853,25 @@ int main(int argc, char *argv[])
   
   // Initialize user-defined chi^2 functions (chiMB_init has to be called after the
   // number of oscillation parameters has been fixed
+  int minos_nc = MINOS_NC;
+  int minos_cc = MINOS_CC;
   glbDefineChiFunction(&chiT2K,          16, "chiT2K",           NULL);
   glbDefineChiFunction(&chiNOvA,         18, "chiNOvA",          NULL);
   glbDefineChiFunction(&chiWBB_WCfast,   10, "chiWBB_WCfast",    &wbb_params);
   glbDefineChiFunction(&chiWBB_LAr,      10, "chiWBB_LAr",       &wbb_params);
   glbDefineChiFunction(&chiDCNorm,        5, "chiDCNorm",        NULL);
   glbDefineChiFunction(&chiKamLAND,       1, "chiKamLAND",       NULL);
-  glbDefineChiFunction(&chiMINOS,         5, "chiMINOS",         NULL);
-  glbDefineChiFunction(&chiMINOS,         0, "chiMINOS-nosys",   NULL);
+  glbDefineChiFunction(&chiMINOS,         5, "chiMINOS-NC",      &minos_nc);
+  glbDefineChiFunction(&chiMINOS,         5, "chiMINOS-CC",      &minos_cc);
+  glbDefineChiFunction(&chiMINOS,         0, "chiMINOS-nosys-NC",&minos_nc);
+  glbDefineChiFunction(&chiMINOS,         0, "chiMINOS-nosys-CC",&minos_cc);
   glbDefineChiFunction(&chiLSNDspectrum,  2, "chiLSNDspectrum",  NULL);
   chiMB_init();
   glbDefineChiFunction(&chiMBanti_nu2010, 0, "chiMBanti_nu2010", NULL);
+  glbDefineChiFunction(&chi_E776,         4, "chi_E776",         NULL);
+  glbDefineChiFunction(&chi_E776_rates,   4, "chi_E776_rates",   NULL);
+  glbDefineChiFunction(&chi_karmen_c12,   1, "chi_karmen_c12",   NULL);
+  glbDefineChiFunction(&chi_lsnd_c12,     1, "chi_lsnd_c12",     NULL);
 
   // Evaluate first bunch of environment variables to determine mode of operation, etc. 
   if (eval_env() < 0)

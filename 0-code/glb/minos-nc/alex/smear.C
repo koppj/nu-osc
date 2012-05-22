@@ -10,27 +10,36 @@ int smear()
   TFile f("ND_NC_histos.root");
 #endif
   TH2F *hRecoTrueNC = (TH2F *) f.Get("RecoTrueNC");
-  hRecoTrueNC->Rebin2D(4, 1);
 
 #ifdef FAR
-  FILE *fOut = fopen("smear_NC_MC-far.dat", "w");
+  FILE *fOut = fopen("smear_nc_mc-far.dat", "w");
 #else
-  FILE *fOut = fopen("smear_NC_MC-near.dat", "w");
+  FILE *fOut = fopen("smear_nc_mc-near.dat", "w");
 #endif
   fprintf(fOut, "// Mapping of true neutrino energy to reconstructed energy\n");
   fprintf(fOut, "// in NC interactions in MINOS\n");
   fprintf(fOut, "// Extracted from histograms courtesy of Alex Sousa\n");
-  fprintf(fOut, "//\n");
-//  fprintf(fOut, "//      E_true [GeV]    E_reco [GeV]    weight\n");
-  fprintf(fOut, "energy(#ERES_NC)<\n");
+  fprintf(fOut, "energy(#ERES_NC_TEST)<\n");
   fprintf(fOut, "  @energy =\n");
 
 
   // Compute normalization constants
-  int nbins_reco =  20; //hRecoTrueNC->GetNbinsX();
-  int nbins_true = hRecoTrueNC->GetNbinsY();
-  int n_sampling_points = 170;
-  double sampling_stepsize[] = { // copied from MINOS-NC-near/far.glb
+//  const int nbins_reco =  39; // Binning for CC analysis from 1103.0340
+//  double reco_binwidth[] = {  // Analysis bins from glb file
+//    1,
+//    0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+//    0.25, 0.25, 0.25, 0.25,  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+//    0.5, 0.5,   1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  10,  20
+//  };
+  const int nbins_reco =  20; // Binning for NC analysis from 1001.0336
+                              // and for comparing ND data to fig. 1 of 1103.0340
+  double reco_binwidth[] = {  // Analysis bins from glb file
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+  };
+
+  const int nbins_true = 170;
+  double true_binwidth[] = { // Stepsizes for NC analysis (from glb file)
     0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
     0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
     0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
@@ -43,41 +52,49 @@ int smear()
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1
   };
-  double *norm = new double[nbins_true];
-  for (int j=1; j <= nbins_true; j++)
+
+  // The smearing matrix - note that bin boundaries must coincide with
+  // bin boundaries in the original histogram, though bins may be combined
+  double smearing_matrix[nbins_reco][nbins_true];
+
+  // Loops over AEDL bins and sampling points
+  double E_reco = 0.0; // Left edge of current reco bin in smearing_matrix
+  for (int i=0; i < nbins_reco; i++)
   {
-    norm[j-1] = 0.0;
-    for (int i=1; i <= nbins_reco; i++)
-      norm[j-1] += hRecoTrueNC->GetBinContent(i, j);
+    double E_true = 0.0;  // Left edge of current true bin in smearing_matrix
+    for (int j=0; j < nbins_true; j++) 
+    {
+      smearing_matrix[i][j] = 0.0;
+
+      int k = hRecoTrueNC->GetYaxis()->FindFixBin(E_true + 1e-10);
+      while (hRecoTrueNC->GetYaxis()->GetBinUpEdge(k) <= E_true + true_binwidth[j] + 1e-10)
+      {
+        int l = hRecoTrueNC->GetXaxis()->FindFixBin(E_reco + 1e-10);
+        while (hRecoTrueNC->GetXaxis()->GetBinUpEdge(l) <= E_reco + reco_binwidth[i] + 1e-10)
+        {
+          smearing_matrix[i][j] += hRecoTrueNC->GetBinContent(l, k) / true_binwidth[j];
+          l++;
+        }
+        k++;
+      }
+
+      E_true += true_binwidth[j];
+    }
+    E_reco += reco_binwidth[i];
   }
 
-  for (int i=1; i <= nbins_reco; i++)
+
+  for (int i=0; i < nbins_reco; i++)
   {
-    fprintf(fOut, "{ %d, %d ", 0, n_sampling_points-1);
-    
-    int k = 0;
-    int j = 1;
-    while (j <= nbins_true)      // Loop over E_true bins
-    {
-      double x = 0.0;
-      double w = 0.0;
-      while ((w += hRecoTrueNC->GetYaxis()->GetBinWidth(j)) <= sampling_stepsize[k]+1e-10)
-      {
-        x += hRecoTrueNC->GetBinContent(i, j);
-        j++;
-      }
-      fprintf(fOut, ", %10.7g", x / sampling_stepsize[k]);
-      k++;
-    }
-//    for (int j=1; j <= nbins_true; j++) // Loop over E_true bins
-//      fprintf(fOut, ", %10.7g", hRecoTrueNC->GetBinContent(i, j));
-    if (i != nbins_reco)
+    fprintf(fOut, "{ %d, %d ", 0, nbins_true-1);
+    for (int j=0; j < nbins_true; j++) 
+      fprintf(fOut, ", %10.7g", smearing_matrix[i][j]);
+    if (i != nbins_reco-1)
       fprintf(fOut, " }:\n");
   }
   fprintf(fOut, " };\n");
   fprintf(fOut, ">\n");
   fclose(fOut);
   f.Close();
-  if (norm) { delete[] norm; norm = NULL; }
   return 0;
 }
