@@ -49,7 +49,10 @@ export globesconf= $(exec_prefix)/bin/globes-config
 INCFLAGS = $(shell $(globesconf) --include) -I${HOME}/projects/globes/Distribution/source
 LDFLAGS = $(shell $(globesconf) --libs) \
 	  -L./atm/LibMath -L./atm/LibPhys -L./atm/LibWrap \
-	  -lwrapper -lphysics -lmathres -static #-lmontecubes
+	  -L./solar/LibMath -L./solar/LibPhys -L./solar/LibWrap -L./solar/LibProb \
+	  -latmwrapper -latmphysics -latmmathres \
+       	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun
+          #-static #-lmontecubes
 
 # For some reason, -D_BSD_SOURCE is required for mathematical constants
 # such as M_PI, to be defined
@@ -58,14 +61,15 @@ export CXXFLAGS = -Wall -g -O2 $(INCFLAGS)
 
 BIN     = nu
 OBJ     = nu.o const.o sys.o snu.o degfinder.o sensitivities.o prem.o \
-	  mb.o e776.o karmen-c12.o lsnd-c12.o prior.o iface.o
-HEADER  = nu.h const.h snu.h sbl/definitions.h sbl/def-reactors.h
-SUBDIRS = sbl
+	  mb.o e776.o c12.o prior.o iface.o
+HEADER  = nu.h const.h snu.h sbl/definitions.h reactors/definitions.h
+SUBDIRS = sbl reactors
 
 all: $(BIN)
 
 $(BIN): $(OBJ) $(SUBDIRS)
-	g++ $(CFLAGS) $$(ls *.o sbl/*.o) -o $(BIN) $(INCFLAGS) $(LDFLAGS)
+#	g++ $(CFLAGS) $$(ls *.o sbl/*.o reactors/*.o) -o $(BIN) $(INCFLAGS) $(LDFLAGS)
+	g++ $(CFLAGS) $(shell ls *.o sbl/*.o reactors/*.o) -o $(BIN) $(INCFLAGS) $(LDFLAGS)
 
 %.o : %.c $(HEADER)
 	gcc $(CFLAGS) $(INCFLAGS) -c $<

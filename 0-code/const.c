@@ -26,5 +26,6 @@ const env_param ext_scenarios[] =
   { "CDHS",            EXT_CDHS             },
   { "ATM_TABLE",       EXT_ATM_TABLE        },
   { "ATM_COMP",        EXT_ATM_COMP         },
+  { "SOLAR",           EXT_SOLAR            },
   { NULL, -1 }
 };

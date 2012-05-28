@@ -1,6 +1,5 @@
-OBJ     = linear_algebra.o minimize-simplex.o mynrfunc.o read.o miniboone.o minib-anti.o flux_Xsection.o \
-	  nomad.o karmen.o lsnd.o class_react-fit.o class_react-flux.o bugey.o palo-verde.o \
-	  sbl_reactors.o chooz.o cdhs.o atm-de-dm.o
+OBJ     = linear_algebra.o mynrfunc.o read.o miniboone.o minib-anti.o flux_Xsection.o \
+	  nomad.o karmen.o lsnd.o cdhs.o atm-de-dm.o
 HEADER  = def-reactors.h definitions.h minimize-simplex.h minimization.h mynrfunc.h
 SUBDIRS = 
 

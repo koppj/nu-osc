@@ -18,8 +18,7 @@ double E776data[4][E776BINS] =
  {{ 35, 45, 23, 6, 6, 4, 1, 5, 5, 3, 1, 2, 0,0 },   /* + polarity, 136 total */
   {  9, 18,  6, 3, 4, 3, 1, 1, 0, 1, 0, 1, 0,0 },   /* - polarity, 47 total */
   {23.1, 43.4, 15.0, 6.28, 3.14, 0.92, 2.77, 0,0,0,0,0,0,0 }, /* + pol, pi0 94.61 */
-  {8.01, 25.8, 4.69, 2.85, 0,0,0,0,0,0,0,0,0,0 } };           /* - pol, pi0 41.35 */
-//{9.01, 26.8, 4.69, 2.85, 0,0,0,0,0,0,0,0,0,0 } };           /* - pol, pi0 43.35 */
+  {9.01, 26.8, 4.69, 2.85, 0,0,0,0,0,0,0,0,0,0 } };           /* - pol, pi0 43.35 */
 
 inline static double glb_prior(double x, double center, double sigma)
 {
@@ -53,7 +52,8 @@ double chi_E776(int exp, int rule, int n_params, double *x,
   double *bg_fit_rates_pos     = glbGetBGFitRatePtr(exp, 0);
   double *bg_fit_rates_neg     = glbGetBGFitRatePtr(exp, 1);
   double pi0_norm_pos,pi0_norm_neg, nue_beam_norm_pos, nue_beam_norm_neg;
-  double fit_rate_pos, fit_rate_neg;
+  double fit_rate_pos=0, fit_rate_neg=0;
+  double datapos=0,dataneg=0;
   int ew_low, ew_high;
   double chi2 = 0.0;
   int i;
@@ -63,17 +63,33 @@ double chi_E776(int exp, int rule, int n_params, double *x,
   pi0_norm_neg  = 1.0 + x[1]; /* pi0 bkgd error - */
   nue_beam_norm_pos = 1.0 + x[2]; /* beam error + */
   nue_beam_norm_neg = 1.0 + x[3]; /* beam error - (not correlated?) */
-  for (i=2; i <= ew_high; i++) /* i=2 to avoid first 2 bins (Enu > 1 GeV) */
-                               /* I cannot reproduce these very well */
+
+  /* I am summing the first bins. The minimum chi2 gets high
+     when I fit them separetely. */
+  for(i=1; i<3; i++) /* Avoid the first bin... */
   {
-        fit_rate_pos = signal_fit_rates_pos[i]
-          + pi0_norm_pos*data[2*E776BINS+i] /* read pi0 + polarity */
-          + nue_beam_norm_pos*bg_fit_rates_pos[i];
-        fit_rate_neg = signal_fit_rates_neg[i]
-          + pi0_norm_neg*data[3*E776BINS+i] /* read pi0 - polarity */
-          + nue_beam_norm_neg*bg_fit_rates_neg[i];
-        chi2 += glb_likelihood(data[0*E776BINS+i], fit_rate_pos);
-        chi2 += glb_likelihood(data[1*E776BINS+i], fit_rate_neg); /* antinu */
+    fit_rate_pos += signal_fit_rates_pos[i]
+        + pi0_norm_pos*data[2*E776BINS+i] /* read pi0 + polarity */
+        + nue_beam_norm_pos*bg_fit_rates_pos[i];
+      fit_rate_neg += signal_fit_rates_neg[i]
+        + pi0_norm_neg*data[3*E776BINS+i] /* read pi0 - polarity */
+        + nue_beam_norm_neg*bg_fit_rates_neg[i];
+      datapos += data[0*E776BINS+i];
+      dataneg += data[1*E776BINS+i];
+  }
+  chi2 += glb_likelihood(datapos, fit_rate_pos);
+  chi2 += glb_likelihood(dataneg, fit_rate_neg);
+
+  for (i=3; i <= ew_high; i++)
+  {
+      fit_rate_pos = signal_fit_rates_pos[i]
+        + pi0_norm_pos*data[2*E776BINS+i] /* read pi0 + polarity */
+        + nue_beam_norm_pos*bg_fit_rates_pos[i];
+      fit_rate_neg = signal_fit_rates_neg[i]
+        + pi0_norm_neg*data[3*E776BINS+i] /* read pi0 - polarity */
+        + nue_beam_norm_neg*bg_fit_rates_neg[i];
+      chi2 += glb_likelihood(data[0*E776BINS+i], fit_rate_pos);
+      chi2 += glb_likelihood(data[1*E776BINS+i], fit_rate_neg); /* antinu */
   }
 
   /* I have 4 errors: pi0 background and beam nue for each polarity */

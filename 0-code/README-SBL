@@ -16,5 +16,15 @@ Updates to SBL code (2011 version):
 
 Adjustment for reactor code (2012 version):
 - Remove reactor-related stuff from old sbl/ directory
--
+  (remove also minimize-simplex library)
+- Add new reactors/ directory to Makefile (also in the linker call)
+- Create Make in reactors/ directory and add all object files
+  (corresponding to all .cc files)
+- Rename main() function in main.cc to reactor_main to avoid two main's
+- Add namespacing environment to every .cc file and .h in reactors/
+  to wrap class, function, and variable declarations
+- Update SBL reactor initialization and chi^2 calls in prior.cc
+  Be careful: Thomas' code doesn't accept inverted hierarchy parameters
+- Adjust paths in reactor code wherever external data is loaded
+- Optional: Change LDM2MIN and LDM2MAX in bugey.cc to +-2.0
 

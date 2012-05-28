@@ -16,7 +16,8 @@
 #include "const.h"
 #include "snu.h"
 #include "nu.h"
-#include "sbl/def-reactors.h"
+#include "sbl/definitions.h"
+#include "reactors/definitions.h"
 
 #ifdef NU_MPI
   #include <mpi.h>
@@ -81,7 +82,10 @@ wbb_params_type wbb_params =
 };
 
 // Parameters for Thomas' reactor analysis
-extern int old_new_main;
+namespace ns_reactor
+{
+  extern int old_new_main;
+}
 
 /* Density correlations. Lists, for each experiment, the experiment with which
  * the corresponding matter density is correlated */
@@ -636,6 +640,8 @@ int load_exps(const int n_exps, char **exps)
     // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
     else if (strcasecmp(exps[i], "MINOS_NC") == 0)
     {
+      printf("DON'T USE MINOS CODE YET!\n");
+      getchar();
       glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       L_opt[1] = L_opt[3] = 0;
@@ -644,6 +650,8 @@ int load_exps(const int n_exps, char **exps)
     // MINOS CC \nu_\mu analysis (http://arxiv.org/abs/1103.0340)
     else if (strcasecmp(exps[i], "MINOS_CC") == 0)
     {
+      printf("DON'T USE MINOS CODE YET!\n");
+      getchar();
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       L_opt[1] = 0;
     }
@@ -655,10 +663,16 @@ int load_exps(const int n_exps, char **exps)
     // KARMEN \nu_e--C-12 scattering data
     else if (strcasecmp(exps[i], "KARMEN-C12") == 0)
       glbInitExperiment("KARMEN-nuecarbon.glb", &glb_experiment_list[0], &glb_num_of_exps);
+    else if (strcasecmp(exps[i], "KARMEN-C12-JR") == 0)
+      glbInitExperiment("KARMEN-nuecarbon-JR.glb", &glb_experiment_list[0], &glb_num_of_exps);
 
     // LSND \nu_e--C-12 scattering data
     else if (strcasecmp(exps[i], "LSND-C12") == 0)
       glbInitExperiment("LSND-nuecarbon.glb", &glb_experiment_list[0], &glb_num_of_exps);
+
+    // Joint LSND + KARMEN C-12 scattering analysis
+    else if (strcasecmp(exps[i], "C12") == 0)
+      init_nue_carbon(1);
 
     // Dummy scenario that doesn't do anything
     else if (strcasecmp(exps[i], "DUMMY") == 0)
@@ -816,7 +830,7 @@ int main(int argc, char *argv[])
   // Initialize libglobes 
   setenv("GLB_PATH", "glb/nova:glb/t2k:glb/bbeam:glb/dchooz:glb/wbb_wc:"
                      "glb/wbb_lar:glb/nufact:glb/minos-nc:glb/miniboone:"
-                     "glb/kamland:glb/lsnd:glb/e776:glb/karmen-c12:glb/lsnd-c12", 1);
+                     "glb/kamland:glb/lsnd:glb/e776:glb/c12", 1);
   glbInit(argv[0]);
   glbSelectMinimizer(GLB_MIN_POWELL); // Parts of code work ONLY with GLB_MIN_POWELL !!! 
 
@@ -871,6 +885,7 @@ int main(int argc, char *argv[])
   glbDefineChiFunction(&chi_E776,         4, "chi_E776",         NULL);
   glbDefineChiFunction(&chi_E776_rates,   4, "chi_E776_rates",   NULL);
   glbDefineChiFunction(&chi_karmen_c12,   1, "chi_karmen_c12",   NULL);
+  glbDefineChiFunction(&chi_karmen_c12_JR,1, "chi_karmen_c12_JR",NULL);
   glbDefineChiFunction(&chi_lsnd_c12,     1, "chi_lsnd_c12",     NULL);
 
   // Evaluate first bunch of environment variables to determine mode of operation, etc. 
@@ -940,7 +955,7 @@ int main(int argc, char *argv[])
   if (ext_flags & EXT_LSND)
     printf("#   LSND\n");
   if (ext_flags & EXT_SBL)
-    printf("#   Bugey, Rovno, Krasnoyarsk, ILL, Goesgen, Chooz, Palo Verde\n");
+    printf("#   Reactor experiments\n");
   if (ext_flags & EXT_NOMAD)
     printf("#   NOMAD\n");
   if (ext_flags & EXT_CDHS)
@@ -949,6 +964,8 @@ int main(int argc, char *argv[])
     printf("#   Atmospheric neutrinos (tabulated chi^2)\n");
   if (ext_flags & EXT_ATM_COMP)
     printf("#   Atmospheric neutrinos (Michele's simulation)\n");
+  if (ext_flags & EXT_SOLAR)
+    printf("#   Solar neutrinos (Michele's simulation)\n");
   printf("#\n");
 
   printf("# True oscillation parameters (only nonzero params shown):\n");
@@ -966,7 +983,8 @@ int main(int argc, char *argv[])
   printf("#\n");
   printf("# Miscellaneous options:\n");
   printf("#   Constraint \\eps^s = \\eps^{d\\dag}: %s\n", use_nsi_constraints ? "YES" : "NO");
-  printf("#   New reactor fluxes (1101.2663):   %s\n", old_new_main==NEW ? "YES" : "NO");
+  printf("#   New reactor fluxes (1101.2663):   %s\n",
+         ns_reactor::old_new_main==NEW ? "YES" : "NO");
   if (n_flavors >= 5)
   {
 #ifdef Ip3pI

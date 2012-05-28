@@ -63,7 +63,7 @@ enum { NU_ACTION_SPECTRUM, NU_ACTION_PARAM_SCAN, NU_ACTION_EXPOSURE_SCAN,
 /* External analysis routines */
 enum { EXT_MB=0x001,  EXT_MBANTI=0x002, EXT_KARMEN=0x004, EXT_LSND=0x008,
        EXT_SBL=0x010, EXT_NOMAD=0x020,  EXT_CDHS=0x040,
-       EXT_ATM_TABLE=0x080, EXT_ATM_COMP=0x100};
+       EXT_ATM_TABLE=0x080, EXT_ATM_COMP=0x100, EXT_SOLAR=0x200};
 
 /* Experiment and rule numbers */
 extern int EXP_BEAM_NEAR;
@@ -179,15 +179,18 @@ double chi_E776(int exp, int rule, int n_params, double *x,
 double chi_E776_rates(int exp, int rule, int n_params, double *x,
               double *errors, void *user_data);
 
-/* lsnd-c12.c */
+/* c12.c */
 double chi_lsnd_c12(int exp, int rule, int n_params,
               double *x, double *errors, void *user_data);
-
-/* karmen-c12.c */
 double chi_karmen_c12_JR(int exp, int rule, int n_params,
               double *x, double *errors, void *user_data);
 double chi_karmen_c12(int exp, int rule, int n_params,
               double *x, double *errors, void *user_data);
+double chi_nue_carbon(int exp, int rule, int n_params,
+              double *x, double *errors, void *user_data);
+double chi_nue_carbon_spectrum(int exp, int rule, int n_params,
+              double *x, double *errors, void *user_data);
+void init_nue_carbon(int KM_spectrum);
 
 /* sensitivities.c */
 double sample(double min, double max, int steps, int i);
@@ -213,7 +216,7 @@ double my_prior(const glb_params in, void* user_data);
 /* iface.c */
 int checkBF(int n_flavors);
 
-/* nu.c */
+/* nu.cc */
 int load_exps(const int n_exps, char **exps);
 
 #ifdef __cplusplus

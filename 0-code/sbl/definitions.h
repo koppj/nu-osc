@@ -78,7 +78,7 @@ enum experiments{
 
 #define MN 939.566
 #define MP 938.272
-#define DELTA 1.294
+#define DELTA (MN-MP)
 #define ME 0.511
 
 double read(char *name, double x0);
@@ -157,20 +157,20 @@ inline double chi2atm(params p){
 
 #if !defined(PC475) && !defined(PC300)
 
-inline double chisq_main(params p, const bool incl[NUM_EXP])
-{
-  return
-    (incl[mb300]  ? chi2mb300(p)   : 0.) +   
-    (incl[mb475]  ? chi2mb475(p)   : 0.) +   
-    (incl[mba200] ? chi2_MBA_200(p): 0.) +   
-    (incl[mba475] ? chi2_MBA_475(p): 0.) +   
-    (incl[lsnd]   ? chi2lsnd(p)    : 0.) +   
-    (incl[karmen] ? chi2karmen(p)  : 0.) + 
-    (incl[nomad]  ? chi2nomad(p)   : 0.) + 
-    (incl[reactor]? chi2reactor(p) : 0.) +  
-    (incl[cdhs]   ? chi2cdhs(p)    : 0.) +	
-    (incl[atm]    ? chi2atm(p)     : 0.); 	
-}
+//inline double chisq_main(params p, const bool incl[NUM_EXP])
+//{
+//  return
+//    (incl[mb300]  ? chi2mb300(p)   : 0.) +   
+//    (incl[mb475]  ? chi2mb475(p)   : 0.) +   
+//    (incl[mba200] ? chi2_MBA_200(p): 0.) +   
+//    (incl[mba475] ? chi2_MBA_475(p): 0.) +   
+//    (incl[lsnd]   ? chi2lsnd(p)    : 0.) +   
+//    (incl[karmen] ? chi2karmen(p)  : 0.) + 
+//    (incl[nomad]  ? chi2nomad(p)   : 0.) + 
+//    (incl[reactor]? chi2reactor(p) : 0.) +  
+//    (incl[cdhs]   ? chi2cdhs(p)    : 0.) +	
+//    (incl[atm]    ? chi2atm(p)     : 0.); 	
+//}
 
 #else // chisq function to calculate the PC
 
