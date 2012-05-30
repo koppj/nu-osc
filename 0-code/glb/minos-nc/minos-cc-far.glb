@@ -72,7 +72,7 @@ $filter_value = 0.3
 // Energy resolution for CC events, taken from Pedro's code for CC
 energy(#ERES_CC)<
   @type = 1
-  @sigma_e = {0.16,0.07,0.0}
+  @sigma_e = {0, 0.1, 0}   // \sigma(E) = \alpha * E + \beta * sqrt{E} + \gamma
 >
 
 // Energy resolution for NC events
@@ -83,31 +83,32 @@ include "smear_nc_mc-far-1001.0336.dat"
 // Oscillation channels
 // --------------------
 
-// Efficiencies for CC selection (from fig. 6 of 1001.0336)
-%bc           = bincenter()
-%E_table_CC   = { 0.33,     0.50794,  1.52381,  2.47619,  3.55556,  4.50794,  5.46032,  7.55556,
-                 13.01587, 14.79365, 16.25397, 17.65079, 18.34921, 19.74603, 27.93651,
-                 32.38095, 37.33333 }
-%eff_table_CC = { 0.0,      0.26329,  0.64734,  0.74879,  0.77295,  0.75362,  0.74879,  0.80435,
-                  0.85507,  0.85507,  0.86715,  0.86473,  0.87198,  0.86957,  0.88164,
-                  0.88164,  0.88889 }
-%eff_CC       = interpolation(%E_table_CC, %eff_table_CC, 1, %bc)
-
-
 // Channel definitions
 channel(#ch_CC_nu)<         // CC signal
   @channel = #NUMI_nu : + :      m :      m : #XCC : #ERES_CC
-//  @post_smearing_efficiencies = copy(%eff_CC)
-  @post_smearing_efficiencies = { 0.187058, 0.561346, 0.659981, 0.707164,
-    0.696433, 0.735949, 0.880982, 1.01628, 1.08786, 1.14316, 1.17478, 1.21328,
-    1.22777, 1.16513, 1.16045, 1.19857, 1.20144, 1.16118, 1.14911, 1.20549 }
+
+  // Efficiencies used with @sigma_e = {0, 0.1, 0}
+  @post_smearing_efficiencies = {0.294003, 0.685595, 0.698816, 0.613537,
+    0.640051, 0.83512, 1.00646, 1.05674, 1.09238, 1.16574, 1.16659, 1.20161,
+    1.20245, 1.14027, 1.13093, 1.15642, 1.16221, 1.12668, 1.10608, 1.15491}
+
+  // Efficiencies used with @sigma_e = {0.16,0.07,0.0}
+//  @post_smearing_efficiencies = { 0.187058, 0.561346, 0.659981, 0.707164,
+//    0.696433, 0.735949, 0.880982, 1.01628, 1.08786, 1.14316, 1.17478, 1.21328,
+//    1.22777, 1.16513, 1.16045, 1.19857, 1.20144, 1.16118, 1.14911, 1.20549 }
 >
 channel(#ch_CC_nubar)<      // Wrong sign muons in the beam
   @channel = #NUMI_nu : - :      m :      m : #XCC : #ERES_CC
-//  @post_smearing_efficiencies = copy(%eff_CC)
-  @post_smearing_efficiencies = { 0.187058, 0.561346, 0.659981, 0.707164,
-    0.696433, 0.735949, 0.880982, 1.01628, 1.08786, 1.14316, 1.17478, 1.21328,
-    1.22777, 1.16513, 1.16045, 1.19857, 1.20144, 1.16118, 1.14911, 1.20549 }
+
+  // Efficiencies used with @sigma_e = {0, 0.1, 0}
+  @post_smearing_efficiencies = {0.294003, 0.685595, 0.698816, 0.613537,
+    0.640051, 0.83512, 1.00646, 1.05674, 1.09238, 1.16574, 1.16659, 1.20161,
+    1.20245, 1.14027, 1.13093, 1.15642, 1.16221, 1.12668, 1.10608, 1.15491}
+
+  // Efficiencies used with @sigma_e = {0.16,0.07,0.0}
+//  @post_smearing_efficiencies = { 0.187058, 0.561346, 0.659981, 0.707164,
+//    0.696433, 0.735949, 0.880982, 1.01628, 1.08786, 1.14316, 1.17478, 1.21328,
+//    1.22777, 1.16513, 1.16045, 1.19857, 1.20144, 1.16118, 1.14911, 1.20549 }
 >
 
 channel(#ch_NC_BG)<      // NC BG in CC sample - we neglect oscillations into \nu_s here
@@ -129,7 +130,6 @@ rule(#rule_CC)<
   @signal           = 1.0@#ch_CC_nu : 1.0@#ch_CC_nubar
   @background       = 1.0@#ch_NC_BG
   @sys_on_function  = "chiMINOS-CC"
-//FIXME FIXME  @sys_on_errors    = { 0.1, 0.2, 0.2, 0.05, 0.05 }
   @sys_on_errors    = { 0.1, 0.2, 0.2, 0.05, 0.05 }
   @sys_off_function = "chiMINOS-nosys-CC"
   @sys_off_errors   = {}

@@ -1,0 +1,229 @@
+%!GLoBES
+
+$version="3.0.0"
+
+/* Author: PAN Machado 
+ * Date: May 2012
+ *
+ * AEDL file for the karmen nue-Carbon analysis
+ * See J. Reichenbacher thesis for details
+ */
+
+/* Parameters: */
+KMfact = 0.476407 /* to normalize flux*xsec to 1 */
+KMnus  = 5.23E21
+KMeff  = 0.272
+KMdist = 2.53433E-4
+KMNtgt = 2.54E30
+FUKUGsec  = 9.2 /* FUKUGITA et al cross section in units of 10^-42 cm^2 */
+KMBINS /* 1 for rate only, 26 for spectral analysis - set in init_nue_carbon */
+
+/* ####### nue weighted flux ####### */
+
+nuflux(#nue_weighted)<
+        @flux_file = "karmen-nue-weighted-flux.dat"
+        @time      = 1		/* dummy */
+        @power     = 1   	/* dummy */
+        @norm      = KMfact*KMnus*KMeff*KMdist*KMNtgt*FUKUGsec*1E-46
+>
+
+
+/* ######## Baseline setting ######## */
+
+$profiletype = 3
+$densitytab  = { 1e-6 }
+$lengthtab   = { 0.017675  } /* needs to be set in program */
+
+
+/* ####### Detector settings ####### */
+
+$target_mass = 1  /* dummy */
+
+
+/* ####### Energy window ####### */
+/* the e- prompt energy + Q + quenching is the nu energy */
+
+$emin        = 0.030	/* GeV */
+$emax        = 0.056	/* GeV */
+//$emin        = 0.0301	/* GeV */
+//$emax        = 0.0561	/* GeV */
+$sampling_points = 3*26
+$bins        = KMBINS  	/* rate only analysis or 1 MeV bins (1 or 26) */
+
+
+/* ######## Technical information ######## */
+
+/* globes probability engine */
+$filter_state = 1
+$filter_value = 4E-3
+
+/* My probability engine */
+//$filter_state = 0
+//$filter_value = 4E1
+
+/* ####### Energy resolution ####### */
+
+energy(#ERES)<
+        @type = 1
+        @sigma_e = {0., 0.008, 0} /* adjusted to reproduce the data */
+	/* since I am doing a rate analysis, this is not important */
+>
+
+
+/* ####### Cross sections ####### */
+
+cross(#flat)<
+        @cross_file = "karmen-flat-xsec.dat"
+>
+
+
+/* ####### Channel definitions ####### */
+
+channel(#KMnu_e_carbon)<
+        @channel   =    #nue_weighted:      + :      e  :      e : #flat : #ERES
+>
+
+
+/* ####### Setting the rules ####### */
+
+rule(#KM_NU_E_dis_carbon)<
+        @signal     = 0.9675@#KMnu_e_carbon
+        @background = 0.0@#KMnu_e_carbon   /* No background */
+        @energy_window = 0.020 : 0.060
+
+        @sys_on_function  = "chiZero"
+        @sys_on_errors   = {}
+        @sys_off_function = "chiNoSysSpectrum"
+>
+
+/*********************************************************************
+
+			GENERAL COMMENTS
+
+# FLUX: the karmen-nue-weighted-flux.dat is read from JR thesis.
+# See fig 4.4 (d,e,f) for the flux and the spatial distribution.
+# His result is shown in fig 4.5.
+#
+# CROSS SECTION: The flux already include the shape of the cross
+# section, so that is why I use a flat cross section. What need to
+# be changed (for our analysis) is the "sec" variable with gets
+# the best fit. The syst error can be added in quadrature if the
+# others.
+#
+# ERRORS: Accordingly to Table 3.3 of JR thesis, the final syst
+# is 7.5%, which includes flux, efficiency, distance, # of tgts,
+# and other efficiencies, but NOT a cross section error.
+# JR quotes 3.3% as xsec error (G Drexlin private comm 2002).
+#
+# Everything here was done in order to reproduce his results.
+# The systematic error is also taken from his thesis (although the 
+# theoretical cross section error is only 3.3%!!!).
+#
+# In principle, a shape analysis could be more powerful than this
+# rate-only that I do. The problem is how to reconstruct the neutrino
+# energy. There is some spectral distortion but not too much information
+# on that. 
+
+*********************************************************************/
+
+#NEXT#
+
+$version="3.0.0"
+
+/* Author: PAN Machado 
+ * Date: May 2012
+ */
+
+/* AEDL file for the LSND nue-Carbon analysis
+ * See hep-ex/0104049
+ */
+
+/* Parameters for LSND: */
+LSnus  = 10.58E13
+LSeff  = 0.232
+LSNtgt = 3.34E30
+LSfact = 1.191632 /* normalize flux*xsec to 1 @ 29.8 m */
+FUKUGsec  = 9.2 /* FUKUGITA et al cross section in units of 10^-42 cm^2 */
+
+/* ####### nue weighted flux ####### */
+
+nuflux(#nue_raw)<
+        @flux_file = "LSND-flux.dat"
+        @time      = 1.		/* years */
+        @power     = 1.   	/* GWth */
+        @norm      = LSfact*LSnus*LSeff*LSNtgt*FUKUGsec*1E-42
+>
+
+/* ######## Baseline setting ######## */
+
+$profiletype = 3
+$densitytab  = { 1e-6 }
+$lengthtab   = { 0.0298  } /* This is the A6 (C target) distance from the detector  */
+
+
+/* ####### Detector settings ####### */
+
+$target_mass = 1  /* dummy */
+
+
+/* ####### Energy window ####### */
+/* the e- prompt energy + Q + quenching is the nu energy */
+
+$emin        = 0.0353	/* GeV */
+$emax        = 0.0593	/* GeV */
+//$emin        = 0.0373	/* GeV */
+//$emax        = 0.0673	/* GeV */
+$bins        = 12  	/* 2 MeV bins */
+
+$sampling_points = 3*15 /* do not make this lower than 15 (45 is good) */ 
+
+/* ######## Technical information ######## */
+
+/* globes probability engine */
+$filter_state = 1
+$filter_value = 4E-3
+
+/* My probability engine */
+//$filter_state = 0
+//$filter_value = 1e6
+
+
+/* ####### Energy resolution ####### */
+
+energy(#ERES)<
+        @type = 1
+        @sigma_e = {0., 0, 0.0027} /* adjusted to reproduce the data */
+>
+
+
+/* ####### Cross sections ####### */
+
+cross(#carbon)<
+        @cross_file = "LSND-xsec.dat"
+>
+
+
+/* ####### Channel definitions ####### */
+
+channel(#LSnu_e_carbon)<
+        @channel   =    #nue_raw:      + :      e  :      e : #carbon : #ERES
+>
+
+/* ####### Setting the rules ####### */
+
+rule(#LSNU_E_dis_carbon)<
+        @signal     = 1.005@#LSnu_e_carbon
+        @background = 0.0@#LSnu_e_carbon   /* No background */
+
+        @sys_on_function  = "chiZero"
+        @sys_on_errors   = {}
+        @sys_off_function = "chiNoSysSpectrum"
+        @energy_window = 0.0353 : 0.0593
+>
+
+/*********************************************************************
+
+			GENERAL COMMENTS
+# 
+
+*********************************************************************/

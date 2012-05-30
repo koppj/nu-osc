@@ -61,9 +61,18 @@ enum { NU_ACTION_SPECTRUM, NU_ACTION_PARAM_SCAN, NU_ACTION_EXPOSURE_SCAN,
        NU_ACTION_CHECK_BF };
 
 /* External analysis routines */
-enum { EXT_MB=0x001,  EXT_MBANTI=0x002, EXT_KARMEN=0x004, EXT_LSND=0x008,
-       EXT_SBL=0x010, EXT_NOMAD=0x020,  EXT_CDHS=0x040,
-       EXT_ATM_TABLE=0x080, EXT_ATM_COMP=0x100, EXT_SOLAR=0x200};
+enum { EXT_MB         = 0x0001,
+       EXT_MB_300     = 0x0002,
+       EXT_MBANTI     = 0x0004,
+       EXT_MBANTI_200 = 0x0008,
+       EXT_KARMEN     = 0x0010,
+       EXT_LSND       = 0x0020,
+       EXT_SBL        = 0x0040,
+       EXT_NOMAD      = 0x0080,
+       EXT_CDHS       = 0x0100,
+       EXT_ATM_TABLE  = 0x0200,
+       EXT_ATM_COMP   = 0x0400,
+       EXT_SOLAR      = 0x0800};
 
 /* Experiment and rule numbers */
 extern int EXP_BEAM_NEAR;

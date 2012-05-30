@@ -448,6 +448,10 @@ int load_exps(const int n_exps, char **exps)
 // Load experiments
 // -------------------------------------------------------------------------
 {
+  int karmen_c12_loaded = 0;
+  int lsnd_c12_loaded   = 0;
+  int c12_combi_loaded  = 0;
+
   // Default density correlations: Every experiment independent 
   for (int i=0; i < GLB_MAX_EXP; i++)
     density_corr[i] = i;
@@ -640,8 +644,6 @@ int load_exps(const int n_exps, char **exps)
     // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
     else if (strcasecmp(exps[i], "MINOS_NC") == 0)
     {
-      printf("DON'T USE MINOS CODE YET!\n");
-      getchar();
       glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       L_opt[1] = L_opt[3] = 0;
@@ -650,8 +652,6 @@ int load_exps(const int n_exps, char **exps)
     // MINOS CC \nu_\mu analysis (http://arxiv.org/abs/1103.0340)
     else if (strcasecmp(exps[i], "MINOS_CC") == 0)
     {
-      printf("DON'T USE MINOS CODE YET!\n");
-      getchar();
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       L_opt[1] = 0;
     }
@@ -662,17 +662,29 @@ int load_exps(const int n_exps, char **exps)
 
     // KARMEN \nu_e--C-12 scattering data
     else if (strcasecmp(exps[i], "KARMEN-C12") == 0)
+    {
       glbInitExperiment("KARMEN-nuecarbon.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      karmen_c12_loaded = 1;
+    }
     else if (strcasecmp(exps[i], "KARMEN-C12-JR") == 0)
+    {
       glbInitExperiment("KARMEN-nuecarbon-JR.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      karmen_c12_loaded = 1;
+    }
 
     // LSND \nu_e--C-12 scattering data
     else if (strcasecmp(exps[i], "LSND-C12") == 0)
+    {
       glbInitExperiment("LSND-nuecarbon.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      lsnd_c12_loaded = 1;
+    }
 
     // Joint LSND + KARMEN C-12 scattering analysis
     else if (strcasecmp(exps[i], "C12") == 0)
+    {
       init_nue_carbon(1);
+      c12_combi_loaded = 1;
+    }
 
     // Dummy scenario that doesn't do anything
     else if (strcasecmp(exps[i], "DUMMY") == 0)
@@ -703,8 +715,27 @@ int load_exps(const int n_exps, char **exps)
         fprintf(stderr, "Not a valid experiment: %s.\n", exps[i]);
         return -2;
       }
+
+      // A few sanity checks
+      if (ext_flags & EXT_MB  && ext_flags & EXT_MB_300)
+      {
+        fprintf(stderr, "Do not use MB and MB_300 analyses simultaneously.\n");
+        return -3;
+      }
+      if (ext_flags & EXT_MBANTI  && ext_flags & EXT_MBANTI_200)
+      {
+        fprintf(stderr, "Do not use MBANTI and MBANTI200 analyses simultaneously.\n");
+        return -4;
+      }
     }
   } // for(i)
+
+  // More sanity checks
+  if (c12_combi_loaded  &&  (karmen_c12_loaded || lsnd_c12_loaded))
+  {
+    fprintf(stderr, "Do not use combined C-12 analysis together with individual analyses.\n");
+    return -5;
+  }
 
   for (int i=0; i < glb_num_of_exps; i++)
     glbOptimizeSmearingMatrixInExperiment(i);
@@ -947,9 +978,13 @@ int main(int argc, char *argv[])
   printf("#\n");
   printf("# External analysis routines included:\n");
   if (ext_flags & EXT_MB)
-    printf("#   MiniBooNE (neutrino run)\n");
+    printf("#   MiniBooNE (neutrino run, E > 475 MeV)\n");
+  if (ext_flags & EXT_MB_300)
+    printf("#   MiniBooNE (neutrino run, E > 300 MeV)\n");
   if (ext_flags & EXT_MBANTI)
-    printf("#   MiniBooNE (anti-neutrino run)\n");
+    printf("#   MiniBooNE (anti-neutrino run, E > 475 MeV)\n");
+  if (ext_flags & EXT_MBANTI_200)
+    printf("#   MiniBooNE (anti-neutrino run, E > 200 MeV)\n");
   if (ext_flags & EXT_KARMEN)
     printf("#   KARMEN\n");
   if (ext_flags & EXT_LSND)

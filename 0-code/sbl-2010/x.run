@@ -1,0 +1,12 @@
+#!/bin/bash 
+
+#export PP='PATH="'`pwd`'"' 
+#echo "compiling with path option "$PP
+
+for data_set in set_evid set_nev_mb475 set_app_mb300 set_app_mb475 \
+                set_dis set_all_mb300 set_all_mb475  
+do
+#  g++ -Wall -O3 -mtune=pentium4 *.cc -Wno-write-strings -DDATA_SET=$data_set -oy.$data_set
+  y.$data_set Out-new-queue &
+done
+

@@ -1,0 +1,101 @@
+%!GLoBES
+
+$version="3.0.0"
+
+/* Author: PAN Machado 
+ * Date: Apr 2012
+ */
+
+/* AEDL file for the LSND nue-Carbon analysis
+ * See hep-ex/0104049
+ */
+
+/* Parameters for LSND: */
+Lnus  = 10.58E13
+Leff  = 0.232
+LNtgt = 3.34E30
+Lfact = 1.191632 /* normalize flux*xsec to 1 @ 29.8 m */
+Lsec  = 9.2 /* cross section in units of 10^-42 cm^2 */
+
+/* ####### nue weighted flux ####### */
+
+nuflux(#nue_raw)<
+        @flux_file = "LSND-flux.dat"
+        @time      = 1.		/* years */
+        @power     = 1.   	/* GWth */
+        @norm      = Lfact*Lnus*Leff*LNtgt*Lsec*1E-42
+>
+
+/* ######## Baseline setting ######## */
+
+$profiletype = 3
+$densitytab  = { 1e-6 }
+$lengthtab   = { 0.0298  } /* This is the A6 (C target) distance from the detector  */
+
+
+/* ####### Detector settings ####### */
+
+$target_mass = 1  /* dummy */
+
+
+/* ####### Energy window ####### */
+/* the e- prompt energy + Q + quenching is the nu energy */
+
+$emin        = 0.0353	/* GeV */
+$emax        = 0.0593	/* GeV */
+//$emin        = 0.0373	/* GeV */
+//$emax        = 0.0673	/* GeV */
+$bins        = 12  	/* 2 MeV bins */
+
+$sampling_points = 3*15 /* do not make this lower than 15 (45 is good) */ 
+
+/* ######## Technical information ######## */
+
+/* globes probability engine */
+$filter_state = 1
+$filter_value = 4E-3
+
+/* My probability engine */
+//$filter_state = 0
+//$filter_value = 1e6
+
+
+/* ####### Energy resolution ####### */
+
+energy(#ERES)<
+        @type = 1
+        @sigma_e = {0., 0, 0.0027} /* adjusted to reproduce the data */
+>
+
+
+/* ####### Cross sections ####### */
+
+cross(#carbon)<
+        @cross_file = "LSND-xsec.dat"
+>
+
+
+/* ####### Channel definitions ####### */
+
+channel(#nu_e_carbon)<
+        @channel   =    #nue_raw:      + :      e  :      e : #carbon : #ERES
+>
+
+/* ####### Setting the rules ####### */
+
+rule(#NU_E_dis_carbon)<
+        @signal     = 1.005@#nu_e_carbon
+        @background = 0.0@#nu_e_carbon   /* No background */
+
+        @sys_on_function  = "LSchi"
+        @sys_on_errors   = {0.1556}//{0.099}
+        @sys_off_function = "chiNoSysSpectrum"
+        @energy_window = 0.0353 : 0.0593
+>
+
+/*********************************************************************
+
+			GENERAL COMMENTS
+# 
+
+*********************************************************************/

@@ -1,0 +1,126 @@
+%!GLoBES
+
+$version="3.0.0"
+
+/* Author: PAN Machado 
+ * Date: Apr 2012
+ *
+ * AEDL file for the karmen nue-Carbon analysis
+ * See J. Reichenbacher thesis for details
+ */
+
+/* Parameters: */
+fact = 0.476407 /* to normalize flux*xsec to 1 */
+nus  = 5.23E21
+eff  = 0.272
+dist = 2.53433E-4
+Ntgt = 2.54E30
+sec  = 9.1 /* cross section in units of 10^-42 cm^2 */
+
+
+/* ####### nue weighted flux ####### */
+
+nuflux(#nue_weighted)<
+        @flux_file = "karmen-nue-weighted-flux.dat"
+        @time      = 1		/* dummy */
+        @power     = 1   	/* dummy */
+        @norm      = fact*nus*eff*dist*Ntgt*1E-46*sec
+>
+
+
+/* ######## Baseline setting ######## */
+
+$profiletype = 3
+$densitytab  = { 1e-6 }
+$lengthtab   = { 0.017675  } /* needs to be set in program */
+
+
+/* ####### Detector settings ####### */
+
+$target_mass = 1  /* dummy */
+
+
+/* ####### Energy window ####### */
+/* the e- prompt energy + Q + quenching is the nu energy */
+
+$emin        = 0.030	/* GeV */
+$emax        = 0.056	/* GeV */
+//$emin        = 0.0301	/* GeV */
+//$emax        = 0.0561	/* GeV */
+$sampling_points = 3*26
+$bins        = 1  	/* 1 MeV bins */
+
+
+/* ######## Technical information ######## */
+
+$filter_state = 1
+//$filter_value = 4E1     /* This value is for Pedro's 2-flavor probability engine */
+$filter_value  = 4E-3   /* This value is for the GLoBES probability engine */
+
+
+/* ####### Energy resolution ####### */
+
+energy(#ERES)<
+        @type = 1
+        @sigma_e = {0., 0.008, 0} /* adjusted to reproduce the data */
+//        @sigma_e = {0.039, 0, 0} /* adjusted to reproduce the data */
+//        @sigma_e = {0.02, 0, 0} /* adjusted to reproduce the data */
+>
+
+
+/* ####### Cross sections ####### */
+
+cross(#flat)<
+        @cross_file = "karmen-flat-xsec.dat"
+>
+
+
+/* ####### Channel definitions ####### */
+
+channel(#nu_e_carbon)<
+        @channel   =    #nue_weighted:      + :      e  :      e : #flat : #ERES
+>
+
+
+/* ####### Setting the rules ####### */
+
+rule(#NU_E_dis_carbon)<
+ /* I need to set the signal norm to get the correct expected # of evts */
+        @signal     = 0.9675@#nu_e_carbon
+        @background = 0.0@#nu_e_carbon   /* No background */
+        @energy_window = 0.020 : 0.060
+
+        @sys_on_function  = "chi_karmen_c12_JR"
+        @sys_on_errors   = {0.081} // for reproducing JR's analysis
+        @sys_off_function = "chiNoSysSpectrum"
+>
+
+/*********************************************************************
+
+			GENERAL COMMENTS
+
+# FLUX: the karmen-nue-weighted-flux.dat is read from JR thesis.
+# See fig 4.4 (d,e,f) for the flux and the spatial distribution.
+# His result is shown in fig 4.5.
+#
+# CROSS SECTION: The flux already include the shape of the cross
+# section, so that is why I use a flat cross section. What need to
+# be changed (for our analysis) is the "sec" variable with gets
+# the best fit. The syst error can be added in quadrature if the
+# others.
+#
+# ERRORS: Accordingly to Table 3.3 of JR thesis, the final syst
+# is 7.5%, which includes flux, efficiency, distance, # of tgts,
+# and other efficiencies, but NOT a cross section error.
+# JR quotes 3.3% as xsec error (G Drexlin private comm 2002).
+#
+# Everything here was done in order to reproduce his results.
+# The systematic error is also taken from his thesis (although the 
+# theoretical cross section error is only 3.3%!!!).
+#
+# In principle, a shape analysis could be more powerful than this
+# rate-only that I do. The problem is how to reconstruct the neutrino
+# energy. There is some spectral distortion but not too much information
+# on that. 
+
+*********************************************************************/

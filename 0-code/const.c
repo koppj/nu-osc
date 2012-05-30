@@ -18,7 +18,9 @@ const env_param actions[] =
 const env_param ext_scenarios[] =
 {
   { "MB",              EXT_MB               },
+  { "MB300",           EXT_MB_300           },
   { "MBANTI",          EXT_MBANTI           },
+  { "MBANTI200",       EXT_MBANTI_200       },
   { "KARMEN",          EXT_KARMEN           },
   { "LSND",            EXT_LSND             },
   { "SBL",             EXT_SBL              },

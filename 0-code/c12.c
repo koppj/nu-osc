@@ -45,8 +45,8 @@ static double JR(double true_rate, double fit_rate, double bkgd, double err)
 {
       double tmp = (true_rate -bkgd - fit_rate);
       double tmp2 = true_rate + SQR(66.1) + SQR(0.7) /* SQR(err*fit_rate) */;
-//      return tmp/sqrt(tmp2);
-      return SQR(tmp)/tmp2;
+//      return tmp/sqrt(tmp2);  // Compute # of standard deviations
+      return SQR(tmp)/tmp2;  // Compute chi^2
 }
 
 

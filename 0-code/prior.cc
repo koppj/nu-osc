@@ -180,10 +180,10 @@ int solar_parameters(gsl_matrix_complex *U, Angles *a)
  ***************************************************************************/
 int ext_init(int ext_flags)
 {
-  if (ext_flags & EXT_MB)
+  if (ext_flags & EXT_MB  ||  ext_flags & EXT_MB_300)
     initMiniboone();                 // MiniBooNE (\nu)
 
-  if (ext_flags & EXT_MBANTI)
+  if (ext_flags & EXT_MBANTI  ||  ext_flags & EXT_MBANTI_200)
     initMBanti();                    // MiniBooNE (\bar\nu)
 
   if (ext_flags & EXT_KARMEN  ||  ext_flags & EXT_LSND)
@@ -220,6 +220,9 @@ int ext_init(int ext_flags)
     #endif
     #ifdef USE_RENO
       ns_reactor::RENO_init();                     // RENO
+    #endif
+    #ifdef USE_GAL
+      ns_reactor::gallium_init();                  // Gallium radioactive source experiments
     #endif
 
     ns_reactor::fit.invert_S();
@@ -281,6 +284,7 @@ double my_prior(const glb_params in, void* user_data)
   double pv = 0.0;
   double fitvalue,centralvalue,inputerror;
 
+
   // Force the active-sterile mixing angles to be < \pi/4 to prevent the minimizer
   // from jumping between the 3+2 and 1+3+1 cases FIXME
   if (n_flavors >= 4  &&
@@ -320,6 +324,7 @@ double my_prior(const glb_params in, void* user_data)
     }
 #endif
   }
+
 
   // Add chi^2 from external codes
   // -----------------------------
@@ -375,46 +380,73 @@ double my_prior(const glb_params in, void* user_data)
                           gsl_complex_mul(_U[0][4], gsl_complex_conjugate(_U[1][3]))) );
     }
 
-    // Prepare parameter data structure for Thomas' 2012 reactor code
-    struct ns_reactor::Param_5nu reactor_params;
-    reactor_params.dmq[0] = 0.0;
-    reactor_params.dmq[1] = glbGetOscParamByName(params, "DM21");
-    double dmsq31 = glbGetOscParamByName(params, "DM31");
-    if (dmsq31 < 0)
-      dmsq31 = -dmsq31 + reactor_params.dmq[1];
-    reactor_params.dmq[2] = dmsq31;
-    reactor_params.theta[ns_reactor::I12] = glbGetOscParamByName(params, "TH12");
-    reactor_params.theta[ns_reactor::I13] = glbGetOscParamByName(params, "TH13");
-    if (n_flavors >= 4)
-    {
-      reactor_params.dmq[3] = glbGetOscParamByName(params, "DM41");
-      reactor_params.theta[ns_reactor::I14] = glbGetOscParamByName(params, "TH14");
-    }
-    if (n_flavors >= 5)
-    {
-      reactor_params.dmq[4] = glbGetOscParamByName(params, "DM51");
-      reactor_params.theta[ns_reactor::I15] = glbGetOscParamByName(params, "TH15");
-    }
-    reactor_params.set_ang();
-
 
     // Compute chi^2 using external codes
     if (ext_flags & EXT_MB)
       pv += chi2mb475(sbl_params);
+    if (ext_flags & EXT_MB_300)
+      pv += chi2mb300(sbl_params);
     if (ext_flags & EXT_MBANTI)
       pv += chi2_MBA_475(sbl_params);
+    if (ext_flags & EXT_MBANTI_200)
+      pv += chi2_MBA_200(sbl_params);
     if (ext_flags & EXT_KARMEN)
       pv += chi2karmen(sbl_params);
     if (ext_flags & EXT_LSND)
       pv += chi2lsnd(sbl_params);
-    if (ext_flags & EXT_SBL)
-      pv += ns_reactor::fit.chisq(reactor_params);
     if (ext_flags & EXT_NOMAD)
       pv += chi2nomad(sbl_params);
     if (ext_flags & EXT_CDHS)
       pv += chi2cdhs(sbl_params);
     if (ext_flags & EXT_ATM_TABLE)
       pv += chi2atm(sbl_params);
+
+
+    // SBL reactor experiments + gallium experiments
+    if (ext_flags & EXT_SBL)
+    {
+      // Prepare parameter data structure for Thomas' 2012 reactor code
+      struct ns_reactor::Param_5nu reactor_params =
+        { { NAN, NAN, NAN, 0, 0 },  // params for 4th and 5th neutrino need to be initialized
+          { NAN, NAN, NAN, 0, 0 },  // even if we do only a 3-flavor fit!
+          { NAN, NAN, NAN, 0, 0 } };
+      static struct ns_reactor::Param_5nu last_reactor_params =
+        { { NAN, NAN, NAN, NAN, NAN },
+          { NAN, NAN, NAN, NAN, NAN },
+          { NAN, NAN, NAN, NAN, NAN } };
+      static double last_chi2_reactor = NAN;
+
+      reactor_params.dmq[0] = 0.0;
+      reactor_params.dmq[1] = glbGetOscParamByName(params, "DM21");
+      double dmsq31 = glbGetOscParamByName(params, "DM31");
+      if (dmsq31 < 0) // Thomas' code works only for NH (and the hierarchy doesn't matter for it)
+        dmsq31 = -dmsq31 + reactor_params.dmq[1];
+      reactor_params.dmq[2] = dmsq31;
+      reactor_params.theta[ns_reactor::I12] = glbGetOscParamByName(params, "TH12");
+      reactor_params.theta[ns_reactor::I13] = glbGetOscParamByName(params, "TH13");
+      if (n_flavors >= 4)
+      {
+        reactor_params.dmq[3] = glbGetOscParamByName(params, "DM41");
+        reactor_params.theta[ns_reactor::I14] = glbGetOscParamByName(params, "TH14");
+      }
+      if (n_flavors >= 5)
+      {
+        reactor_params.dmq[4] = glbGetOscParamByName(params, "DM51");
+        reactor_params.theta[ns_reactor::I15] = glbGetOscParamByName(params, "TH15");
+      }
+      reactor_params.set_ang();
+
+      if (memcmp(&last_reactor_params, &reactor_params, sizeof(reactor_params)) != 0)
+      {     // Recompute reactor chi^2 only if the relevant parameters have changed
+        last_reactor_params = reactor_params;
+        last_chi2_reactor = ns_reactor::fit.chisq(reactor_params);
+        pv += last_chi2_reactor;
+      }
+      else
+        pv += last_chi2_reactor;
+    }
+
+    // Atmospheric neutrinos
     if (ext_flags & EXT_ATM_COMP)
     {
       // Workaround for Michele's code requiring dm31sq < 1e-2
@@ -451,6 +483,8 @@ double my_prior(const glb_params in, void* user_data)
     if (ext_flags & EXT_SOLAR)
     {
       static Angles last_a = { NAN, NAN, NAN, NAN, NAN, NAN, NAN };
+      static double last_dm21 = NAN;
+      static double last_chi2_solar = NAN;
       Angles a;
       double chi2_solar = -1.e25;
       const double dm21_min = 1e-6;
@@ -473,8 +507,19 @@ double my_prior(const glb_params in, void* user_data)
         }
         sun_probs(a, dm21_min, dm21_max);
         memcpy(&last_a, &a, sizeof(a));
+        sun_chisq(dm21, &chi2_solar);
+        last_dm21 = dm21;
+        last_chi2_solar = chi2_solar;
       }
-      sun_chisq(dm21, &chi2_solar);
+      else if (last_dm21 != dm21)     // Recompute chi^2 only if the relevant angles/phases
+      {
+        sun_chisq(dm21, &chi2_solar); // or dm21 have changed
+        last_dm21 = dm21;
+        last_chi2_solar = chi2_solar;
+      }
+      else
+        chi2_solar = last_chi2_solar;
+
       pv += chi2_solar;
     }
   } // if (ext_flags)

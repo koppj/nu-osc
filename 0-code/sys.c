@@ -1104,6 +1104,8 @@ double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
     {
       // Predicted rate at far detector is F_th/N_th * N_data
       fit_rate = norm_tot * (sig_F[i] + norm_bgF*bg_F[i])/(sig_N[i] + norm_bgN*bg_N[i]) * data_N[i];
+//      printf("** %d: (%g  + %g*%g) / (%g + %g*%g)\n", i, sig_F[i], norm_bgF, bg_F[i],
+//             sig_N[i], norm_bgN, bg_N[i]);
 
       // NC only: Rescale to pot from 1001.0336 to verify their sensitivities
 //      if (rule == 0) // Beware: This is error-prone if the rules in the glb file change
@@ -1112,6 +1114,7 @@ double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
 
       chi2 += poisson_likelihood(data_F[i], fit_rate);
     }
+//    getchar();
   }
   else                             // Systematics OFF
   {
