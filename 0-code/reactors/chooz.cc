@@ -40,7 +40,7 @@ const double isofract_chooz[NISO]={0.568, 0.078, 0.297, 0.057};
 void set_table_chooz(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1])
 {
   // for interpolation
-  const double logDmq = log10(prm.dmq[2]);
+  const double logDmq = log10(fabs(prm.dmq[2]));
   const int idmq = int( (logDmq - ATM_MIN) / D_ATM);
   const double x = (logDmq - idmq * D_ATM - ATM_MIN) / D_ATM;
 

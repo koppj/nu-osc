@@ -7,13 +7,13 @@ namespace ns_reactor
 
 #define ACCURACY 1.e-5
 
-// 0.35 gives good agreement with DC no-osc MC 
-#define E_RESOL 0.35
+// 0.32 gives good agreement with DC no-osc MC 
+#define E_RESOL 0.3
 
 inline double e_res_dc(double e)
 {
-  //return 0.4;
-  //return 0.15 + 0.12*sqrt(e);
+  //return 0.7;
+  //return 0.3 + 0.16*sqrt(e);
   return E_RESOL*sqrt(e);
 }
 
@@ -44,7 +44,6 @@ const double isofract_dc[NISO]={0.488, 0.087, 0.359, 0.076};
 double dc_no_osc_react[NBIN_DC];
 double bg_dc[NBIN_DC][NBG_DC];
 
-
 /**************** input data ***************/
 
 /* binning in positron energy */
@@ -69,89 +68,183 @@ double bin[NBIN_DC][2] = {
   {10.2, 12.2}
 };
 
-// total pred for no osc including bg, and background
-const double pred_tot_dc[NBIN_DC][2] = {
-  {122.377625, 18.4926186},    
-  {308.935516, 18.4926186},
-  {466.122772, 18.492618},
-  {562.937073, 19.03651},
-  {571.639465, 13.597513},
-  {530.30304,  15.22921},
-  {447.086243, 16.31701},
-  {362.781677, 16.86091},
-  {288.267303, 16.86091},
-  {212.121216, 17.40481},
-  {151.748245, 17.40481},
-  {107.148407, 17.40481},
-  {64.1802673, 16.31701},
-  {39.1608391, 15.77311},
-  {22.8438225, 14.14141},
-  {26.1072254, 22.8438225},
-  {17.4048176, 16.3170166},
-  {17.4048176, 17.4048176}
-};
-
-// events per bin read off from plot
-double data_dc[NBIN_DC] = {
-  119.658119,
-  304.040405,
-  449.805756,
-  513.986023,
-  596.658875,
-  478.088593,
-  403.030304,
-  335.586639,
-  298.057495,
-  207.770004,
-  168.065262,
-  82.6728821,
-  54.9339561,
-  23.9316235,
-  25.0194244,
-  28.2828274,
-  13.0536127,
-  15.2292156
-};
-
-
-// backgrounds read off from figure of DC 1st pub in ev / 0.5 MeV
-const double FN_BG = 3.348;
-
-// sum of fast n and acc
-const double FN_ACC_BG[NBIN_DC] = {17.828, 12.127, 7.692, 6.878, 3.982, 
-  3.529, 3.348,3.348,3.348,3.348,3.348,3.348,3.348,3.348,3.348,
-  3.348,3.348,3.348};
-
-// total BG
-const double bg_dc_tot[NBIN_DC] = {24.434, 21.267, 16.199, 
-  14.299, 13.213, 12.851, 13.937, 14.661,
-  15.747, 14.751, 15.928, 15.385, 14.118, 12.851, 10.588, 
-  7.873, 4.525, 4.525};
-
-
-// bg rate per day and error [DC 1st pub]
+// bg rate per day and error 
 const double bg_dc_rate[NBG_DC][2] = {
-  {0.332, 0.03}, // acc
-  {2.3,   1.2},   // Li9
-  {0.83,  0.38}    // fast n
+  {0.261, 0.002}, // acc
+  {1.2,   0.59},   // Li9
+  {0.67,  0.2}    // fast n
 };
 
+/***************** init *************************************/
 
-/*
-double accidental(double e){
-  return read("Data_DC/accidentals.dat", e);
+void dc_init(const int old_new)
+{
+  double pred_tot_dc[NBIN_DC];    // total pred for no osc including bg
+  double data_dc[NBIN_DC];        // events per bin
+  double FN_ACC_BG[NBIN_DC];      // sum of fast n and acc
+  double bg_dc_tot[NBIN_DC];      // total BG
+  double bf_spect[NBIN_DC];       // spectrum for sin^22th13 = 0.109, Dmq = 0.00232
+  double ratio[NBIN_DC];          // ratio of data/prediction
+
+  // read the data, extracted from DC spectrum plot
+  FILE *fp_fn_ac = fopen(REACTOR_PATH"Data_DC/FN+acc.txt","r");
+  FILE *fp_bf_sp = fopen(REACTOR_PATH"Data_DC/best-fit-spect.txt","r");
+  FILE *fp_data  = fopen(REACTOR_PATH"Data_DC/data.txt","r");
+  FILE *fp_no_os = fopen(REACTOR_PATH"Data_DC/no-osc-pred-tot.txt","r");
+  FILE *fp_totbg = fopen(REACTOR_PATH"Data_DC/tot-bg.txt","r");
+  FILE *fp_ratio = fopen(REACTOR_PATH"Data_DC/dc-ratio.dat","r");
+
+  for(int i = 0; i < NBIN_DC; i++){
+    fscanf(fp_totbg, "%lf", &bg_dc_tot[i]);
+    fscanf(fp_fn_ac, "%lf", &FN_ACC_BG[i]);
+    fscanf(fp_data,  "%lf", &data_dc[i]);
+    fscanf(fp_no_os, "%lf", &pred_tot_dc[i]);
+    fscanf(fp_bf_sp, "%lf", &bf_spect[i]);
+    fscanf(fp_ratio, "%lf", &ratio[i]);
+  }
+  fclose(fp_totbg);
+  fclose(fp_fn_ac);
+  fclose(fp_data);
+  fclose(fp_no_os);
+  fclose(fp_bf_sp);
+  fclose(fp_ratio);
+
+  // calc coefficients
+  old_new_gl_dc = old_new;
+  calc_coef_dc();
+  
+  // total number of observed neutrinos
+  const double tot_ev_obs = 8249.;
+
+  // normalize the data read off from the plot 
+  double n_nu_dc = 0.; 
+  
+  for(int i = 0; i < NBIN_DC; i++){
+    data_dc[i] *= (bin[i][1] - bin[i][0])/0.5;
+    n_nu_dc += data_dc[i];
+  }  
+  
+  // correct last bins
+  data_dc[NBIN_DC-1] -= 15.;
+  data_dc[NBIN_DC-2] -= 7.;
+  n_nu_dc -= 22.;
+  
+  //fprintf(stderr, "DC neutrinos = %f (should be %f)\n", n_nu_dc, tot_ev_obs);
+
+  for(int i = 0; i < NBIN_DC; i++)
+    data_dc[i] *= tot_ev_obs / n_nu_dc;
+  
+ // plotting the data
+ /* 
+  for(int i = 0; i < NBIN_DC; i++)
+    fprintf(stderr, "%e %e %e\n", 0.5*(bin[i][0]+bin[i][1]),data_dc[i],sqrt(data_dc[i]));
+  exit(0);
+  */
+  
+  // set data and covariance matrix in class fit    
+  for(int i = 0; i < NBIN_DC; i++){
+    const int ii = fit.first_bin[DC] + i;    
+    fit.Data[ii] = fit.S_data[ii][ii] = data_dc[i];
+  }
+
+  /*** set the backgrounds ***/
+  double sum_bg[NBG_DC] = {0., 0., 0.};
+
+  for(int i = 0; i < NBIN_DC; i++){
+    // accidental 
+    bg_dc[i][0] = (FN_ACC_BG[i] - FN_ACC_BG[NBIN_DC-1]) * (bin[i][1] - bin[i][0])/0.5; 
+    sum_bg[0] += bg_dc[i][0];
+
+    // Li9
+    bg_dc[i][1] = (bg_dc_tot[i] - FN_ACC_BG[i])*(bin[i][1] - bin[i][0])/0.5; 
+    sum_bg[1] += bg_dc[i][1];
+
+    // fast n 
+    bg_dc[i][2] = FN_ACC_BG[NBIN_DC-1] * (bin[i][1] - bin[i][0])/0.5;
+    sum_bg[2] += bg_dc[i][2];
+  }
+  
+  
+  /*** set the pull errors ***/
+
+  // DC normalization
+#ifndef CHECK_DC_ERRORS 
+  // only detector norm (increased from 0.01-->0.02 to improve fit)
+  fit.S_pull[fit.first_pull[DC]][fit.first_pull[DC]] = norm(0.02);  
+#else  
+  fit.S_pull[fit.first_pull[DC]][fit.first_pull[DC]] = norm(0.02) + norm(0.017);  // detector + reactor  
+  for(int i = 0; i < PULL_GLOBAL; i++)
+    fit.pull_status[i] = FIXED;
+#endif  
+
+  // backgrounds
+  for(int j = 0; j < NBG_DC; j++){
+    const int p = fit.first_pull[DC] + 1 + j;
+    fit.S_pull[p][p] = norm(bg_dc_rate[j][1] / bg_dc_rate[j][0]); 
+  }
+
+  // energy scale
+  fit.S_pull[fit.first_pull[DC] + 4][fit.first_pull[DC] + 4] = norm(0.015);
+    
+  /**** the no oscillation prediction ****************
+   * dc_no_osc_react contains the no-oscillation 
+   * prediction scaled to the Bugey4 measurement
+   ***************************************************/ 
+    
+  // subtracting background, scaling to events per bin
+  for(int i = 0; i < NBIN_DC; i++){
+    dc_no_osc_react[i] = pred_tot_dc[i] * (bin[i][1] - bin[i][0])/0.5;
+    bf_spect[i] *= (bin[i][1] - bin[i][0])/0.5;
+    
+    for(int j = 0; j < NBG_DC; j++){
+      dc_no_osc_react[i] -= bg_dc[i][j];
+      bf_spect[i] -= bg_dc[i][j];
+    }
+    if(dc_no_osc_react[i] < 0.) dc_no_osc_react[i] = 0.;
+    if(bf_spect[i] < 0.) bf_spect[i] = 0.;
+  }
+
+  // for last 5 bins use the number obtained from the ratio
+  for(int i = NBIN_DC-6; i < NBIN_DC; i++){
+    dc_no_osc_react[i] = data_dc[i] / ratio[i];
+    for(int j = 0; j < NBG_DC; j++)
+      dc_no_osc_react[i] -= bg_dc[i][j];
+  }
+  
+  
+  //  plotting the original no-osc and best fit spectra
+  /*
+  for(int i = 0; i < NBIN_DC; i++){
+    printf("%e %e %e\n", bin[i][0], bf_spect[i], dc_no_osc_react[i]);
+    printf("%e %e %e\n", bin[i][1], bf_spect[i], dc_no_osc_react[i]);
+  }
+  exit(0);
+  */
+#define USE_DC_PRED  
+#ifndef USE_DC_PRED  
+  // using my own no-osc prediction  
+  double dc_expect_ev_tot = 0.; 
+  for(int i = 0; i < NBIN_DC; i++)  
+    dc_expect_ev_tot += dc_no_osc_react[i];
+  
+  double w = 0.;
+  for(int i = 0; i < NBIN_DC; i++)
+    w += co_dc.c0[i];
+
+  for(int i = 0; i < NBIN_DC; i++)    
+    dc_no_osc_react[i] = co_dc.c0[i] * dc_expect_ev_tot / w;
+#endif  
+  return;
 }
-*/
-
-const double rate_nu = 42.6;  // neutrino rate per day
 
 
 /**************** calc the table for class fit ***************/
 
+   
 void set_table_dc(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1])
 {
   // for interpolation
-  const double logDmq = log10(prm.dmq[2]);
+  const double logDmq = log10(fabs(prm.dmq[2]));
   const int idmq = int( (logDmq - ATM_MIN) / D_ATM);
   const double x = (logDmq - idmq * D_ATM - ATM_MIN) / D_ATM;
 
@@ -165,7 +258,7 @@ void set_table_dc(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1])
   double w = 0;
   for(int i = 0; i < 3; i++) w += norm(prm.Ue[i]);
   const double cons = 2. * (norm(prm.Ue[3]) + norm(prm.Ue[4])) * w + 2. * norm(prm.Ue[3]) * norm(prm.Ue[4]);
-
+      
   // set the table
   for(int i = 0; i < NBIN_DC; i++){
     const int b = fit.first_bin[DC] + i;
@@ -174,8 +267,7 @@ void set_table_dc(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1])
     const double sinq = co_dc.c1[i][idmq] + (co_dc.c1[i][idmq+1] - co_dc.c1[i][idmq]) * x;
     cff[b][NPULLS] = 1. - sq_eff * sinq - cons;
 
-
-    // scale to Bugey4 measurement
+    // factor out Bugey4 measurement
     cff[b][NPULLS] *= dc_no_osc_react[i] / sbl_data[BUGEY4][old_new_gl_dc];
 
     // DC normalization and flux normalization
@@ -215,121 +307,6 @@ void set_table_dc(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1])
   return;
 }
 
-/***************** init *************************************/
-
-void dc_init(const int old_new)
-{
-  // calc coefficients
-  old_new_gl_dc = old_new;
-  calc_coef_dc();
-
-  // total number of neutrinos
-  const double tot_ev_obs = 4121.;
-
-  // normalize the data read off from the plot 
-  double n_nu_dc = 0.; 
-
-  // correct last bin
-  data_dc[NBIN_DC-1] *= 5.5/4.;
-  
-  for(int i = 0; i < NBIN_DC; i++)
-    n_nu_dc += data_dc[i];
-  //fprintf(stderr, "DC neutrinos = %f\n", n_nu_dc);
-  
-  for(int i = 0; i < NBIN_DC; i++)
-    data_dc[i] *= tot_ev_obs / n_nu_dc;
-
-  // set data and covariance matrix in class fit    
-  for(int i = 0; i < NBIN_DC; i++){
-    const int ii = fit.first_bin[DC] + i;    
-    fit.Data[ii] = fit.S_data[ii][ii] = data_dc[i];
-  }
-
-  /*** set the backgrounds ***/
-  double sum_bg[NBG_DC] = {0., 0., 0.};
-
-  for(int i = 0; i < NBIN_DC; i++){
-    // accidental
-    //bg_dc[i][0] = qromb1(accidental, bin[i][0], bin[i][1], ACCURACY);
-    bg_dc[i][0] = (FN_ACC_BG[i] - FN_BG) * (bin[i][1] - bin[i][0])/0.5; 
-    sum_bg[0] += bg_dc[i][0];
-
-    // Li9
-    bg_dc[i][1] = (bg_dc_tot[i] - FN_ACC_BG[i])*(bin[i][1] - bin[i][0])/0.5; 
-    sum_bg[1] += bg_dc[i][1];
-
-    // fast n: flat 
-    bg_dc[i][2] = bin[i][1] - bin[i][0];
-    sum_bg[2] += bg_dc[i][2];
-  }
-  
-  // normalize the backgrounds relative to neutrino signal
-  for(int i = 0; i < NBIN_DC; i++){
-    for(int j = 0; j < NBG_DC; j++){
-      bg_dc[i][j] *= bg_dc_rate[j][0] / sum_bg[j] / rate_nu * tot_ev_obs;
-    }
-    // print backgrounds
-    //printf("%f %f %f %f\n", bg_dc[i][0], bg_dc[i][1], bg_dc[i][2], 
-    //bg_dc[i][0]+bg_dc[i][1]+bg_dc[i][2]);    
-  }
-
-  double tot_bg = 0.;
-  for(int j = 0; j < NBG_DC; j++)
-    tot_bg += bg_dc_rate[j][0] / rate_nu * tot_ev_obs;
-  //fprintf(stderr, "DC tot background = %f\n", tot_bg);
-  
-
-  
-  /*** set the pull errors ***/
-
-  // DC normalization
-  fit.S_pull[fit.first_pull[DC]][fit.first_pull[DC]] = norm(0.021);  // only detector norm
-  //fit.S_pull[fit.first_pull[DC]][fit.first_pull[DC]] = norm(0.021) + norm(0.018);  // detector + reactor
-
-  // backgrounds
-  for(int j = 0; j < NBG_DC; j++){
-    const int p = fit.first_pull[DC] + 1 + j;
-    fit.S_pull[p][p] = norm(bg_dc_rate[j][1] / bg_dc_rate[j][0]); 
-  }
-
-  // energy scale
-  fit.S_pull[fit.first_pull[DC] + 4][fit.first_pull[DC] + 4] = norm(0.015);
-  fit.pull_status[fit.first_pull[DC]+4] = FIXED; // energy scale error not used
-
-    
-  /**** the no oscillation prediction ****/
-    
-#ifdef USE_DC_PRED 
-  // subtracting background, scaling to events per bin
-  for(int i = 0; i < NBIN_DC; i++){
-    dc_no_osc_react[i] = pred_tot_dc[i][0];
-    
-    for(int j = 0; j < NBG_DC; j++)
-      dc_no_osc_react[i] -= bg_dc[i][j];
-  }
-  
-#else // use my own prediction
-  
-  // expected # events incl bg normalized to Bugey4
-  const double dc_expect_ev_tot = 4344.; // [DC 1st pub]
-  double w = 0.;
-  for(int i = 0; i < NBIN_DC; i++)
-    w += co_dc.c0[i];
-
-  for(int i = 0; i < NBIN_DC; i++)
-    dc_no_osc_react[i] = co_dc.c0[i] * (dc_expect_ev_tot - tot_bg) / w;
-
-#endif 
-  
-  /*
-  for(int i = 0; i < NBIN_DC; i++){
-    printf("%e %e %e\n", bin[i][0], co_dc.c0[i] * no_osc / w, dc_no_osc_react[i]);
-    printf("%e %e %e\n", bin[i][1], co_dc.c0[i] * no_osc / w, dc_no_osc_react[i]);
-  }
-  exit(0);
-  */
-}
-
 /********************************************************/
 /*    calculation of coefficients                       */
 /********************************************************/
@@ -353,6 +330,8 @@ double dc_flux(const double Enu)
 /* correct energy scale non-linearity */
 double eNu_corr(double eNu)
 {
+  return eNu; // not used
+
   const double Evis = eNu - DELTA + ME;
   const double PE = Evis * DC_PE_MEV;    
 
@@ -520,31 +499,19 @@ double gauss_int_dc(double eNu)
  * plotting functions
  ****************************************/
 
-void plot_dc_data(void)
-{
-  for(int i = 0; i < NBIN_DC; i++)
-    printf("%e %e %e\n", 0.5*(bin[i][0]+bin[i][1]), 
-	   data_dc[i], sqrt(data_dc[i]));
-  exit(0);
-}
-
 void plot_dc_pred(Parameters p, double f)
 {
   fprintf(stderr, "dmq = %e\n", p.dmq31());
   
   for(int i = 0; i < NBIN_DC; i++){
     
-    double w = (1. - p.sq2_t13() * co_dc.c1[i][p.idmq_31]);
-    w *= dc_no_osc_react[i] * f  / sbl_data[BUGEY4][old_new_gl_dc];
+    const double N_nos = dc_no_osc_react[i] * f  / sbl_data[BUGEY4][old_new_gl_dc];
+    const double N_osc = N_nos * (1. - p.sq2_t13() * co_dc.c1[i][p.idmq_31]);
 
-    /*
-    printf("%f %f %f %f %f\n",
-	   bg_dc[i][2], 
-	   bg_dc[i][0],
-	   bg_dc[i][1],
-	   w,
-	   bg_dc[i][2]+bg_dc[i][0]+bg_dc[i][1] + w);
-    /*/
+    printf("%f %f %f\n", bin[i][0], N_osc, N_nos);
+    printf("%f %f %f\n", bin[i][1], N_osc, N_nos);
+
+    /*	   
     printf("%e %e %e %e %e\n", bin[i][0], 
 	   bg_dc[i][2], 
 	   bg_dc[i][2]+bg_dc[i][0],
@@ -555,6 +522,7 @@ void plot_dc_pred(Parameters p, double f)
 	   bg_dc[i][2]+bg_dc[i][0],
 	   bg_dc[i][2]+bg_dc[i][0]+bg_dc[i][1], 
 	   bg_dc[i][2]+bg_dc[i][0]+bg_dc[i][1] + w); 
+    */ 
   }
   exit(0);  
 }
@@ -600,5 +568,6 @@ double dc_test_chisq(Parameters prm)
 }
 
 #endif // USE_DC
-
+   
 } // end namespace
+   

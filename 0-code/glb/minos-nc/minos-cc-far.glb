@@ -5,6 +5,13 @@ $version="3.1.10"        // Minimal GLoBES version required for this file
 
 // Beam data
 // ---------
+//
+// Note on normalization:
+//   Mary Bishai's flux files are in neutrino/GeV/pot/m^2 at 735 km.
+//   Cross sections are in 10^-42 m^2
+//   Detector masses are in kt (1 kt = 6.02e32 nucleons)
+// --> Normalization: (735 km^2) * 6.02e32 * 1e-42 = 3.252e-4.
+//     Small deviations come from tuning to MINOS
 nuflux(#NUMI_nu)<
   @flux_file = "flugg_le010z185i_run1_735km_0kmoa_flux.txt"
   @time      = 1

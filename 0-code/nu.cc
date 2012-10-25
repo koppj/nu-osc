@@ -9,9 +9,13 @@
 #include <math.h>
 #include <time.h>
 #include <argp.h>
+#include <gsl/gsl_complex_math.h>
 
 #include <globes/globes.h>   // GLoBES library 
 #include "glb_types.h"
+BEGIN_C_DECLS
+#include "glb_path.h"
+END_C_DECLS
 #include "glb_error.h"
 #include "const.h"
 #include "snu.h"
@@ -54,6 +58,10 @@ static int    prescan_p_steps[32];  // Stepsizes for degfinder precan
 static unsigned long prescan_p_flags[32]; // Extra flags for prescan (e.g. DEG_LOGSCALE)
 int n_min_params = 0;               // Names of parameters to marginalize over
 static char *min_params[32];        // Names of parameters to marginalize over
+
+static int n_constrained_params=2;  // Number of parameters with external priors
+static const char *constrained_params[32] = {"TH12", "DM21"};
+                                    // Parameter on which priors are imposed
 
 // Experiment numbers 
 int EXP_BEAM_NEAR    = -1;
@@ -116,6 +124,8 @@ static char argp_doc[] = "nu neutrino oscillation simulation";
 static char argp_option_doc[] = "[options]";
 
 // The actual list of command line options we accept
+#define OPT_NO_IH 1000
+#define OPT_NO_NH 1001
 static struct argp_option cmdline_options[] = {
   {"flavors",    'f',"NUMBER",0,"Number of flavors to use. Can be 3, 4, or 5)" },
   {"action",     'a',"ACTION",0,"Which parameters to scan (allowed values defined in const.c)" },
@@ -125,6 +135,9 @@ static struct argp_option cmdline_options[] = {
                                 "<param_name>,<min>,<max>,<steps>,[<flags>]"},
   {"minimize",   'm',"PARAMS",0,"Parameters to marginalize: <param_name>[,<param_name[, ...]]"},
   {"true_params",'t',"PARAMS",0,"True oscillation parameters: \"NAME=VALUE, ...\""},
+  {"cons",       'c',"PARAMS",0,"Parameters with external priors (CHECK DOCUMENTATION!)"},
+  {"no-ih",       OPT_NO_IH, NULL, 0,"Omit inverted hierarchy in fit"},
+  {"no-nh",       OPT_NO_NH, NULL, 0,"Omit normal hierarchy in fit"},
   {"verbose",    'v',NULL,    0,"Show debug output (use multiple times for more)"},
   { 0 }
 };
@@ -418,10 +431,24 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         true_param_def = strdup(arg);
       else
       {
-        char s[strlen(true_param_def)+strlen(arg)];
+        char s[strlen(true_param_def)+strlen(arg)+1];
         strcpy(s, true_param_def);
+        strcat(s, ";");
         free(true_param_def);
         true_param_def = strdup(strcat(s, arg));
+      }
+      break;
+    }
+
+    // -------------------------------------------------
+    case 'c':
+    {
+      n_constrained_params = 0;
+      char *p = strtok(arg, delim);
+      while (p)
+      {
+        constrained_params[n_constrained_params++] = strdup(p);
+        p = strtok(NULL, delim);
       }
       break;
     }
@@ -432,6 +459,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
       debug_level++;
       break;
     }
+
+    // -------------------------------------------------
+    case OPT_NO_IH:
+      default_degfinder_flags |= DEG_NO_IH;
+      break;
+
+    case OPT_NO_NH:
+      default_degfinder_flags |= DEG_NO_NH;
+      break;
 
     // -------------------------------------------------
     default:
@@ -451,6 +487,7 @@ int load_exps(const int n_exps, char **exps)
   int karmen_c12_loaded = 0;
   int lsnd_c12_loaded   = 0;
   int c12_combi_loaded  = 0;
+  int mb_loaded         = 0;
 
   // Default density correlations: Every experiment independent 
   for (int i=0; i < GLB_MAX_EXP; i++)
@@ -468,6 +505,13 @@ int load_exps(const int n_exps, char **exps)
   glbClearExperimentList();
   for (int i=0; i < n_exps; i++)
   {
+    // Set some paths (for some experiments the path is set only when they are
+    // actually loaded to avoid conflicts)
+    setenv("GLB_PATH", "glb/nova:glb/t2k:glb/bbeam:glb/dchooz:glb/wbb_wc:"
+                       "glb/wbb_lar:glb/nufact:glb/mb-2012:"
+                       "glb/kamland:glb/lsnd:glb/e776:glb/c12:glb/icarus", 1);
+    glb_setup_path();
+
     // LBNE-like wide band beams (1 detector)
     if (strcasecmp(exps[i], "WBB_WC_60") == 0)
     {
@@ -591,38 +635,38 @@ int load_exps(const int n_exps, char **exps)
     }
 
     // Double Chooz (near + far)
-    else if (strcasecmp(exps[i], "DCHOOZ") == 0)
-    {
-      glbInitExperiment("D-Chooz_near.glb",&glb_experiment_list[0],&glb_num_of_exps);
-      glbInitExperiment("D-Chooz_far.glb",&glb_experiment_list[0],&glb_num_of_exps);
-      L_opt[0] = 0;
-      EXP_REACTOR_NEAR = 0;
-      EXP_REACTOR_FAR  = 1;
-      prior_th23 = 0.10 * true_theta23;
-      prior_ldm  = 0.05 * true_ldm;
-    }
+//    else if (strcasecmp(exps[i], "DCHOOZ") == 0)
+//    {
+//      glbInitExperiment("D-Chooz_near.glb",&glb_experiment_list[0],&glb_num_of_exps);
+//      glbInitExperiment("D-Chooz_far.glb",&glb_experiment_list[0],&glb_num_of_exps);
+//      L_opt[0] = 0;
+//      EXP_REACTOR_NEAR = 0;
+//      EXP_REACTOR_FAR  = 1;
+//      prior_th23 = 0.10 * true_theta23;
+//      prior_ldm  = 0.05 * true_ldm;
+//    }
 
     // KamLAND
-    else if (strcasecmp(exps[i], "KAMLAND") == 0)
-    {
-      // Baseline and thermal power for the 16 most important KamLAND reactors
-      const double distance[KAMLAND_N_REACT] =  { 160.0,  179.0,  191.0,  214.0,  139.0,
-                                                   87.7,   145.0,  349.0,  345.0,  295.0,
-                                                  401.0,  561.0,  755.0,  430.0,  783.0,
-                                                  830.0 };
-      const double power[KAMLAND_N_REACT] = { 24.317, 13.692, 10.200, 10.600, 4.5,
-                                               1.6,    4.927,  14.2,   13.172, 3.293,
-                                               3.8,    5.96,   10.146, 6.465,  3.3,
-                                               5.32 };
-      for(int i=0; i < KAMLAND_N_REACT; i++)
-      {
-        glbDefineAEDLVariable("setpower",  power[i]);
-        glbDefineAEDLVariable("setlength", distance[i]);
-        glbInitExperiment("kamland.glb",  &glb_experiment_list[0], &glb_num_of_exps);
-        if (i != 0)
-          glbSetChiFunction(glb_num_of_exps-1, GLB_ALL, GLB_ON, "chiZero", NULL);     
-      }
-    }
+//    else if (strcasecmp(exps[i], "KAMLAND") == 0)
+//    {
+//      // Baseline and thermal power for the 16 most important KamLAND reactors
+//      const double distance[KAMLAND_N_REACT] =  { 160.0,  179.0,  191.0,  214.0,  139.0,
+//                                                   87.7,   145.0,  349.0,  345.0,  295.0,
+//                                                  401.0,  561.0,  755.0,  430.0,  783.0,
+//                                                  830.0 };
+//      const double power[KAMLAND_N_REACT] = { 24.317, 13.692, 10.200, 10.600, 4.5,
+//                                               1.6,    4.927,  14.2,   13.172, 3.293,
+//                                               3.8,    5.96,   10.146, 6.465,  3.3,
+//                                               5.32 };
+//      for(int i=0; i < KAMLAND_N_REACT; i++)
+//      {
+//        glbDefineAEDLVariable("setpower",  power[i]);
+//        glbDefineAEDLVariable("setlength", distance[i]);
+//        glbInitExperiment("kamland.glb",  &glb_experiment_list[0], &glb_num_of_exps);
+//        if (i != 0)
+//          glbSetChiFunction(glb_num_of_exps-1, GLB_ALL, GLB_ON, "chiZero", NULL);     
+//      }
+//    }
 
     // IDS-NF neutrino factory
     else if (strcasecmp(exps[i], "NUFACT") == 0)
@@ -644,6 +688,8 @@ int load_exps(const int n_exps, char **exps)
     // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
     else if (strcasecmp(exps[i], "MINOS_NC") == 0)
     {
+      setenv("GLB_PATH", "glb/minos-nc", 1);
+      glb_setup_path();
       glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       L_opt[1] = L_opt[3] = 0;
@@ -652,8 +698,28 @@ int load_exps(const int n_exps, char **exps)
     // MINOS CC \nu_\mu analysis (http://arxiv.org/abs/1103.0340)
     else if (strcasecmp(exps[i], "MINOS_CC") == 0)
     {
+      setenv("GLB_PATH", "glb/minos-nc", 1);
+      glb_setup_path();
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       L_opt[1] = 0;
+    }
+
+    // 2010 MINOS NC+CC analysis (http://arxiv.org/abs/1001.0336 and Neutrino 2010)
+    else if (strcasecmp(exps[i], "MINOS_2010") == 0)
+    {
+      setenv("GLB_PATH", "glb/minos-nc/1001.0336", 1);
+      glb_setup_path();
+      glbInitExperiment("MINOS-NC-far.glb",  &glb_experiment_list[0], &glb_num_of_exps);
+      glbInitExperiment("MINOS-NC-near.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      L_opt[1] = 0;
+    }
+
+    // MINOS ND nu_e test
+    else if (strcasecmp(exps[i], "MINERVA_TEST") == 0)
+    {
+      setenv("GLB_PATH", "glb/minerva-test", 1);
+      glb_setup_path();
+      glbInitExperiment("minerva-test.glb",  &glb_experiment_list[0], &glb_num_of_exps);
     }
 
     // E776 \nu_e appearance search
@@ -685,6 +751,55 @@ int load_exps(const int n_exps, char **exps)
       init_nue_carbon(1);
       c12_combi_loaded = 1;
     }
+
+    // ICARUS
+    else if (strcasecmp(exps[i], "ICARUS") == 0)
+    {
+      init_icarus();
+    }
+
+    // Pedro's MiniBooNE simulation
+    else if (strcasecmp(exps[i], "MBall200") == 0)
+    {
+      chiMB_init(0);
+      mb_loaded++;
+    }
+    else if (strcasecmp(exps[i], "MBall475") == 0)
+    {
+      chiMB_init(1);
+      mb_loaded++;
+    }
+
+//    else if (strcasecmp(exps[i], "MBall") == 0  ||  strcasecmp(exps[i], "MBneutrino200.glb") == 0)
+//    {
+//      chiMB_init(1, 1); // 0=off, 1=full E range, 2=only E > 475 MeV, 1st number for nu, 2nd for nubar
+//      mb_loaded++;
+//    }
+//    else if (strcasecmp(exps[i], "MBall475") == 0)
+//    {
+//      chiMB_init(2, 2);
+//      mb_loaded++;
+//    }
+//    else if (strcasecmp(exps[i], "MB") == 0  ||  strcasecmp(exps[i], "MBnu") == 0)
+//    {
+//      chiMB_init(2, 0);
+//      mb_loaded++;
+//    }
+//    else if (strcasecmp(exps[i], "MBanti") == 0  ||  strcasecmp(exps[i], "MBnubar") == 0)
+//    {
+//      chiMB_init(0, 2);
+//      mb_loaded++;
+//    }
+//    else if (strcasecmp(exps[i], "MB300") == 0  ||  strcasecmp(exps[i], "MBnu300") == 0)
+//    {
+//      chiMB_init(1, 0);
+//      mb_loaded++;
+//    }
+//    else if (strcasecmp(exps[i], "MBanti200") == 0  ||  strcasecmp(exps[i], "MBnubar200") == 0)
+//    {
+//      chiMB_init(0, 1);
+//      mb_loaded++;
+//    }
 
     // Dummy scenario that doesn't do anything
     else if (strcasecmp(exps[i], "DUMMY") == 0)
@@ -736,6 +851,11 @@ int load_exps(const int n_exps, char **exps)
     fprintf(stderr, "Do not use combined C-12 analysis together with individual analyses.\n");
     return -5;
   }
+  if (mb_loaded > 1)
+  {
+    fprintf(stderr, "Do not loade MiniBooNE multiple times - use MBall for combined nu+nubar fit.\n");
+    return -6;
+  }
 
   for (int i=0; i < glb_num_of_exps; i++)
     glbOptimizeSmearingMatrixInExperiment(i);
@@ -770,18 +890,24 @@ int main(int argc, char *argv[])
 {
   int status;
   true_theta12 = asin(sqrt(0.32));
-  true_theta13 = 0.0;
+  true_theta13 = asin(sqrt(0.092))/2.0;
   true_theta23 = M_PI/4;
   true_deltacp = 3.0*M_PI/2.0;
   true_sdm = 7.6e-5;
   true_ldm = 2.4e-3;
 
-  prior_th12    = 0.05 * true_theta12;
-  prior_th13    = 0.0;
-  prior_th23    = 0.0;
-  prior_deltacp = 0.0;
-  prior_sdm     = 0.05 * true_sdm;
-  prior_ldm     = 0.0;
+  time_t start_time;
+  time(&start_time);
+  printf("# GLoBES neutrino oscillation simulation\n");
+  printf("# --------------------------------------\n");
+  printf("#\n");
+  printf("# Run started on %s", asctime(localtime(&start_time)));
+  printf("#\n");
+  printf("# Command line:   ");
+  for (int i=0; i < argc; i++)
+    printf("%s ", argv[i]);
+  printf("\n");
+  printf("#\n");
 
   // Parse command line arguments
   struct argp argp = { cmdline_options, parse_opt, argp_option_doc, argp_doc };
@@ -814,14 +940,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Warning: -m is used only when -a PARAM_SCAN is given.\n");
     fprintf(stderr, "Will ignore all -m options\n");
   }
-
-  time_t start_time;
-  time(&start_time);
-  printf("# GLoBES neutrino oscillation simulation\n");
-  printf("# --------------------------------------\n");
-  printf("#\n");
-  printf("# Run started on %s", asctime(localtime(&start_time)));
-  printf("#\n");
 
   // Initialize MPI 
   #ifdef NU_MPI
@@ -859,9 +977,6 @@ int main(int argc, char *argv[])
   }
 
   // Initialize libglobes 
-  setenv("GLB_PATH", "glb/nova:glb/t2k:glb/bbeam:glb/dchooz:glb/wbb_wc:"
-                     "glb/wbb_lar:glb/nufact:glb/minos-nc:glb/miniboone:"
-                     "glb/kamland:glb/lsnd:glb/e776:glb/c12", 1);
   glbInit(argv[0]);
   glbSelectMinimizer(GLB_MIN_POWELL); // Parts of code work ONLY with GLB_MIN_POWELL !!! 
 
@@ -880,7 +995,7 @@ int main(int argc, char *argv[])
     int default_rotation_order[][2] = { {3,4}, {2,4}, {1,4}, {2,3}, {1,3}, {1,2} };
     int default_phase_order[] = { -1,  1, -1, -1,  0,   2};
     snu_init_probability_engine(n_flavors, default_rotation_order, default_phase_order);
-    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+3, &snu_probability_matrix,
+    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+4, &snu_probability_matrix,
       &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
   }
   else if (n_flavors == 5)
@@ -889,7 +1004,7 @@ int main(int argc, char *argv[])
                                         {2,3}, {1,3}, {1,2} };
     int default_phase_order[] = { -1, -1, -1,  2, -1, -1,  1, -1,  0, -1};
     snu_init_probability_engine(n_flavors, default_rotation_order, default_phase_order);
-    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+5, &snu_probability_matrix,
+    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+8, &snu_probability_matrix,
       &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
   }
 
@@ -906,13 +1021,20 @@ int main(int argc, char *argv[])
   glbDefineChiFunction(&chiWBB_LAr,      10, "chiWBB_LAr",       &wbb_params);
   glbDefineChiFunction(&chiDCNorm,        5, "chiDCNorm",        NULL);
   glbDefineChiFunction(&chiKamLAND,       1, "chiKamLAND",       NULL);
+
   glbDefineChiFunction(&chiMINOS,         5, "chiMINOS-NC",      &minos_nc);
   glbDefineChiFunction(&chiMINOS,         5, "chiMINOS-CC",      &minos_cc);
   glbDefineChiFunction(&chiMINOS,         0, "chiMINOS-nosys-NC",&minos_nc);
   glbDefineChiFunction(&chiMINOS,         0, "chiMINOS-nosys-CC",&minos_cc);
+
+  glbDefineChiFunction(&chiMINOS_2010,    5, "chiMINOS-NC-2010", &minos_nc);
+  glbDefineChiFunction(&chiMINOS_2010,    5, "chiMINOS-CC-2010", &minos_cc);
+  glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-NC-2010",&minos_nc);
+  glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-CC-2010",&minos_cc);
+
   glbDefineChiFunction(&chiLSNDspectrum,  2, "chiLSNDspectrum",  NULL);
-  chiMB_init();
-  glbDefineChiFunction(&chiMBanti_nu2010, 0, "chiMBanti_nu2010", NULL);
+//  chiMB_init(); // for 2010 version of MiniBooNE code
+//  glbDefineChiFunction(&chiMBanti_nu2010, 0, "chiMBanti_nu2010", NULL);
   glbDefineChiFunction(&chi_E776,         4, "chi_E776",         NULL);
   glbDefineChiFunction(&chi_E776_rates,   4, "chi_E776_rates",   NULL);
   glbDefineChiFunction(&chi_karmen_c12,   1, "chi_karmen_c12",   NULL);
@@ -946,12 +1068,43 @@ int main(int argc, char *argv[])
                               true_deltacp,true_sdm,true_ldm);
   glbSetDensityParams(true_values, 1.0, GLB_ALL);
 
-  // Define input errors   
+  // Define input errors
+  //
+  // External priors are dealt with in the following way:
+  // - by default th12 and dm21 carry priors
+  // - if any -c option is given, only the parameters given there will have a prior
+  // - th12 and dm21 priors are omitted if solar neutrinos are included in the fit
+  // - Right now only priors on th12, dm21, th23, dm31 are supported
+//  prior_th12    = 0.05 * true_theta12;
+//  prior_th13    = 0.0;
+//  prior_th23    = 0.0;
+//  prior_deltacp = 0.0;
+//  prior_sdm     = 0.05 * true_sdm;
+//  prior_ldm     = 0.0;
+  prior_th12 = prior_th13 = prior_th23 = prior_deltacp = prior_sdm = prior_ldm = 0.0;
+  for (int i=0; i < n_constrained_params; i++)
+  {
+    if (strcmp(constrained_params[i], "TH12") == 0)
+      prior_th12    = 0.05 * true_theta12;
+    else if (strcmp(constrained_params[i], "DM21") == 0)
+      prior_sdm     = 0.05 * true_sdm;
+    else if (strcmp(constrained_params[i], "TH23") == 0)
+      prior_th23    = 0.09 * true_theta23;
+    else if (strcmp(constrained_params[i], "DM31") == 0)
+      prior_ldm     = 0.05 * true_ldm;
+  }
   for (int i=0; i < glbGetNumOfOscParams(); i++)
     glbSetOscParams(input_errors, 0.0, i);
+  if (ext_flags & EXT_SOLAR) // Use prior on solar parameters only if solar data not included in fit
+  {
+    printf("# *** Ignoring **** priors on th12 and m21 since solar neutrinos "
+           "are included in fit.\n");
+    prior_th12 = prior_sdm = 0.0;
+  }
   glbDefineParams(input_errors, prior_th12, prior_th13, prior_th23, prior_deltacp,
                   prior_sdm, prior_ldm);
   glbSetDensityParams(input_errors, 0.05, GLB_ALL);
+
 
   // Evaluate true parameters given on the command line
   if (true_param_def  &&  eval_true_params(true_param_def) < 0)
@@ -962,6 +1115,43 @@ int main(int argc, char *argv[])
   glbCopyParams(true_values, test_values);
   glbCopyParams(true_values, central_values);
 
+  // --------------------------------------------------------------------
+  // The following code is used for debugging the implementation of the
+  // 4- and 5-flavor parameterizations FIXME
+//  {
+//    gsl_matrix_complex *U = snu_get_U();
+//    glbSetOscParamByName(true_values, 0.9*M_PI/4, "TH23");
+//    glbSetOscParamByName(true_values, 0.33, "TH13");
+//    glbSetOscParamByName(true_values, 0.5, "TH14");
+//    glbSetOscParamByName(true_values, 0.2, "TH24");
+//    glbSetOscParamByName(true_values, 0.75, "TH15");
+//    glbSetOscParamByName(true_values, 0.77, "TH25");
+//    glbSetOscParamByName(true_values, M_PI/3, "DELTA_0");
+//    glbSetOscParamByName(true_values, M_PI/4, "DELTA_1");
+//    glbSetOscParamByName(true_values, M_PI/5, "DELTA_2");
+//    glbSetOscillationParameters(true_values);
+//    snu_print_gsl_matrix_complex(U);
+//
+//    glbSetOscParamByName(true_values, 0.0, "TH14");
+//    glbSetOscParamByName(true_values, 0.0, "TH24");
+//    glbSetOscParamByName(true_values, gsl_complex_abs(gsl_matrix_complex_get(U, 0, 3)), "Ue4");
+////    glbSetOscParamByName(true_values, gsl_complex_abs(gsl_matrix_complex_get(U, 1, 3)), "Um4");
+//    glbSetOscParamByName(true_values, gsl_complex_abs(gsl_matrix_complex_get(U, 1, 3))
+//                            * gsl_complex_abs(gsl_matrix_complex_get(U, 0, 3)), "Ue4Um4");
+//    glbSetOscParamByName(true_values, 0.0, "TH15");
+//    glbSetOscParamByName(true_values, 0.0, "TH25");
+//    glbSetOscParamByName(true_values, gsl_complex_abs(gsl_matrix_complex_get(U, 0, 4)), "Ue5");
+////    glbSetOscParamByName(true_values, gsl_complex_abs(gsl_matrix_complex_get(U, 1, 4)), "Um5");
+//    glbSetOscParamByName(true_values, gsl_complex_abs(gsl_matrix_complex_get(U, 1, 4))
+//                            * gsl_complex_abs(gsl_matrix_complex_get(U, 0, 4)), "Ue5Um5");
+//    printf("\n");
+//    glbSetOscillationParameters(true_values);
+//    snu_print_gsl_matrix_complex(U);
+//
+//    exit(1);
+//  }
+  // --------------------------------------------------------------------
+
   // Print true parameter values and various kinds of meta information 
   printf("# Using %d flavor model\n", n_flavors);
   printf("# Simulating the following experiments:\n");
@@ -970,27 +1160,64 @@ int main(int argc, char *argv[])
   printf("# Including the following AEDL files:\n");
   for (int i=0; i < glb_num_of_exps; i++)
   {
-    printf("#   %s (version %s)\n", glbGetFilenameOfExperiment(i),
+    printf("#   %s (version %s)", glbGetFilenameOfExperiment(i),
            glbVersionOfExperiment(i));
+    if (strcasecmp(glbGetFilenameOfExperiment(i), "MBneutrino200.glb") == 0)
+    {
+//      extern double Eminnu, Eminbar;
+//      printf("; nu mode E > %g, nu-bar mode E > %g", Eminnu, Eminbar);
+      extern double Emin;
+      printf("; E > %g MeV", Emin);
+    }
+    printf("\n");
   }
   printf("#\n");
   print_aedl_variables();
   printf("#\n");
   printf("# External analysis routines included:\n");
   if (ext_flags & EXT_MB)
-    printf("#   MiniBooNE (neutrino run, E > 475 MeV)\n");
+    printf("#   Thomas' MiniBooNE code (neutrino run, E > 475 MeV)\n");
   if (ext_flags & EXT_MB_300)
-    printf("#   MiniBooNE (neutrino run, E > 300 MeV)\n");
+    printf("#   Thomas' MiniBooNE code (neutrino run, E > 300 MeV)\n");
   if (ext_flags & EXT_MBANTI)
-    printf("#   MiniBooNE (anti-neutrino run, E > 475 MeV)\n");
+    printf("#   Thomas' MiniBooNE code (anti-neutrino run, E > 475 MeV)\n");
   if (ext_flags & EXT_MBANTI_200)
-    printf("#   MiniBooNE (anti-neutrino run, E > 200 MeV)\n");
+    printf("#   Thomas' MiniBooNE code (anti-neutrino run, E > 200 MeV)\n");
   if (ext_flags & EXT_KARMEN)
     printf("#   KARMEN\n");
   if (ext_flags & EXT_LSND)
     printf("#   LSND\n");
-  if (ext_flags & EXT_SBL)
-    printf("#   Reactor experiments\n");
+  if (ext_flags & EXT_REACTORS)
+  {
+    printf("#   \\nu_e disappearance searches: \n");
+    #ifdef USE_SBL
+      printf("#     Bugey, ROVNO, Goesgen, ILL, Kranoyarsk, SRP, Rovno rates\n");
+    #endif
+    #ifdef USE_CHOOZ
+      printf("#     Chooz\n");
+    #endif
+    #ifdef USE_PV
+      printf("#     Palo Verde\n");
+    #endif
+    #ifdef USE_KAML
+      printf("#     KamLAND\n");
+    #endif
+    #ifdef USE_DC
+      printf("#     Double Chooz\n");
+    #endif
+    #ifdef USE_DB
+      printf("#     Daya Bay\n");
+    #endif
+    #ifdef USE_RENO
+      printf("#     RENO\n");
+    #endif
+    #ifdef USE_BUGEY_SP
+      printf("#     Bugey spectrum\n");
+    #endif
+    #ifdef USE_GAL
+      printf("#     Gallium\n");
+    #endif
+  }
   if (ext_flags & EXT_NOMAD)
     printf("#   NOMAD\n");
   if (ext_flags & EXT_CDHS)
@@ -1048,6 +1275,7 @@ int main(int argc, char *argv[])
   for (int i=0; i < n_prescan_params; i++)
     printf("#   %10s, %10.7g, %10.7g, %5d  0x%lx\n", prescan_params[i],
            prescan_p_min[i], prescan_p_max[i], prescan_p_steps[i], prescan_p_flags[i]);
+  printf("# Degfinder flags: 0x%lx\n", default_degfinder_flags);
   printf("#\n");
 
   if (load_exps(n_exps, exps) < 0)  // Load experiments 

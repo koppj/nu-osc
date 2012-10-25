@@ -184,7 +184,7 @@ Fit::Fit(void)
    /* the remaining global pulls */
    S_pull[FLUX_COR] [FLUX_COR]  = 1.;            // error included in the pull couplings
    S_pull[PULL_U238][PULL_U238] = norm(0.0815);  // error from tab I of Mention et al. 1101.2755 
-   S_pull[FLUX_NORM][FLUX_NORM] = norm(0.027);   // invent just some number (not used -> either fixed or free)
+   S_pull[FLUX_NORM][FLUX_NORM] = norm(0.030);   // invent just some number (not used -> either fixed or free)
 
 
    /* set data covariance matrix to 0 */
@@ -241,32 +241,41 @@ double Fit::chisq(Param_5nu &prm, double xi[NPULLS], bool use_xi_in)
 	     pred[i] += xi[a] * cff[i][a];
      }
 
-
      int aa = -1;
      for(int a = 0; a < NPULLS; a++){
        if(pull_status[a] != FIXED) {
 	 aa++;
 
+         double t[NBIN_CHISQ];
+         for(int i = 0; i < NBIN_CHISQ; i++){
+           t[i] = 0.;
+           for(int j = 0; j < NBIN_CHISQ; j++)
+             t[i] += S_data_inv[i][j] * cff[j][a];
+         }
+	 	 
 	 int bb = -1;
 	 for(int b = 0; b < NPULLS; b++){
 	   if(pull_status[b] != FIXED) {
 	     bb++;
 
-	     if(pull_status[a] == FREE || pull_status[b] == FREE)
-	       A[aa][bb] = 0.;
-	     else
-	       A[aa][bb] = S_pull_inv[a][b];
+             // use that A has to be symmetric
+             if(bb >= aa){
+	     
+	       if(pull_status[a] == FREE || pull_status[b] == FREE)
+	         A[aa][bb] = 0.;
+	       else
+	         A[aa][bb] = S_pull_inv[a][b];
 
-	     for(int i = 0; i < NBIN_CHISQ; i++)
-	       for(int j = 0; j < NBIN_CHISQ; j++)
-		 A[aa][bb] += cff[i][a] * S_data_inv[i][j] * cff[j][b];
+	       for(int i = 0; i < NBIN_CHISQ; i++)
+		 A[aa][bb] += cff[i][b] * t[i];
+	       
+	     }else
+	       A[aa][bb] = A[bb][aa];
 	   }
 	 }
 	 A[aa][n_active] = 0.;
-	 for(int i = 0; i < NBIN_CHISQ; i++)
-	   for(int j = 0; j < NBIN_CHISQ; j++)
-	     A[aa][n_active] += cff[i][a] * S_data_inv[i][j] * (pred[j] - Data[j]);
-
+	 for(int j = 0; j < NBIN_CHISQ; j++)
+           A[aa][n_active] += t[j] * (pred[j] - Data[j]);
        }
      }
 
@@ -309,30 +318,27 @@ double Fit::chisq(Param_5nu &prm, double xi[NPULLS], bool use_xi_in)
        t[i] += xi[a] * cff[i][a];
    }
 
-   double chq = 0.;
-   for(int i = 0; i < NBIN_CHISQ; i++)
-     for(int j = 0; j < NBIN_CHISQ; j++)
-       chq += (t[i] - Data[i]) * S_data_inv[i][j] * (t[j] - Data[j]);
-
-   for(int a = 0; a < NPULLS; a ++)
-     for(int b = 0; b < NPULLS; b++)
-       if(pull_status[a] == ACTIVE && pull_status[b] == ACTIVE)
-	 chq += xi[a] * S_pull_inv[a][b] * xi[b];
-
-  
-   /* print chisq terms 
+   double chq = 0., w[NBIN_CHISQ];
    for(int i = 0; i < NBIN_CHISQ; i++){
-     for(int j = 0; j < NBIN_CHISQ; j++)
-       fprintf(stderr, "%+.3f  ", (t[i] - Data[i]) * S_data_inv[i][j] * (t[j] - Data[j]));
-     fprintf(stderr, "\n");
+     w[i] = 0.;
+     for(int j = 0; j < NBIN_CHISQ; j++)     
+       w[i] += (t[j] - Data[j]) * S_data_inv[i][j];
    }
-   double w = 0.;
-   for(int a = 0; a < NPULLS; a ++)
+   for(int j = 0; j < NBIN_CHISQ; j++)
+     chq += w[j] * (t[j] - Data[j]);
+
+   double v[NPULLS];
+   for(int a = 0; a < NPULLS; a ++){
+     v[a] = 0.;
      for(int b = 0; b < NPULLS; b++)
-       if(pull_status[a] != FREE && pull_status[b] != FREE)
-	 w += xi[a] * S_pull_inv[a][b] * xi[b];
-   fprintf(stderr, "pull term: %f\n", w);  
-  */
+       if(pull_status[b] == ACTIVE)
+	 v[a] += xi[b] * S_pull_inv[a][b];
+   }
+  
+   for(int a = 0; a < NPULLS; a ++)
+     if(pull_status[a] == ACTIVE)
+       chq += xi[a] * v[a];
+  
    return chq;
 }
 

@@ -6,7 +6,8 @@ $version="3.1.10"        // Minimal GLoBES version required for this file
 // Beam data
 // ---------
 nuflux(#NUMI_nu)<
-  @flux_file = "flugg_le010z185i_run1_735km_0kmoa_flux.txt"
+//  @flux_file = "flugg_le010z185i_run1_735km_0kmoa_flux.txt"
+  @flux_file = "fluka05_le010z185i_735km_flux.txt"
   @time      = 1
   @power     = 3.18e20  // pot
   @norm      = 0.22e-3

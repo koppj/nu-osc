@@ -26,5 +26,9 @@ Adjustment for reactor code (2012 version):
 - Update SBL reactor initialization and chi^2 calls in prior.cc
   Be careful: Thomas' code doesn't accept inverted hierarchy parameters
 - Adjust paths in reactor code wherever external data is loaded
+- Define appropriate USE_XXX directives in definitions.h
 - Optional: Change LDM2MIN and LDM2MAX in bugey.cc to +-2.0
+- Replace p.dmq[2] ---> fabs(p.dmq[2])  in chooz.cc and dc.cc to allow
+  for inverted hierarchy
+
 

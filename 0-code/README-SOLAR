@@ -1,0 +1,8 @@
+Integrating Michele's solar code:
+---------------------------------
+- Rename libwrapper.a to libsolarwrapper.a, libphysics.a to libsolarphysics.a,
+  libmathres.a to libsolarmathres.a
+- Change #ifdef in out.interface.hh to a different name to avoid
+  conflict with atmospherics
+- Make sure Inputs/ are in the right place
+

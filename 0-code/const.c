@@ -17,17 +17,19 @@ const env_param actions[] =
 
 const env_param ext_scenarios[] =
 {
-  { "MB",              EXT_MB               },
-  { "MB300",           EXT_MB_300           },
-  { "MBANTI",          EXT_MBANTI           },
-  { "MBANTI200",       EXT_MBANTI_200       },
-  { "KARMEN",          EXT_KARMEN           },
-  { "LSND",            EXT_LSND             },
-  { "SBL",             EXT_SBL              },
-  { "NOMAD",           EXT_NOMAD            },
-  { "CDHS",            EXT_CDHS             },
-  { "ATM_TABLE",       EXT_ATM_TABLE        },
-  { "ATM_COMP",        EXT_ATM_COMP         },
-  { "SOLAR",           EXT_SOLAR            },
+  { "MB-Thomas",        EXT_MB               },
+  { "MB300-Thomas",     EXT_MB_300           },
+  { "MBANTI-Thomas",    EXT_MBANTI           },
+  { "MBANTI200-Thomas", EXT_MBANTI_200       },
+  { "KARMEN",           EXT_KARMEN           },
+  { "LSND",             EXT_LSND             },
+  { "SBL",              EXT_REACTORS         },
+  { "REACTORS",         EXT_REACTORS         },
+  { "NOMAD",            EXT_NOMAD            },
+  { "CDHS",             EXT_CDHS             },
+  { "ATM_TABLE",        EXT_ATM_TABLE        },
+  { "ATM_COMP",         EXT_ATM_COMP         },
+  { "ATM",              EXT_ATM_COMP         },
+  { "SOLAR",            EXT_SOLAR            },
   { NULL, -1 }
 };

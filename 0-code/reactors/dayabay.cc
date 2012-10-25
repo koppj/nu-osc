@@ -5,7 +5,7 @@ namespace ns_reactor
 
 #ifdef USE_DB
 
-// source: 1st Daya Bay paper
+// source: 1st Daya Bay paper + talk at Neutrino2012
 
 #define NREACT_DB 6
 
@@ -13,7 +13,6 @@ extern Fit fit;
 extern Rate_pull_coupl rate_pull_coupl;  // defined in class_flux.cc
 extern Rate_coef rate;                   // defined in class_flux.cc
 extern int old_new_main;
-
 
 // assume same values as in DC
 const double isofract_DB[NISO] = {0.488, 0.087, 0.359, 0.076};
@@ -30,39 +29,40 @@ const double basel_DB[NBIN_DB][NREACT_DB] = {
   {1.912, 1.912, 1.540, 1.540, 1.548, 1.548}    // EH3
 };
 
-// data from table II
+// data from slide 13 of Nu2012 talk
 const double IDB_cand[NBIN_DB] = {
-  28935., 28975., 22466., 3528., 3436., 3452.
+  69121., 69714., 66473., 9788., 9669., 9452.
 };
 // days
 const double DAQ[NBIN_DB] = {
-  49.553, 49.553, 49.4971, 48.9473, 48.9473, 48.9473
+  127.547, 127.547, 127.3763, 127.3763, 126.2646, 126.2646
 };
 const double eff_DB[NBIN_DB] = {
-  0.8019, 0.7989, 0.8363, 0.9547, 0.9543, 0.9538
+  0.8015, 0.7986, 0.8364, 0.9544, 0.9552, 0.9547
 };
  
 #define NBG_DB 5
 // bg rate per day
 const double bg_DB_data[NBG_DB][NBIN_DB] = {
-  {9.82, 9.88, 7.67, 3.29, 3.33, 3.12},  // accidentals
-  {0.84, 0.84, 0.74, 0.04, 0.04, 0.04},  // fast neutron
-  {3.1, 3.1, 1.8, 0.16, 0.16, 0.16},     // Li, He
+  {9.73, 9.61, 7.55, 3.05, 3.04, 2.93},  // accidentals
+  {0.77, 0.77, 0.58, 0.05, 0.05, 0.05},  // fast neutron
+  {2.9, 2.9, 2.0, 0.22, 0.22, 0.22},     // Li, He
   {0.2,0.2,0.2,0.2,0.2,0.2},             // Am-C
-  {0.04, 0.04, 0.035, 0.03, 0.03, 0.03}  // CO
+  {0.08, 0.07, 0.05, 0.04, 0.04, 0.04}   // CO
 };
 // bg error per day
 const double bg_err_DB[NBG_DB][NBIN_DB] = {
-  {0.06, 0.06, 0.05, 0.03, 0.03, 0.03},
-  {0.28, 0.28, 0.44, 0.04, 0.04, 0.04},
-  {1.6, 1.6, 1.1, 0.11, 0.11, 0.11},
+  {0.1, 0.1, 0.08, 0.04, 0.04, 0.03},
+  {0.24, 0.24, 0.33, 0.02, 0.02, 0.02},
+  {1.5, 1.5, 1.1, 0.12, 0.12, 0.12},
   {0.2, 0.2, 0.2, 0.2, 0.2, 0.2},
-  {0.02, 0.02, 0.02, 0.02, 0.02, 0.02}
+  {0.04, 0.04, 0.03, 0.02, 0.02, 0.02}
 }; 
-// fig. 4: measured/expected reactor neutrinos
+// slide 16: measured/expected reactor neutrinos
 const double ratios_DB[NBIN_DB] = {
-  0.97681, 0.99042, 0.98664, 0.93975, 0.91252, 0.92916
+  0.981935, 0.987097, 0.984516, 0.943226, 0.929677, 0.918710
 };
+
 // number of bg events and relative error
 double bg_DB[NBIN_DB][2];
 double no_osc_react_DB[NBIN_DB];
@@ -80,7 +80,7 @@ void set_table_DB(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1])
 
     for(int j = 0; j < NREACT_DB; j++){
 
-      // reactor norm  (solar therm included in rate.prob)
+      // reactor norm
       const int pr = fit.first_pull[DB] + 1 + j;
       cff[b][pr] = no_osc_react_DB[i] * weight_DB[i][j] * rate.prob(prm, basel_DB[i][j] * 1.e3, isofract_DB);
       cff[b][NPULLS] += cff[b][pr];
@@ -146,7 +146,7 @@ void DB_init(void)
     for(int j = 0; j < NREACT_DB; j++)
       weight_DB[i][j] = 1./norm(basel_DB[i][j]) / w;
   }
-
+  
   // set data and stat. errors in class fit
   for(int i = 0; i < NBIN_DB; i++){
   
@@ -182,4 +182,4 @@ void DB_init(void)
 
 #endif
 
-}
+} // namespace

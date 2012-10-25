@@ -37,8 +37,10 @@
 
 # Note: - To compile with MPI support, add -lmpich option to LDFLAGS
 #         and use mpicc instead of gcc
-#       - To include profiling information, use -gp option in CFLAGS
-#         and LDFLAGS and use -static option in LDFLAGS
+#       - To include profiling information, use -pg option in CFLAGS
+#         and LDFLAGS and use -static option in LDFLAGS,
+#         and link against -lc_p if available (use GLB_LDFLAGS_PROF instead
+#         of GLB_LDFLAGS)
 
 
 export prefix = ${HOME}/software/installed/globes-devel
@@ -46,36 +48,48 @@ export exec_prefix = ${prefix}
 export libdir = ${exec_prefix}/lib
 export globesconf= $(exec_prefix)/bin/globes-config
 
+export solar_dir=solar/
+
+export GCC = gcc
+export GPP = g++
+
+GLB_LDFLAGS = $(shell $(globesconf) --libs)
+GLB_LDFLAGS_PROF = -g -pg -L/home/jkopp/software/installed/globes-devel/lib \
+		   -Wl,-rpath -Wl,/home/jkopp/software/installed/globes-devel/lib \
+		   -lglobes -L/home/jkopp/software/installed/lib -lgsl -lgslcblas \
+#		   -nodefaultlibs -static-libgcc -lgcc -lstdc++ -lm_p -lc
+#		   -nodefaultlibs -static -static-libgcc -lgcc -lstdc++ -lm -lc
 INCFLAGS = $(shell $(globesconf) --include) -I${HOME}/projects/globes/Distribution/source
-LDFLAGS = $(shell $(globesconf) --libs) \
+LDFLAGS = $(GLB_LDFLAGS) \
 	  -L./atm/LibMath -L./atm/LibPhys -L./atm/LibWrap \
-	  -L./solar/LibMath -L./solar/LibPhys -L./solar/LibWrap -L./solar/LibProb \
+	  -L./$(solar_dir)/LibMath -L./$(solar_dir)/LibPhys \
+	  -L./$(solar_dir)/LibWrap -L./$(solar_dir)/LibProb \
 	  -latmwrapper -latmphysics -latmmathres \
-       	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun
-          #-static #-lmontecubes
+       	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun -static
+          #-lmontecubes
 
 # For some reason, -D_BSD_SOURCE is required for mathematical constants
 # such as M_PI, to be defined
-export CFLAGS   = -std=c99 -Wall -g -O2 -D_BSD_SOURCE -fgnu89-inline -ffast-math $(INCFLAGS)
-export CXXFLAGS = -Wall -g -O2 $(INCFLAGS)
+export CFLAGS   = -std=c99 -Wall -g -O3 -D_BSD_SOURCE -fgnu89-inline -ffast-math -Wno-write-strings $(INCFLAGS)
+export CXXFLAGS = -Wall -g -O3 -Wno-write-strings $(INCFLAGS)
 
 BIN     = nu
 OBJ     = nu.o const.o sys.o snu.o degfinder.o sensitivities.o prem.o \
-	  mb.o e776.o c12.o prior.o iface.o
+	  mb.o e776.o c12.o icarus.o prior.o iface.o
 HEADER  = nu.h const.h snu.h sbl/definitions.h reactors/definitions.h
 SUBDIRS = sbl reactors
 
 all: $(BIN)
 
 $(BIN): $(OBJ) $(SUBDIRS)
-#	g++ $(CFLAGS) $$(ls *.o sbl/*.o reactors/*.o) -o $(BIN) $(INCFLAGS) $(LDFLAGS)
-	g++ $(CFLAGS) $(shell ls *.o sbl/*.o reactors/*.o) -o $(BIN) $(INCFLAGS) $(LDFLAGS)
+#	${GPP} $(CFLAGS) $$(ls *.o sbl/*.o reactors/*.o) -o $(BIN) $(INCFLAGS) $(LDFLAGS)
+	${GPP} $(CFLAGS) $(shell ls *.o sbl/*.o reactors/*.o) -o $(BIN) $(INCFLAGS) $(LDFLAGS)
 
 %.o : %.c $(HEADER)
-	gcc $(CFLAGS) $(INCFLAGS) -c $<
+	${GCC} $(CFLAGS) $(INCFLAGS) -c $<
 
 %.o : %.cc $(HEADER)
-	g++ $(CXXFLAGS) $(INCFLAGS) -c $<
+	${GPP} $(CXXFLAGS) $(INCFLAGS) -c $<
 
 .PHONY: subdirs $(SUBDIRS)
 subdirs: $(SUBDIRS)

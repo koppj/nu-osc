@@ -6,10 +6,10 @@ SUBDIRS =
 all: $(OBJ)
 
 %.o : %.c $(HEADER)
-	gcc $(CFLAGS) $(INCFLAGS) -c $<
+	${GCC} $(CFLAGS) $(INCFLAGS) -c $<
 
 %.o : %.cc $(HEADER)
-	g++ $(CXXFLAGS) $(INCFLAGS) -c $<
+	${GPP} $(CXXFLAGS) $(INCFLAGS) -c $<
 
 .PHONY: subdirs $(SUBDIRS)
 subdirs: $(SUBDIRS)

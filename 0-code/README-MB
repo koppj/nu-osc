@@ -1,0 +1,12 @@
+Steps required to incorporate Pedro's MB fit
+--------------------------------------------
+
+- Copy files to glb/mb-2012/
+- Adjust paths of all filenames in mb.c
+- Address C warning (in particular with definition of pp in mb.c)
+- Replace calls to glb_probability_matrix by calls to snu_probability_matrix
+- Replace NU_FLAVORS by n_flavors
+- Fix type conversion warnings
+- Include provisions for reusing MB chi^2 if oscillation parameters
+  have not changed
+

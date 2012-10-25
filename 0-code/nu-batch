@@ -1,47 +1,44 @@
 #!/bin/bash
+#Usage: qsub nu-batch <arguments>
+CODE_PATH=$HOME/papers/sterile-nu/sim/0-code/
+DATA_PATH=$HOME/papers/sterile-nu/sim/results
 
-# Set paths
-export DATA_PATH=$(pwd)/../results
-export CODE_PATH=$(pwd)
-cd $DATA_PATH
+# Export all environment variables
+#$ -V
 
-if [[ -z $NU_SIZE ]]; then
-  NU_SIZE=1;
+# Specify location of output and error files
+#$ -o /home/lin/jkopp/papers/sterile-nu/sim/results
+#$ -e /home/lin/jkopp/papers/sterile-nu/sim/results
+#$ -m ae
+#$ -M jkopp@mpi-hd.mpg.de
+
+echo "Starting job run-nu" $@ "at: "
+date
+echo
+#echo "System type:"
+#echo "------------"
+#cat /proc/cpuinfo
+
+# Determine name of output file
+if [[ -z $OUT_FILE ]]; then
+  OUT_FILE=$DATA_PATH"/"$(mktemp -u nu-XXXXXXXX)".dat"
+else
+  OUT_FILE=$DATA_PATH"/"$OUT_FILE
 fi
+echo "Output file: $OUT_FILE"
 
-# For parallel jobs, loop over all slices
-for (( I=0; $I < NU_SIZE; I++ )); do
+# Determine name of executable
+if [[ -z $EXE_FILE ]]; then
+  EXE_FILE=nu
+fi
+echo "Executable:  $EXE_FILE"
 
-  export NU_RANK=$I
-  if (( NU_SIZE > 1 )); then
-    export OF="${OUT_FILE%%.dat}_${NU_RANK}.dat"
-  else
-    export OF="${OUT_FILE}";
-  fi
-  export CONDOR_SCRIPT="condor_script_${OF%%.dat}"
 
-  echo "Submitting with options $@, slice $NU_RANK / $NU_SIZE."
-  echo "Output file: $OF"
+ulimit -c 0  # Switch off core dumps
+cd $CODE_PATH
+$CODE_PATH/$EXE_FILE $@ > $OUT_FILE
 
-  # Generate condor submit script
-  cat <<-EOF > $CONDOR_SCRIPT
-Universe                = grid
-GridResource            = gt2 fnpcosg1.fnal.gov/jobmanager-condor
-Executable              = $CODE_PATH/nu
-Arguments               = $@
-Remote_InitialDir       = $CODE_PATH
-Output                  = $DATA_PATH/$OF
-Error                   = $DATA_PATH/$OF.err
-Log                     = $DATA_PATH/$OF.log
-transfer_executable     = False
-Environment             = "NU_RANK=$NU_RANK;NU_SIZE=$NU_SIZE"
-Notification            = always
-Notify_User             = jkopp@fnal.gov
-globusrsl               = (jobtype=single)(maxwalltime=999)
-QUEUE
-EOF
-
-  # Submit job
-  condor_submit -debug $CONDOR_SCRIPT
-done
+echo
+echo "Job finished at: "
+date
 

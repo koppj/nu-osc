@@ -231,7 +231,7 @@ double Rate_coef::prob(Param_5nu &p, const double L, const double f[NISO])
   double P = 1.;
   for(int i = 0; i < N_NU-1; i++){
     for(int j = i+1; j < N_NU; j++){
-      const double DmqL = p.Dmq(j,i) * L;
+      const double DmqL = fabs(p.Dmq(j,i)) * L;
       if(DmqL > DmqL_min)
         P -= 4. * norm(p.Ue[i] * p.Ue[j]) * sinq(DmqL, f);
     }

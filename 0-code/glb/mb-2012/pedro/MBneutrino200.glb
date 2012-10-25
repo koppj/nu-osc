@@ -1,0 +1,102 @@
+%!GLoBES
+$version="3.1.10"
+
+/*
+ * GLoBES implementation of MiniBooNE antineutrino analysis from 1007.1150
+ * -----------------------------------------------------------------------
+ *
+ * Author: Pedro Machado (accioly@fma.if.usp.br), 
+ * based on work by Patrick Huber, modified later by Joachim Kopp
+ * Date:   Jun 2012
+ *
+ * If you modify this file, please rename it
+ *
+ * If you are using this file for producing a scientific publication
+ * or a talk please cite the following references and check the supporting
+ * files for a similar comment.
+ *
+ * arxiv: 0812.2243 [hep-ex]
+ *
+ */
+
+// Beam data
+// ---------
+
+nuflux(#flux_Flat)<
+  @flux_file = "flux_flat.dat"
+  @norm      = 1/0.445 * 0.520^2 / 0.0486 // 1/mass * L^2 / sampling bin width
+>
+
+
+// Detector properties
+// -------------------
+$target_mass = 0.445
+
+$profiletype = 3
+$densitytab  = {2.8}    // g/cm^3
+$lengthtab   = {0.520}  // km
+
+
+// Cross sections
+cross(#XCC)<
+  @cross_file = "XCC.dat"
+>
+
+cross (#XFlat)<
+  @cross_file = "XFlat.dat"
+>
+
+// Binning
+$emin            =  0.2    // GeV
+$emax            =  3.0    // GeV
+$binsize         =  { 0.1, 0.075, 0.1, 0.075, 0.125, 0.125, 0.15, 0.15, 0.2, 0.2, 1.5 }
+                       // see http://www-boone.fnal.gov/for_physicists/data_release/lowe/
+$sampling_min    =   0.140 // GeV
+$sampling_max    =   5.0   // GeV
+$sampling_points = 100
+
+// Energy smearing
+include "smearing_matrix.dat"
+
+// Low pass filter
+$filter_state = 1
+$filter_value = 0.05  // FIXME Not optimized yet
+
+
+// Oscillation channels
+// --------------------
+
+//channel(#ch_nu_e)<
+//  @channel = #flux_MBanti_mu    : + : m : e : #XCC : #ERES
+//>
+
+//channel(#ch_nu_ebar)< //FIXME
+//  @channel = #flux_MBanti_mubar : - : m : e : #XCC : #ERES
+//>
+
+channel(#ch_nu_ebar)<
+  @channel = #flux_Flat : - : m : e : #XFlat : #ERES
+>
+
+channel(#ch_bg)<
+  @channel = #flux_Flat: - : NOSC_t : NOSC_t : #XFlat : #ERES
+  @post_smearing_efficiencies = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+//  @post_smearing_background   = { 189,  108.41,  120.36,  64.22,  90.32, 67.69,   70.43,   57.48,   52.34,  39.01,  70.23 }
+  @post_smearing_background   = { 181.06,  108.41,  120.36,  64.22,  90.32, 67.69,   70.43,   57.48,   52.34,  39.01,  70.23 }
+                       // see http://www-boone.fnal.gov/for_physicists/data_release/lowe/
+>
+
+
+// Rules
+// -----
+
+rule(#rule_nu_e)<
+  @signal           = 1.0@#ch_nu_ebar //FIXME
+  @background       = 1.0@#ch_bg
+  @sys_on_function  = "chiMB"
+  @sys_on_errors    = {}
+//  @sys_on_errors    = {1E0,1E0}
+  @sys_off_function = "chiNoSysSpectrum"
+  @sys_off_errors   = {}
+>
+

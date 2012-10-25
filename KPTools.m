@@ -18,6 +18,11 @@ LegendBox[Style_]  := Graphics[{Style,Rectangle[{0,0}]},AspectRatio->0.6,ImageSi
 LegendBox[Style_,EdgeStyle_] :=
   Graphics[{Style,EdgeForm[EdgeStyle],Rectangle[{0,0}]},AspectRatio->0.6,ImageSize->30];
 
+LegendBox[Style_,EdgeStyle_,Symbol_,SymbolStyle_] :=
+  Graphics[{Style,EdgeForm[EdgeStyle],Rectangle[{0,0}],SymbolStyle,
+            Text[Symbol,{.5,.6}]},
+            AspectRatio->0.6, ImageSize->30, BaseStyle->{FontSize->18}];
+
 LegendBound[Style_] := 
   Graphics[{Style,Arrowheads[.6], AbsoluteThickness[1.5],Line[{{0,-1},{0,1}}],
             Arrow[{{0,0},{-1,0}}]},AspectRatio->0.6,ImageSize->30];

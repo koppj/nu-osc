@@ -1,0 +1,9 @@
+Integrating Michele's atmospherics code
+---------------------------------------
+
+- Make sure calls in prior.cc are correct for the version used
+- Download data files and place in atm/Inputs
+- mv LibWrap/libwrapper.a LibWrap/libatmwrapper.a
+  mv LibPhys/libphysics.a LibPhys/libatmphysics.a
+  mv LibMath/libmathres.a LibMath/libatmmathres.a
+

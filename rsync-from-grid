@@ -5,4 +5,5 @@ rsync -avz fnpcsrv1.fnal.gov:/grid/app/jkopp/sterile-nu/results/* \
       --exclude nu_script* \
       --exclude nu_tarball* \
       --exclude *.dat.err \
-      --exclude *.dat.log
+      --exclude *.dat.log \
+      --exclude *Inputs*

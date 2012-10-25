@@ -56,6 +56,7 @@ int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sig
 int snu_filtered_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS],
       double E, double L, double V, double sigma, int cp_sign);
 gsl_matrix_complex *snu_get_U();
+int snu_print_gsl_matrix_complex(gsl_matrix_complex *A);
 
 // prem.c
 int LoadPREMProfile(const char *prem_file);

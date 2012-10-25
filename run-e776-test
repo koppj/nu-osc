@@ -1,2 +1,0 @@
-#!/bin/bash
-./nu -f 3 -t "TH23=0,DM31=0,TH13=0" -e E776 -p "TH12,-3,-0.2,28,LOGSCALE" -p "DM21,-1.8,1.8,36,LOGSCALE"  -a PARAM_SCAN > ../3-3p1/dm41th14th24-e776-test.dat 

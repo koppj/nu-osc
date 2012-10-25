@@ -42,6 +42,9 @@ extern double true_sdm;
 extern double true_ldm;
 extern int n_flavors;
 
+extern double solar_dm21_min;
+extern double solar_dm21_max;
+
 extern int density_corr[];
 extern wbb_params_type wbb_params;
 
@@ -337,30 +340,58 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
 //   prescan_n_p: Number of parameters in degfinder prescan
 //   prescan_params: Names of parameters in degfinder prescan
 //   prescan_p_min, prescan_p_max, prescan_p_steps: Scan ranges for prescan
-//   presan_p_flags: Extra flags for prescan (DEG_LOGSCALE, DEG_S22, DEG_PM)
+//   prescan_p_flags: Extra flags for params in prescan (DEG_LOGSCALE,
+//      DEG_S22, DEG_PM)
 // -------------------------------------------------------------------------
 {
   // Check for invalid oscillation parameter names
   for (int i=0; i < n_p; i++)
+  {
     if (glbFindParamByName(params[i]) < 0)
     {
       fprintf(stderr, "Invalid oscillation parameter: %s.\n", params[i]);
       return -1;
     }
+    else if (glbFindParamByName(params[i]) == GLB_DM_21) // Set range for solar code
+    {
+      solar_dm21_min = MAX(1.e-6, MIN(p_min[i], solar_dm21_min));
+      solar_dm21_max = MAX(p_max[i], solar_dm21_max);
+    }
+  }
 
   for (int i=0; i < prescan_n_p; i++)
+  {
     if (glbFindParamByName(prescan_params[i]) < 0)
     {
       fprintf(stderr, "Invalid oscillation parameter: %s.\n", prescan_params[i]);
       return -2;
     }
+    else if (glbFindParamByName(prescan_params[i]) == GLB_DM_21) // Set range for solar code
+    {
+      solar_dm21_min = MAX(1.e-6, MIN(prescan_p_min[i], solar_dm21_min));
+      solar_dm21_max = MAX(prescan_p_max[i], solar_dm21_max);
+    }
+  }
 
   for (int i=0; i < n_min_params; i++)
+  {
     if (glbFindParamByName(min_params[i]) < 0)
     {
       fprintf(stderr, "Invalid oscillation parameter: %s.\n", min_params[i]);
       return -3;
     }
+    else if (glbFindParamByName(min_params[i]) == GLB_DM_21) // Set range for solar code
+    {
+      solar_dm21_min = 1.e-6;
+      solar_dm21_max = 1.e-3;
+    }
+  }
+
+  if (debug_level > 0)
+  {
+    printf("# \\Delta m_{21}^2 range (if used): %g eV^2 -- %g eV^2\n", solar_dm21_min, solar_dm21_max);
+    printf("#\n");
+  }
 
   // Print header
   printf("#       ");
@@ -425,9 +456,19 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
       m /= k;
 
       if (p_flags[i] & DEG_LOGSCALE)
-        p_test_values[i] = POW10(p_min[i] + m * (p_max[i]-p_min[i])/p_steps[i]);
+      {
+        if (p_steps[i] == 0)
+          p_test_values[i] = POW10(p_min[i]);
+        else
+          p_test_values[i] = POW10(p_min[i] + m * (p_max[i]-p_min[i])/p_steps[i]);
+      }
       else
-        p_test_values[i] = p_min[i] + m * (p_max[i]-p_min[i])/p_steps[i];
+      {
+        if (p_steps[i] == 0)
+          p_test_values[i] = p_min[i];
+        else
+          p_test_values[i] = p_min[i] + m * (p_max[i]-p_min[i])/p_steps[i];
+      }
       glbSetOscParamByName(test_values, p_test_values[i], params[i]);
     }
 
@@ -444,11 +485,18 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
 #endif
     }
 
-    // Run degfinder 
-    n_deg = MAX_DEG;
-    degfinder(test_values, prescan_n_p, prescan_param_indices, prescan_p_min, prescan_p_max,
-              prescan_p_steps, prescan_proj, proj, &n_deg, deg_pos, deg_chi2,
-              default_degfinder_flags, prescan_p_flags);
+    // Test if GLoBES will accept the chosen oscillation parameters (it may not,
+    // for instance if the chosen values of s22thmue and Um4 are inconsistent),
+    // and if so, run degfinder
+    if (glbSetOscillationParameters(test_values) == 0)
+    {
+      n_deg = MAX_DEG;
+      degfinder(test_values, prescan_n_p, prescan_param_indices, prescan_p_min, prescan_p_max,
+                prescan_p_steps, prescan_proj, proj, &n_deg, deg_pos, deg_chi2,
+                default_degfinder_flags, prescan_p_flags);
+    }
+    else
+      n_deg = 0;
 
     // Determine best fit 
     double chi2_NH = 1.0e50;

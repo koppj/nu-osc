@@ -67,7 +67,7 @@ enum { EXT_MB         = 0x0001,
        EXT_MBANTI_200 = 0x0008,
        EXT_KARMEN     = 0x0010,
        EXT_LSND       = 0x0020,
-       EXT_SBL        = 0x0040,
+       EXT_REACTORS   = 0x0040,
        EXT_NOMAD      = 0x0080,
        EXT_CDHS       = 0x0100,
        EXT_ATM_TABLE  = 0x0200,
@@ -171,15 +171,17 @@ double chiDCNorm(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
+double chiMINOS_2010(int exp, int rule, int n_params, double *x, double *errors,
+              void *user_data);
 double chiKamLAND(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 double chiLSNDspectrum(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 
-/* mb.c */
-int chiMB_init();
+/* mb-2010.c */
+int chiMB_init(int threshold);
 int chiMB_clear();
-double chiMBanti_nu2010(int exp, int rule, int n_params, double *x, double *errors,
+double chiMB(int exper, int rule, int n_params, double *x, double *errors,
               void *user_data);
 
 /* e776.c */
@@ -200,6 +202,11 @@ double chi_nue_carbon(int exp, int rule, int n_params,
 double chi_nue_carbon_spectrum(int exp, int rule, int n_params,
               double *x, double *errors, void *user_data);
 void init_nue_carbon(int KM_spectrum);
+
+/* icarus.c */
+int init_icarus();
+double chi_ICARUS(int exp, int rule, int n_params, double *x, double *errors,
+                  void *user_data);
 
 /* sensitivities.c */
 double sample(double min, double max, int steps, int i);

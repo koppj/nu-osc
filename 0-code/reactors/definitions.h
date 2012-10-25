@@ -8,9 +8,11 @@
 #define EnuMAX 10.
 
 // Which experiments to include
+// TAG_DEFS - This signals ./compile-and-run where to insert new #define's
 #define USE_SBL
 #define USE_CHOOZ
 #define USE_PV
+#define USE_KAML
 #define USE_DC
 #define USE_DB
 #define USE_RENO
@@ -27,6 +29,7 @@
 # define USE_DB
 # define USE_RENO
 # define USE_BUGEY_SP
+# define USE_GAL
 #endif
 
 namespace ns_reactor
@@ -208,10 +211,11 @@ inline void error(const char *text) {
    exit(1);
 }
 
+/*   
 inline double exp10(const double x){
   return pow(10, x);
 }
-
+*/
 /********************/
 /* the parameters   */
 /********************/
@@ -238,6 +242,24 @@ struct Param_5nu{
   double dmq[N_NU];    // Dm^2_{j0} j = 0,...,N_NU-1
   double Dmq(const int j, const int i){
     return (j == 0 ? 0. : dmq[j]) - (i == 0 ? 0. : dmq[i]);
+  }
+
+  void save(const char *name){
+    FILE *fp = fopen(name, "w");
+    for(int i = 0; i < N_NU; i++)
+      fprintf(fp, "%e %e %e\n", Ue[i], theta[i], dmq[i]);
+    fclose(fp);
+    return;
+  }
+  void load(const char *name){
+    FILE *fp = fopen(name, "r");
+    for(int i = 0; i < N_NU; i++)
+      if(fscanf(fp, "%le %le %le\n", &Ue[i], &theta[i], &dmq[i]) != 3){
+	fprintf(stderr, "cannot read parameter %s\n", name);
+	exit(0);
+      }
+    fclose(fp);
+    return;
   }
 };
 
@@ -313,7 +335,7 @@ void set_table_PV(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1]);
 int init_sbl_reactors(int old_new);
 void set_table_sbl(Param_5nu &p, double cff[NBIN_CHISQ][NPULLS+1]);
 void print_sbl_data(void);
-void print_sbl_pred(double xi[NPULLS]);
+ void print_sbl_pred(Param_5nu p, FILE *fp = stdout);
 
 /********** KamLAND **********/
 void init_kaml(void);  

@@ -173,7 +173,7 @@ void set_table_gallium(Param_5nu &p, double cff[NBIN_CHISQ][NPULLS+1])
       for(int i = 0; i < N_NU-1; i++){
 	for(int j = i+1; j < N_NU; j++){
        
-	  const double log_dmq_E = log(p.Dmq(j,i) / gal[k].E_line[l]);
+	  const double log_dmq_E = log(fabs(p.Dmq(j,i)) / gal[k].E_line[l]);
 	  if(log_dmq_E > log_dmq_E_min){
 
 	    if(log_dmq_E >= log_dmq_E_max) 
@@ -240,7 +240,7 @@ void gallium_anomaly(void)
 {
   fit.invert_S();
   //fit.pull_status[fit.first_pull[GAL]] = FIXED;
-  fit.pull_status[fit.first_pull[GAL]+1] = FIXED;
+  //fit.pull_status[fit.first_pull[GAL]+1] = FIXED;
 
   Param_5nu p;
   double fmin = 0., min = 1000.;

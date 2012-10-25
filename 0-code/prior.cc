@@ -25,6 +25,12 @@ extern gsl_matrix_complex *U;
 extern int n_flavors;
 extern const int debug_level;
 
+// Minimum/maximum values of dm21^2 for the solar neutrino code
+extern double true_sdm;
+double solar_dm21_min = NAN;
+double solar_dm21_max = NAN;
+
+
 // Provide some global variables for Thomas' code
 namespace ns_reactor
 {
@@ -181,63 +187,95 @@ int solar_parameters(gsl_matrix_complex *U, Angles *a)
 int ext_init(int ext_flags)
 {
   if (ext_flags & EXT_MB  ||  ext_flags & EXT_MB_300)
+  {
+    printf("# Initializing MiniBooNE code (neutrinos) ...\n");
     initMiniboone();                 // MiniBooNE (\nu)
+  }
 
   if (ext_flags & EXT_MBANTI  ||  ext_flags & EXT_MBANTI_200)
+  {
+    printf("# Initializing MiniBooNE code (antineutrinos) ...\n");
     initMBanti();                    // MiniBooNE (\bar\nu)
+  }
 
   if (ext_flags & EXT_KARMEN  ||  ext_flags & EXT_LSND)
   {
+    printf("# Initializing KARMEN and LSND codes ...\n");
     initFlux();                      // LSND/KARMEN
     initLSND();
     calcKarmen();
   }
 
   if (ext_flags & EXT_NOMAD)
+  {
+    printf("# Initializing NOMAD code ...\n");
     initNomad();                     // Nomad
+  }
 
-  if (ext_flags & EXT_SBL)
+  if (ext_flags & EXT_REACTORS)
   {
     ns_reactor::init_fluxes();
     ns_reactor::rate.init();
     #ifdef USE_SBL
+      printf("# Initializing SBL reactor code ...\n");
       ns_reactor::init_sbl_reactors(old_new_main); // Bugey 4, Rovno, Krasnoyarsk, ILL, Goesgen
     #endif
     #ifdef USE_BUGEY_SP
+      printf("# Initializing Bugey code ...\n");
       ns_reactor::bugey_init(old_new_main);        // Bugey
     #endif
     #ifdef USE_CHOOZ
+      printf("# Initializing Chooz code ...\n");
       ns_reactor::chooz_init(old_new_main);        // Chooz
     #endif
     #ifdef USE_PV
+      printf("# Initializing Palo Verde code ...\n");
       ns_reactor::PV_init();                       // Palo Verde
     #endif
     #ifdef USE_DC
+      printf("# Initializing Double Chooz code ...\n");
       ns_reactor::dc_init(old_new_main);           // Double Chooz
     #endif
     #ifdef USE_DB
+      printf("# Initializing Daya Bay code ...\n");
       ns_reactor::DB_init();                       // Daya Bay
     #endif
     #ifdef USE_RENO
+      printf("# Initializing RENO code ...\n");
       ns_reactor::RENO_init();                     // RENO
     #endif
     #ifdef USE_GAL
+      printf("# Initializing Gallium code ...\n");
       ns_reactor::gallium_init();                  // Gallium radioactive source experiments
     #endif
+    #ifdef USE_KAML
+      printf("# Initializing KamLAND code ...\n");
+      ns_reactor::init_kaml();                     // KamLAND
+    #endif
 
+    printf("# Setting up pull matrices for SBL codes ...\n");
     ns_reactor::fit.invert_S();
     ns_reactor::fit.pull_status[ns_reactor::FLUX_NORM]
       = ns_reactor::FIXED; // See Thomas' email from 2012-05-23 for explanation
   }
 
   if (ext_flags & EXT_CDHS)          // CDHS
+  {
+    printf("# Initializing CDHS code ...\n");
     initCDHS();
+  }
 
   if (ext_flags & EXT_ATM_COMP)      // Michele's atmospherics code
+  {
+    printf("# Initializing atmospheric neutrino code ...\n");
     atm_init(0x01);
+  }
 
   if (ext_flags & EXT_SOLAR)         // Michele's solar neutrino code
   {
+    printf("# Initializing solar neutrino code ...\n");
+    solar_dm21_min = true_sdm;
+    solar_dm21_max = true_sdm;
     enum {
       EXP_Chlorine = 1 << 0,
       EXP_Gallium  = 1 << 1,
@@ -253,7 +291,8 @@ int ext_init(int ext_flags)
     const uint solar_exp_mask = EXP_Chlorine | EXP_Gallium  | EXP_SuperK |
                                 EXP_BX_upper | EXP_BX_lower |
                                 EXP_SNO_pure | EXP_SNO_salt | EXP_SNO_henc;
-    sun_init(1, &solar_exp_mask);
+//    sun_init(1, &solar_exp_mask); // This is for the slower, non-adiabatic solar code
+    sun_init(solar_exp_mask); // This is for the new, adiabatic solar code
   }
 
   return 0;
@@ -287,6 +326,7 @@ double my_prior(const glb_params in, void* user_data)
 
   // Force the active-sterile mixing angles to be < \pi/4 to prevent the minimizer
   // from jumping between the 3+2 and 1+3+1 cases FIXME
+  // FIXME Check if this should be fabs or no fabs
   if (n_flavors >= 4  &&
       (fabs(glbGetOscParamByName(params, "TH14")) > M_PI/4  ||
        fabs(glbGetOscParamByName(params, "TH24")) > M_PI/4  ||
@@ -330,23 +370,46 @@ double my_prior(const glb_params in, void* user_data)
   // -----------------------------
   if (ext_flags)
   {
-    // Workaround for Thomas' code requiring 0 < dm41sq, dm51sq <~ 10^2
-    // (actually slightly less than 2 due to a bug)
+    // Workaround for Thomas' reactor code allowing only certain ranges for
+    // dm21sq, dm31sq, dm41sq, dm51sq
+    if (n_flavors >= 3)
+    {
+      #ifndef LOG_ATM
+        #error "my_prior works only for logarithmic Dmq_atm in reactor code."
+      #endif
+      double dm31 = fabs(glbGetOscParamByName(params, "DM31"));
+      if (dm31 < POW10(ATM_MIN)+1e-10 || dm31 > POW10(ATM_MAX)-1e-10)
+      {
+        pv += 5e11;
+        goto my_prior_end;
+      }
+
+      double dm21 = fabs(glbGetOscParamByName(params, "DM21"));
+    #ifdef LOG_SOL
+      if (dm21 < POW10(SOL_MIN)+1e-10 || dm21 > POW10(SOL_MAX)-1e-10)
+    #else
+      if (dm21 < SOL_MIN+1e-10 || dm21 > SOL_MAX-1e-10)
+    #endif
+      {
+        pv += 6e11;
+        goto my_prior_end;
+      }
+    }
     if (n_flavors >= 4)
     {
       double dm41 = fabs(glbGetOscParamByName(params, "DM41"));
-      if (dm41 < 0 || dm41 > 70)
+      if (dm41 < POW10(ATM_MIN)+1e-10 || dm41 > POW10(STE_MAX)-1e-10)
       {
-        pv += 5e11;
+        pv += 7e11;
         goto my_prior_end;
       }
     }
     if (n_flavors >= 5)
     {
       double dm51 = fabs(glbGetOscParamByName(params, "DM51"));
-      if (dm51 < 0 || dm51 > 70)
+      if (dm51 < POW10(ATM_MIN)+1e-10 || dm51 > POW10(STE_MAX)-1e-10)
       {
-        pv += 6e11;
+        pv += 8e11;
         goto my_prior_end;
       }
     }
@@ -377,7 +440,7 @@ double my_prior(const glb_params in, void* user_data)
       sbl_params.dmq[I5] = fabs(glbGetOscParamByName(params, "DM51"));
       sbl_params.delta   = gsl_complex_arg(
           gsl_complex_mul(gsl_complex_mul(_U[1][3], gsl_complex_conjugate(_U[0][3])),
-                          gsl_complex_mul(_U[0][4], gsl_complex_conjugate(_U[1][3]))) );
+                          gsl_complex_mul(_U[0][4], gsl_complex_conjugate(_U[1][4]))) );
     }
 
 
@@ -403,7 +466,8 @@ double my_prior(const glb_params in, void* user_data)
 
 
     // SBL reactor experiments + gallium experiments
-    if (ext_flags & EXT_SBL)
+    // ---------------------------------------------
+    if (ext_flags & EXT_REACTORS)
     {
       // Prepare parameter data structure for Thomas' 2012 reactor code
       struct ns_reactor::Param_5nu reactor_params =
@@ -446,40 +510,76 @@ double my_prior(const glb_params in, void* user_data)
         pv += last_chi2_reactor;
     }
 
-    // Atmospheric neutrinos
+
+//    // Atmospheric neutrinos -- 2011 code (v43)
+//    // ----------------------------------------
+//    if (ext_flags & EXT_ATM_COMP)
+//    {
+//      // Workaround for Michele's code requiring dm31sq < 1e-2
+//      if (fabs(glbGetOscParamByName(params, "DM31")) > 0.99e-2)
+//        pv += 1e15;
+//      else if (glbGetNumOfOscParams() == 51+1)  // 3 flavors
+//        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
+//                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+//                        glbGetOscParamByName(params, "DM31"));
+//      else if (glbGetNumOfOscParams() == 92+4) // 4 flavors
+//        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
+//                        glbGetOscParamByName(params, "TH24"),
+//                        0.0,
+//                        glbGetOscParamByName(params, "TH34"),
+//                        0.0,
+//                        0.0, //FIXME Include phases
+//                        0.0,
+//                        glbGetOscParamByName(params, "DM31"));
+//      else if (glbGetNumOfOscParams() == 145+6) // 5 flavors
+//        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
+//                        glbGetOscParamByName(params, "TH24"),
+//                        glbGetOscParamByName(params, "TH25"),
+//                        glbGetOscParamByName(params, "TH34"),
+//                        glbGetOscParamByName(params, "TH35"),
+//                        0.0,
+//                        0.0,
+//                        glbGetOscParamByName(params, "DM31"));
+//      else
+//        pv -= 1.e30;
+//    } // ext_flags & EXT_ATM_COMP
+
+
+    // Atmospheric neutrinos -- 2012 code (v54)
+    // ----------------------------------------
     if (ext_flags & EXT_ATM_COMP)
     {
+      complx (*_U)[n_flavors] =
+        (complx (*)[n_flavors]) gsl_matrix_complex_ptr(snu_get_U(), 0, 0);
+      complx Uatm[5][5];
+      for (int i=0; i < n_flavors; i++)
+      {
+        for (int j=0; j < n_flavors; j++)
+          Uatm[i][j] = _U[i][j];
+        for (int j=n_flavors; j < 5; j++)
+          Uatm[i][j] = 0.0;
+      }
+      for (int i=n_flavors; i < 5; i++)
+      {
+        for (int j=0; j < 5; j++)
+          Uatm[i][j] = 0.0;
+        Uatm[i][i] = 1.0;
+      }
+
+//FIXME      for (int i=0; i < n_flavors; i++)
+//FIXME        for (int j=0; j < n_flavors; j++)
+//FIXME          printf("*** %g + %g*I\n", Uatm[i][j].real(), Uatm[i][j].imag());
+
       // Workaround for Michele's code requiring dm31sq < 1e-2
       if (fabs(glbGetOscParamByName(params, "DM31")) > 0.99e-2)
         pv += 1e15;
-      else if (glbGetNumOfOscParams() == 51+1)  // 3 flavors
-        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                        glbGetOscParamByName(params, "DM31"));
-      else if (glbGetNumOfOscParams() == 92+3) // 4 flavors
-        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
-                        glbGetOscParamByName(params, "TH24"),
-                        0.0,
-                        glbGetOscParamByName(params, "TH34"),
-                        0.0,
-                        0.0, //FIXME Include phases
-                        0.0,
-                        glbGetOscParamByName(params, "DM31"));
-      else if (glbGetNumOfOscParams() == 145+5) // 5 flavors
-        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
-                        glbGetOscParamByName(params, "TH24"),
-                        glbGetOscParamByName(params, "TH25"),
-                        glbGetOscParamByName(params, "TH34"),
-                        glbGetOscParamByName(params, "TH35"),
-                        0.0,
-                        0.0,
-                        glbGetOscParamByName(params, "DM31"));
       else
-        pv -= 1.e30;
+        pv += atm_chisq(Uatm, glbGetOscParamByName(params, "DM31"), 0.0);
     } // ext_flags & EXT_ATM_COMP
 
 
     // Interface to Michele's solar neutrino code
+    // ------------------------------------------
     if (ext_flags & EXT_SOLAR)
     {
       static Angles last_a = { NAN, NAN, NAN, NAN, NAN, NAN, NAN };
@@ -487,33 +587,39 @@ double my_prior(const glb_params in, void* user_data)
       static double last_chi2_solar = NAN;
       Angles a;
       double chi2_solar = -1.e25;
-      const double dm21_min = 1e-6;
-      const double dm21_max = 1e-3;
       double dm21 = glbGetOscParamByName(params, "DM21");
 
-      if (dm21 < dm21_min || dm21 > dm21_max)
+      if (dm21 < solar_dm21_min || dm21 > solar_dm21_max)
         return 1.e25;
 
       solar_parameters(snu_get_U(), &a); // Determine parameters of Michele's parameterization
-      if (memcmp(&last_a, &a, sizeof(a)) != 0)  // Recompute probabilities only
-      {                                         // if mixing angles have changed
-        if (debug_level > 1)
+      if (memcmp(&last_a, &a, sizeof(a)) != 0) // Recompute probabilities only if mixing angles
+      {                                        // have changed
+        // If this is a degfinder prescan (indicated by systematics OFF), compute solar
+        // probabilities only once FIXME
+        if (glbGetSysOnOffState(0,0)==GLB_ON  ||  isnan(last_a.the12))
         {
-          printf("# Recomputing solar probabilities ...\n");
-          printf("# Old params: %g %g %g %g %g %g %g\n", last_a.the12, last_a.dlt12,
-                 last_a.eta_e, last_a.ste_D, last_a.ste_N, last_a.cst_e, last_a.cst_a);
-          printf("# New params: %g %g %g %g %g %g %g\n", a.the12, a.dlt12,
-                 a.eta_e, a.ste_D, a.ste_N, a.cst_e, a.cst_a);
+          if (debug_level > 1)
+          {
+            printf("# Recomputing solar probabilities ...\n");
+            printf("# Old params: %g %g %g %g %g %g %g\n", last_a.the12, last_a.dlt12,
+                   last_a.eta_e, last_a.ste_D, last_a.ste_N, last_a.cst_e, last_a.cst_a);
+            printf("# New params: %g %g %g %g %g %g %g\n", a.the12, a.dlt12,
+                   a.eta_e, a.ste_D, a.ste_N, a.cst_e, a.cst_a);
+          }
+          sun_probs(a, solar_dm21_min, solar_dm21_max);
         }
-        sun_probs(a, dm21_min, dm21_max);
+
         memcpy(&last_a, &a, sizeof(a));
-        sun_chisq(dm21, &chi2_solar);
+//        sun_chisq(dm21, &chi2_solar); // This is for the slower, non-adiabatic solar code
+        chi2_solar = sun_chisq(dm21); // This is for the new, adiabatic solar code
         last_dm21 = dm21;
         last_chi2_solar = chi2_solar;
       }
       else if (last_dm21 != dm21)     // Recompute chi^2 only if the relevant angles/phases
-      {
-        sun_chisq(dm21, &chi2_solar); // or dm21 have changed
+      {                               // or dm21 have changed
+//        sun_chisq(dm21, &chi2_solar);
+        chi2_solar = sun_chisq(dm21);
         last_dm21 = dm21;
         last_chi2_solar = chi2_solar;
       }

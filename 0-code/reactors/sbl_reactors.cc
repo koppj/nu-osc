@@ -43,9 +43,9 @@ double sbl_data[N_SBL_R][2] = {
 double sbl_err_uncor[N_SBL_R] = {
   1.09,   // BUGEY4
   2.10,	  // ROVNO   
-  2., 	  // BUGEY3_1
-  2., 	  // BUGEY3_2
-  2.,	  // BUGEY3_3
+  2.05,   // BUGEY3_1
+  2.06,   // BUGEY3_2
+  14.6,	  // BUGEY3_3
   2.38,	  // GOSGEN_1
   2.31,	  // GOSGEN_2
   4.81,	  // GOSGEN_3
@@ -174,11 +174,11 @@ int init_sbl_reactors(int old_new)
 
   for(int i = ROV_1I; i <= ROV_2I; i++)
     for(int j = ROV_1I; j <= ROV_2I; j++)
-      S[i][j] += sbl_err_uncor[i] * sbl_err_uncor[j];
+      S[i][j] += sbl_err_uncor[i] * sbl_err_uncor[j] * 1.e-4;
 
   for(int i = ROV_1S; i <= ROV_3S; i++)
     for(int j = ROV_1S; j <= ROV_3S; j++)
-      S[i][j] += sbl_err_uncor[i] * sbl_err_uncor[j];
+      S[i][j] += sbl_err_uncor[i] * sbl_err_uncor[j] * 1.e-4;
 
 
   // set the covar matrix in fit
@@ -260,28 +260,28 @@ void set_table_sbl(Param_5nu &p, double cff[NBIN_CHISQ][NPULLS+1])
 
 /**********************************************************************/
 
-/*
 void print_sbl_data(void)
 {
+  double L18 = 17.;
   for(int i = 0; i < N_SBL_R; i++){
-    printf("%d %e %f %e %e %e\n", i+1, sbl_data[i][OLD], i+1.2, 
-	   sbl_data[i][NEW], sbl_err_stat[i], 
-	   sqrt(norm(sbl_err_stat[i]) + norm(sbl_err_syst[i])));
+    double l = sbl_L[i];
+    if(sbl_L[i] == 18.){ L18 += 0.4; l = L18;}  
+    const int ii = fit.first_bin[SBL] + i;
+    printf("%d %e %e %e %e\n", i+1, l, sbl_data[i][NEW], 
+           0.01*sbl_err_uncor[i] * sbl_data[i][NEW], sqrt(fit.S_data[ii][ii])); 
   }
+  exit(0);
   return;
 }
-void print_sbl_pred(double xi[NPULLS])
+
+void print_sbl_pred(Param_5nu p, FILE *fp)
 {
-  for(int i = 0; i < N_SBL_R; i++){
-    double pred = 1.;
-    for(int j = 0; j < NISO; j++)
-      pred += xi[j] * sbl_flux_pulls[i][j];
-    
-    printf("%f %f\n", i+0.5, pred);
-    printf("%f %f\n", i+1.5, pred);
+  for(double L = 5.; L < 200.; L *= 1.04){
+    fprintf(fp, "%e %e\n", L, rate.prob(p, L, sbl_iso_fract[BUGEY4]));
   }
+  exit(0);
   return;
 }
   
-*/
+
 }

@@ -106,8 +106,8 @@ int initGlb(int n_flavors)
   glbDefineChiFunction(&chiWBB_LAr,      10, "chiWBB_LAr",       &wbb_params);
   glbDefineChiFunction(&chiDCNorm,        5, "chiDCNorm",        NULL);
   glbDefineChiFunction(&chiMINOS,         5, "chiMINOS",         NULL);
-  chiMB_init();
-  glbDefineChiFunction(&chiMBanti_nu2010, 0, "chiMBanti_nu2010", NULL);
+//  chiMB_init(); // for 2010 version of MiniBooNE code
+//  glbDefineChiFunction(&chiMBanti_nu2010, 0, "chiMBanti_nu2010", NULL);
 
   // Load experiments
   int n_exps = 1;

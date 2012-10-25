@@ -2,7 +2,7 @@
 
 # Copy main working directory
 rsync --delete -avz $HOME/papers/sterile-nu/sim/ fnpcsrv1.fnal.gov:/grid/app/jkopp/sterile-nu \
-      --exclude .git/ --exclude *genie*
+      --exclude .git/ --exclude *genie* --exclude *Inputs*
 
 # Change permissions for job execution
 ssh grid chmod -R g+rX /grid/app/jkopp/sterile-nu
