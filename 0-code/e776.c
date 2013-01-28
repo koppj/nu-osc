@@ -94,6 +94,9 @@ double chi_E776(int exp, int rule, int n_params, double *x,
 
   /* I have 4 errors: pi0 background and beam nue for each polarity */
   for(i=0; i<4; i++)chi2 += glb_prior(x[i], 0.0, errors[i]);
+
+  if (isnan(chi2))
+    chi2=1.e102;
   return chi2;
 }
 

@@ -1,6 +1,8 @@
 TODO
 ----
 
+- Make plot of Ue4 vs. Um4 for ATM.
+
 - Understand why including ATM_COMP rather than ATM_TAB changes the PG
   test by so much.
 
@@ -14,18 +16,20 @@ in 3+1, see Thomas' email from Sep 23, 2011, 8:30 am.
 - Try to understand good PG for app vs. disapp in the 1+3+1 case (but
 not the 3+2 case)
 
-- Quantify tensions within the appearance data
-
-- Understand why null-app results seem to prefer, at low confidence,
-non-zero theta
-
 - Study consistency of app and disapp evidence, e.g. by plotting chi^2
 marginalized vs. dmsq.
 
-- Understand why solar is more constraining for th13 than for th14.
-(Matter effects?)
+- What are the artifacts in the Um4-Ut4 plots at high CL?
 
+- Counting of degrees of freedom in MB?
 
+- Write summary of MINOS analysis
+
+- Study impact of sterile neutrinos on th23 (deviation from maximal)
+
+- Using Thomas' code, "all except KamLAND" gives worse limit than
+SBL+BUGEY_SP. Is this related to th13 fixed? Plot in th13-th14 plane
+for fixed dm41?
 
 
 chi^2_min results
@@ -139,5 +143,26 @@ for "all except KamLAND" moves to even larger th14 (by a small amount).
 Plotting the allowed region in th13 vs th14 (for dm41 = 5. eV^2) does not
 reveal anything unusual.
 
+- Why is solar more constraining for th13 than for th14.
+(Matter effects?)
+--> Is it really more constraining? Looking at the exclusion plot in
+the th13--th14 plane, it seems to me that the two limits are similar
+(note that we plot sin^2 \theta_{14}, but \sin^2 2\theta_{13}!
 
+- Why do null-app results seem to prefer, at low confidence,
+non-zero theta?
+--> Cannot reproduce this claim any more.
+
+- Understand why atm depends on th34 in Thomas' 2007 paper, but not for us
+--> Michele's ATM code can do *either* full matter effects (-> th34) or
+include electron neutrinos, but not both.
+
+- Quantify tensions within the appearance data
+--> Done, plot is in the paper (currently fig. 7)
+
+
+Important changes
+-----------------
+
+2013-01-25  Include matter effects in MINOS
 

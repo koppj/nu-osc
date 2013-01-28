@@ -57,8 +57,8 @@ typedef struct
 } wbb_params_type;
 
 /* Different plot types */
-enum { NU_ACTION_SPECTRUM, NU_ACTION_PARAM_SCAN, NU_ACTION_EXPOSURE_SCAN,
-       NU_ACTION_CHECK_BF };
+enum { NU_ACTION_SPECTRUM, NU_ACTION_PARAM_SCAN, NU_ACTION_EXPOSURE_SCAN/*,
+       NU_ACTION_CHECK_BF*/ };
 
 /* External analysis routines */
 enum { EXT_MB         = 0x0001,
@@ -213,6 +213,7 @@ double sample(double min, double max, int steps, int i);
 typedef int (*sens_func)(const char *, double, double, int, double, double, int);
 int RestrictWBBEnergyWindow(wbb_params_type *wbb_params);
 int print_rates();
+int my_print_params(glb_params p);
 int param_scan(const char *key_string, int n_p, char *params[], double p_min[], double p_max[],
        int p_steps[], unsigned long p_flags[], int n_min_params, char *min_params[],
        int prescan_n_p, char *prescan_params[], double prescan_p_min[],

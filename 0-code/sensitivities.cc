@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <float.h>
 
 #include <globes/globes.h>
 //#include <montecubes/montecubes.h>
@@ -60,6 +61,8 @@ extern glb_params prescan_params1;
 extern glb_params prescan_params2;
 extern glb_projection proj;
 extern glb_projection prescan_proj;
+
+extern int compute_bf;
 
 #define MAX_DEG   1000    // Maximum number of degeneracies to expect 
 #define MAX_PARAMS  20
@@ -304,8 +307,8 @@ int my_print_params(glb_params p)
     {
       printf("%s %g   ", glbGetParamName(i), x);
       k++;
-      if (k % 4 == 0)
-        printf("\n");
+//      if (k % 4 == 0)
+//        printf("\n");
     }
   }
   printf("\n");
@@ -407,6 +410,9 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
   glb_params deg_pos[MAX_DEG];
   for (int i=0; i < MAX_DEG; i++)
     deg_pos[i] = glbAllocParams();
+  glb_params global_bf_NH = glbAllocParams();
+  glb_params global_bf_IH = glbAllocParams();
+  double global_chi2min_NH=DBL_MAX, global_chi2min_IH=DBL_MAX;
   int prescan_param_indices[prescan_n_p];
   for (int i=0; i < prescan_n_p; i++)
     prescan_param_indices[i] = glbFindParamByName(prescan_params[i]);
@@ -498,7 +504,7 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
     else
       n_deg = 0;
 
-    // Determine best fit 
+    // Determine best fit among the degenerate solutions
     double chi2_NH = 1.0e50;
     double chi2_IH = 1.0e50;
     glb_params Fit_NH = NULL;
@@ -527,7 +533,7 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
     }
     printf("%15.10g %15.10g\n", chi2_NH, chi2_IH);
 
-    // Print parameters at best fit points
+    // Print best fit parameters at the current scan point
     if (debug_level > 0)
     {
       if (Fit_NH)
@@ -541,8 +547,92 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
         my_print_params(Fit_IH);
       }
     }
+
+    // Look for global best fit
+    if (chi2_NH < global_chi2min_NH)
+    {
+      global_chi2min_NH = chi2_NH;
+      glbCopyParams(Fit_NH, global_bf_NH);
+    }
+    if (chi2_IH < global_chi2min_IH)
+    {
+      global_chi2min_IH = chi2_IH;
+      glbCopyParams(Fit_IH, global_bf_IH);
+    }
   }
 
+  // If desired, compute global best fit by starting a local minimization at
+  // at the minimum among the scan points
+  if (compute_bf)
+  {
+    // Now minimize also over the scan parameters
+    for (int i=0; i < n_p; i++)
+      glbSetProjectionFlagByName(proj, GLB_FREE, params[i]);
+
+    // Call degfinder for NH best fit - prescan shouldn't be necessary here, so omit it
+    if (global_chi2min_NH < 1.e3)
+    {
+      n_deg = MAX_DEG;
+      glbCopyParams(global_bf_NH, test_values);
+      degfinder(test_values, 0, NULL, NULL, NULL, NULL,
+                prescan_proj, proj, &n_deg, deg_pos, deg_chi2,
+                default_degfinder_flags | DEG_NO_IH, prescan_p_flags);
+      for (int i=0; i < n_deg; i++)
+      {
+        if (deg_chi2[i] < global_chi2min_NH)
+        {
+          global_chi2min_NH = deg_chi2[i];
+          glbCopyParams(deg_pos[i], global_bf_NH);
+        }
+      }
+
+      printf("BF_NH chi^2 %g  ", global_chi2min_NH);
+      my_print_params(global_bf_NH);
+    }
+    else
+      printf("# Not computing NH best fit - chi^2 too large.\n");
+
+    // Call degfinder for IH best fit - prescan shouldn't be necessary here, so omit it
+    if (global_chi2min_IH < 1.e3)
+    {
+      n_deg = MAX_DEG;
+      glbCopyParams(global_bf_IH, test_values);
+      degfinder(test_values, prescan_n_p, prescan_param_indices, prescan_p_min, prescan_p_max,
+                prescan_p_steps, prescan_proj, proj, &n_deg, deg_pos, deg_chi2,
+                default_degfinder_flags | DEG_NO_NH, prescan_p_flags);
+      for (int i=0; i < n_deg; i++)
+      {
+        if (deg_chi2[i] < global_chi2min_IH)
+        {
+          global_chi2min_IH = deg_chi2[i];
+          glbCopyParams(deg_pos[i], global_bf_IH);
+        }
+      }
+
+      printf("BF_IH chi^2 %g  ", global_chi2min_IH);
+      my_print_params(global_bf_IH);
+    }
+    else
+      printf("# Not computing IH best fit - chi^2 too large.\n");
+  }
+
+  // Otherwise, output best grid point
+  else
+  {
+    if (global_chi2min_NH < 1.e5)
+    {
+      printf("Best grid point NH  chi^2 %g  ", global_chi2min_NH);
+      my_print_params(global_bf_NH);
+    }
+    if (global_chi2min_IH < 1.e5)
+    {
+      printf("Best grid point IH  chi^2 %g  ", global_chi2min_IH);
+      my_print_params(global_bf_IH);
+    }
+  }
+
+  glbFreeParams(global_bf_NH);
+  glbFreeParams(global_bf_IH);
   for (int i=0; i < MAX_DEG; i++)
     if (deg_pos[i] != NULL)
       glbFreeParams(deg_pos[i]);

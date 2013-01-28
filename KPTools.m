@@ -119,6 +119,46 @@ PValue[sigmas_] := Module[{},
 S2ToRad[x_] := ArcSin[Sqrt[x]]/2;
 RadToS2[x_] := Sin[2 x]^2;
 
+JHEPPlot[grObj_Graphics] := Module[{fulopts, tcklst, th = 0.004},
+   fulopts = FullOptions[grObj];
+   tcklst = FrameTicks /. fulopts /. {loc_, lab_, len : {_, _}, {sty : ___}}
+          :> {loc, lab, 2*len, {Directive[sty, Thickness[th]]}};
+   grObj /. Graphics[prims_, (opts__)?OptionQ] :> 
+            Graphics[prims, FrameTicks -> tcklst, FrameTicksStyle -> Thickness[th],
+                     FrameStyle -> Thickness[th], opts]
+];
+
+(* Remove ``spider webs'' from contour plots (courtesy of Paddy Fox) *)
+OptimizeContourPlot[p_] :=  p /. { { EdgeForm[], style__, ii___}
+                               -> {EdgeForm[style], style, ii} };
+
+(* http://mathematica.stackexchange.com/questions/3190/saner-alternative-to-contourplot-fill *)
+cleanContourPlot[cp_] :=
+ Module[{points, groups, regions, lines},
+  groups = 
+   Cases[cp, {style__, g_GraphicsGroup} :> {{style}, g}, Infinity];
+  points = 
+   First@Cases[cp, GraphicsComplex[pts_, ___] :> pts, Infinity];
+  regions = Table[
+    Module[{group, style, polys, edges, cover, graph},
+     {style, group} = g;
+     polys = Join @@ Cases[group, Polygon[pt_, ___] :> pt, Infinity];
+     edges = Join @@ (Partition[#, 2, 1, 1] & /@ polys);
+     cover = Cases[Tally[Sort /@ edges], {e_, 1} :> e];
+     graph = Graph[UndirectedEdge @@@ cover];
+     {Sequence @@ style, 
+      FilledCurve[
+       List /@ Line /@ First /@ 
+          Map[First, 
+           FindEulerianCycle /@ (Subgraph[graph, #] &) /@ 
+             ConnectedComponents[graph], {3}]]}
+     ],
+    {g, groups}];
+  lines = Cases[cp, _Tooltip, Infinity];
+  Graphics[GraphicsComplex[points, {regions, lines}], 
+   Sequence @@ Options[cp]]
+];
+
 
 
 (*Begin["`Private`"]

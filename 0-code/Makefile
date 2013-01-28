@@ -65,17 +65,17 @@ LDFLAGS = $(GLB_LDFLAGS) \
 	  -L./$(solar_dir)/LibMath -L./$(solar_dir)/LibPhys \
 	  -L./$(solar_dir)/LibWrap -L./$(solar_dir)/LibProb \
 	  -latmwrapper -latmphysics -latmmathres \
-       	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun -static
+      	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun -static
           #-lmontecubes
 
 # For some reason, -D_BSD_SOURCE is required for mathematical constants
 # such as M_PI, to be defined
-export CFLAGS   = -std=c99 -Wall -g -O3 -D_BSD_SOURCE -fgnu89-inline -ffast-math -Wno-write-strings $(INCFLAGS)
-export CXXFLAGS = -Wall -g -O3 -Wno-write-strings $(INCFLAGS)
+export CFLAGS   = -std=c99 -Wall -g -O2 -D_BSD_SOURCE -fgnu89-inline -ffast-math -Wno-write-strings $(INCFLAGS)
+export CXXFLAGS = -Wall -g -O2 -Wno-write-strings $(INCFLAGS)
 
 BIN     = nu
 OBJ     = nu.o const.o sys.o snu.o degfinder.o sensitivities.o prem.o \
-	  mb.o e776.o c12.o icarus.o prior.o iface.o
+	  mb.o e776.o c12.o icarus.o prior.o
 HEADER  = nu.h const.h snu.h sbl/definitions.h reactors/definitions.h
 SUBDIRS = sbl reactors
 

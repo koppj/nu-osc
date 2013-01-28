@@ -95,6 +95,13 @@ namespace ns_reactor
   extern int old_new_main;
 }
 
+// Parameters for Michele's atmospheric neutrino analysis
+int atm_decouple_e = 0; // Whether to decouple electron neutrinos by hand
+                        // and instead include sterile neutrino matter effects
+
+// Compute best fit point at end of parameter scan?
+int compute_bf = 0;
+
 /* Density correlations. Lists, for each experiment, the experiment with which
  * the corresponding matter density is correlated */
 int density_corr[GLB_MAX_EXP];
@@ -124,8 +131,10 @@ static char argp_doc[] = "nu neutrino oscillation simulation";
 static char argp_option_doc[] = "[options]";
 
 // The actual list of command line options we accept
-#define OPT_NO_IH 1000
-#define OPT_NO_NH 1001
+#define OPT_NO_IH          1000
+#define OPT_NO_NH          1001
+#define OPT_ATM_DECOUPLE_E 1002
+#define OPT_BF             1003
 static struct argp_option cmdline_options[] = {
   {"flavors",    'f',"NUMBER",0,"Number of flavors to use. Can be 3, 4, or 5)" },
   {"action",     'a',"ACTION",0,"Which parameters to scan (allowed values defined in const.c)" },
@@ -138,6 +147,8 @@ static struct argp_option cmdline_options[] = {
   {"cons",       'c',"PARAMS",0,"Parameters with external priors (CHECK DOCUMENTATION!)"},
   {"no-ih",       OPT_NO_IH, NULL, 0,"Omit inverted hierarchy in fit"},
   {"no-nh",       OPT_NO_NH, NULL, 0,"Omit normal hierarchy in fit"},
+  {"atm-decouple-e", OPT_ATM_DECOUPLE_E, NULL, 0,"Decouple electron neutrino in ATM code"},
+  {"best-fit",    OPT_BF,NULL,0,"Compute best fit point at the end of parameter scan"},
   {"verbose",    'v',NULL,    0,"Show debug output (use multiple times for more)"},
   { 0 }
 };
@@ -469,6 +480,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
       default_degfinder_flags |= DEG_NO_NH;
       break;
 
+    case OPT_ATM_DECOUPLE_E:
+      atm_decouple_e = 1;
+      break;
+
+    case OPT_BF:
+      compute_bf = 1;
+      break;
+ 
     // -------------------------------------------------
     default:
       return ARGP_ERR_UNKNOWN;
@@ -693,6 +712,29 @@ int load_exps(const int n_exps, char **exps)
       glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       L_opt[1] = L_opt[3] = 0;
+    }
+
+    // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
+    // without oscillations in near detector
+    else if (strcasecmp(exps[i], "MINOS_NC_noNDosc") == 0)
+    {
+      setenv("GLB_PATH", "glb/minos-nc", 1);
+      glb_setup_path();
+      glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      L_opt[1] = L_opt[3] = 0;
+
+      for (int i=glb_num_of_exps-3; i < glb_num_of_exps; i+=2)  // Loop over ND for CC and NC analysis
+      {
+        glb_experiment *e = glb_experiment_list[i];
+        for (int j=0; j < e->numofchannels; j++) // Loop over channels
+        {
+          if (e->listofchannels[2][j] < 10)
+            e->listofchannels[2][j] += 10;
+          if (e->listofchannels[3][j] < 10)
+            e->listofchannels[3][j] += 10;
+        }
+      }
     }
 
     // MINOS CC \nu_\mu analysis (http://arxiv.org/abs/1103.0340)
@@ -1004,8 +1046,9 @@ int main(int argc, char *argv[])
                                         {2,3}, {1,3}, {1,2} };
     int default_phase_order[] = { -1, -1, -1,  2, -1, -1,  1, -1,  0, -1};
     snu_init_probability_engine(n_flavors, default_rotation_order, default_phase_order);
-    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+8, &snu_probability_matrix,
+    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+7, &snu_probability_matrix,
       &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
+      // Remember to change when adding parameters!
   }
 
   for (int j=0; j < glbGetNumOfOscParams(); j++)
@@ -1147,6 +1190,10 @@ int main(int argc, char *argv[])
 //    printf("\n");
 //    glbSetOscillationParameters(true_values);
 //    snu_print_gsl_matrix_complex(U);
+//
+//    glbPrintParams(stdout, true_values);
+//    glbGetOscillationParameters(true_values);
+//    glbPrintParams(stdout, true_values);
 //
 //    exit(1);
 //  }
@@ -1307,12 +1354,12 @@ int main(int argc, char *argv[])
       break;
     }
 
-    // Check Thomas' best fit points
-    case NU_ACTION_CHECK_BF:
-      printf("# Checking Thomas' best fit point\n");
-      printf("#\n");
-      checkBF(n_flavors);
-      break;
+//    // Check Thomas' best fit points
+//    case NU_ACTION_CHECK_BF:
+//      printf("# Checking Thomas' best fit point\n");
+//      printf("#\n");
+//      checkBF(n_flavors);
+//      break;
   }
 
  

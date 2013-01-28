@@ -15,7 +15,6 @@
 /* Global variables */
 extern const int debug_level;
 
-// FIXME Degfinder not tested with sterile neutrinos
 
 /* ---------------------------------------------------------------------------- */
 double ChiNPWrapper(glb_params base_values, double th12, double th13, double th23,
@@ -60,14 +59,24 @@ double ChiNPWrapper(glb_params base_values, double th12, double th13, double th2
     if (dm31_tv < 0)  glbSetOscParams(tv, -dm31_tv + glbGetOscParams(tv,GLB_DM_21), GLB_DM_31);
     if (dm31_cv < 0)  glbSetOscParams(cv, -dm31_cv + glbGetOscParams(cv,GLB_DM_21), GLB_DM_31);
     glbSetCentralValues(cv);
-    result = glbChiNP(tv, fit_values, GLB_ALL);
+
+    // Before calling glbChiNP, check if GLoBES will accept the chosen
+    // oscillation parameters (it may not, for instance if the chosen values of
+    // s22thmue and Um4 are inconsistent)
+    if (glbSetOscillationParameters(tv) == 0)
+      result = glbChiNP(tv, fit_values, GLB_ALL);
+    else
+      result = 1.e21;
   }
   else if (hierarchy == HIERARCHY_INVERTED)
   {
     if (dm31_tv > 0)  glbSetOscParams(tv, -dm31_tv + glbGetOscParams(tv,GLB_DM_21), GLB_DM_31);
     if (dm31_cv > 0)  glbSetOscParams(cv, -dm31_cv + glbGetOscParams(cv,GLB_DM_21), GLB_DM_31);
     glbSetCentralValues(cv);
-    result = glbChiNP(tv, fit_values, GLB_ALL);
+    if (glbSetOscillationParameters(tv) == 0)
+      result = glbChiNP(tv, fit_values, GLB_ALL);
+    else
+      result = 1.e22;
   }
   else
   {
@@ -396,19 +405,24 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
            strstr(snu_param_strings[p_params[i]], "ARG") != NULL ||
            strstr(snu_param_strings[p_params[i]], "DELTA") != NULL )
       {
-        if (chi2_table_NH[j] - chi2_table_NH[j + k - s*k2] > 0 ||
+        /* Ignore chi^2 > 1e10 since this usually indicates some error */
+        if (chi2_table_NH[j] > 1.e10 ||
+            chi2_table_NH[j] - chi2_table_NH[j + k - s*k2] > 0 ||
             chi2_table_NH[j] - chi2_table_NH[j - k + t*k2] > 0)
           min_NH = 0;
-        if (chi2_table_IH[j] - chi2_table_IH[j + k - s*k2] > 0 ||
+        if (chi2_table_IH[j] > 1.e10 ||
+            chi2_table_IH[j] - chi2_table_IH[j + k - s*k2] > 0 ||
             chi2_table_IH[j] - chi2_table_IH[j - k + t*k2] > 0)
           min_IH = 0;
       }
       else
       {
-        if (chi2_table_NH[j] - chi2_table_NH[MIN(n_prescan_points - (k-j%k), j+k)] > 0 ||
+        if (chi2_table_NH[j] > 1.e10 ||
+            chi2_table_NH[j] - chi2_table_NH[MIN(n_prescan_points - (k-j%k), j+k)] > 0 ||
             chi2_table_NH[j] - chi2_table_NH[MAX(0, j-k)] > 0)
           min_NH = 0;
-        if (chi2_table_IH[j] - chi2_table_IH[MIN(n_prescan_points - (k-j%k), j+k)] > 0 ||
+        if (chi2_table_IH[j] > 1.e10 ||
+            chi2_table_IH[j] - chi2_table_IH[MIN(n_prescan_points - (k-j%k), j+k)] > 0 ||
             chi2_table_IH[j] - chi2_table_IH[MAX(0, j-k)] > 0)
           min_IH = 0;
       }

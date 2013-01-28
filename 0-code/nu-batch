@@ -11,6 +11,7 @@ DATA_PATH=$HOME/papers/sterile-nu/sim/results
 #$ -e /home/lin/jkopp/papers/sterile-nu/sim/results
 #$ -m ae
 #$ -M jkopp@mpi-hd.mpg.de
+#$ -l h_vmem=3G
 
 echo "Starting job run-nu" $@ "at: "
 date
@@ -34,7 +35,8 @@ fi
 echo "Executable:  $EXE_FILE"
 
 
-ulimit -c 0  # Switch off core dumps
+#ulimit -c 0  # Switch OFF core dumps
+ulimit -c 50000  # Switch ON core dumps
 cd $CODE_PATH
 $CODE_PATH/$EXE_FILE $@ > $OUT_FILE
 

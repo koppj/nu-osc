@@ -29,6 +29,7 @@
 #define NUBAR_DISAPP         // TAG_DEF
 #define COMBINED_APP         // TAG_DEF
 #define FULL_OSC             // TAG_DEF
+//#define RESCALING            // TAG_DEF
 
 #define DIS_RANK 42
 
@@ -162,6 +163,9 @@ static double mc_events_MB[2000000][4];
 static double mc_events_SB[700000][4];
 static int mc_events_MB_type[2000000];
 static int mc_events_SB_type[700000];
+/* mc_*_bin is for tabulating the Etrue, L, Erec bins */
+static int mc_nu_bin[128000][3],mc_bar_bin[128000][3],mc_numu_bin[1267007][3],
+  mc_MB_bin[2000000][3],mc_SB_bin[2000000][3];
 
   /* Probability arrays */
   double prob_nu[EBINS][LBINS][NU_FLAVOURS][NU_FLAVOURS];
@@ -253,6 +257,132 @@ int getspectrum(const char *fname)
 
 
 /***************************************************************************
+ * Tabulate bins for Montecarlo events                                     *
+ * The order is Etrue, L, Erec                                             *
+ ***************************************************************************/
+int tabulate_bins()
+{
+  double Ereco, Etrue, L, w;
+  int i,j;
+  int FIRST,TOT,LAST;
+  FIRST = APP_FIRST;
+  LAST = APP_LAST;
+  TOT  = 11-FIRST;
+
+  printf("# MiniBooNE: Loading APP-nu table...    ");
+  /* Creating table for APPnu events */
+  for (long k=0; k < Neventsnu; k++)
+    {
+      Ereco = mc_eventsnu[k][0];
+      Etrue = 1E-3*mc_eventsnu[k][1];
+      L     = 1E-5*mc_eventsnu[k][2];
+      w     = mc_eventsnu[k][3];
+      /* Localize event in Etrue -- L grid */
+      i = 0; j = 0;
+      while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
+      while (Lup[j] <= L && j <= LBINS-2) j++;
+      mc_nu_bin[k][0] = i;
+      mc_nu_bin[k][1] = j;
+      double Eup = Emin + 1000.*binwidths[FIRST];
+      i = 0;
+      while (Ereco >= Eup && i < TOT)
+	Eup += 1000.*binwidths[++i];
+      mc_nu_bin[k][2] = i;
+    }
+      
+  printf("Done!\n# MiniBooNE:  Loading DISAPP-nu table...    ");
+  /* Creating table for DISnu events */
+  for (long k=0; k < Neventsnumu; k++)
+    {
+      Ereco = mc_eventsnumu[k][0];
+      Etrue = mc_eventsnumu[k][1];
+      L     = mc_eventsnumu[k][2];
+      w     = mc_eventsnumu[k][3];
+      /* Localize event in Etrue -- L grid */
+      i = 0; j = 0;
+      while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
+      while (Lup[j] <= L && j <= LBINS-2) j++;
+      mc_numu_bin[k][0] = i;
+      mc_numu_bin[k][1] = j;
+      double Eup = disbin[0];
+      i = 0;
+      while (Ereco >= Eup && i < 16)
+	Eup = disbin[++i];
+      mc_numu_bin[k][2] = i;
+    }
+
+  printf("Done!\n# MiniBooNE:  Loading APP-nubar table...    ");
+  /* Creating table for APPnubar events */
+  for (long k=0; k < Neventsbar; k++)
+    {
+      Ereco = mc_eventsbar[k][0];
+      Etrue = 1E-3*mc_eventsbar[k][1]; /* in GeV */
+      L     = 1E-5*mc_eventsbar[k][2]; /* in km */
+      w     = mc_eventsbar[k][3];
+      i = 0; j = 0;
+      while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
+      while (Lup[j] <= L && j <= LBINS-2) j++;
+      mc_bar_bin[k][0] = i;
+      mc_bar_bin[k][1] = j;
+      double Eup = Emin + 1000.*binwidths[FIRST];
+      i = 0;
+      while (Ereco >= Eup && i < TOT)
+	Eup += 1000.*binwidths[++i];
+      mc_bar_bin[k][2] = i;
+    }
+
+  printf("Done!\n# MiniBooNE:  Loading DIS-nubar MB table...    ");
+  /* Creating table for DISnubar MB events */
+  for (long k=0; k < Nevents_MB; k++)
+    {
+      int type;
+      type  = mc_events_MB_type[k];
+      Etrue = mc_events_MB[k][0];
+      Ereco = mc_events_MB[k][1];
+      L     = 1E-3*mc_events_MB[k][2];
+      w     = mc_events_MB[k][3];
+      i = 0; j = 0;
+      while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
+      while (Lup[j] <= L && j <= LBINS-2) j++;
+      mc_MB_bin[k][0] = i;
+      mc_MB_bin[k][1] = j;
+      double Eup = bins_MBSB[0][0];
+      i = 0;
+      while (Ereco >= Eup && i < 21)
+	Eup = bins_MBSB[++i][0];
+      mc_MB_bin[k][2] = i;
+    }
+
+  printf("Done!\n# MiniBooNE:  Loading DIS-nubar SB table...    ");
+  /* Creating table for DISnubar SB events */
+  for (long k=0; k < Nevents_SB; k++)
+    {
+      int type;
+      type  = mc_events_SB_type[k];
+      Etrue = mc_events_SB[k][0];
+      Ereco = mc_events_SB[k][1];
+      L     = 1E-3*mc_events_SB[k][2];
+      w     = mc_events_SB[k][3];
+      i = 0; j = 0;
+      while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
+      while (Lup_SB[j] <= L && j <= LBINS-2) j++;
+      mc_SB_bin[k][0] = i;
+      mc_SB_bin[k][1] = j;
+      double Eup = bins_MBSB[0][1];
+      i = 0;
+      while (Ereco >= Eup && i < 21)
+	Eup = bins_MBSB[++i][1];
+      mc_SB_bin[k][2] = i;
+    }
+
+  printf("Done!\n");
+  
+  
+  return 0;
+}
+
+
+/***************************************************************************
  * Initialize GSL data structures required for MiniBooNE chi^2 calculation *
  * threshold = 0,1:                                                        *
  * 0 - Enu > 200 MeV                                                       *
@@ -263,7 +393,7 @@ int chiMB_init(int threshold)
   int i;
   int status;
 
-  printf("# Initializing MiniBooNE code, Sep 2012 version ...\n");
+  printf("# Initializing MiniBooNE code, Nov 2012 version ...\n");
   printf("#   Energy threshold: %d MeV\n", threshold==0 ? 200 : 475);
   printf("#   MiniBooNE flags: ");
 #ifdef NU_APP
@@ -283,6 +413,9 @@ int chiMB_init(int threshold)
 #endif
 #ifdef FULL_OSC
   printf("FULL_OSC ");
+#endif
+#ifdef RESCALING
+  printf("RESCALING ");
 #endif
   printf("\n");
 
@@ -576,6 +709,9 @@ int chiMB_init(int threshold)
   /* Seting the beam contaminations using MC events from nubar disapp data: */
   contaminations();
 
+  /* Tabulate bin boundaries */
+  tabulate_bins();
+
   return 0;
 }
 
@@ -795,22 +931,25 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       w     = mc_eventsnu[k][3];
       
       /* Localize event in Etrue -- L grid */
-      i = 0; j = 0;
-      while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
-      while (Lup[j] <= L && j <= LBINS-2) j++;
+      /* i = 0; j = 0; */
+      /* while (Euptrue[i] <= Etrue && i <= EBINS-2) i++; */
+      /* while (Lup[j] <= L && j <= LBINS-2) j++; */
+      i = mc_nu_bin[k][0];
+      j = mc_nu_bin[k][1];
       p  = prob_nu[i][j][1][0];  /* mu -> e */
       p2 = prob_nu[i][j][1][1];  /* mu -> mu */
-      double Eup = Emin + 1000.*binwidths[FIRST];
-      i = 0;
-      while (Ereco >= Eup && i < TOT)
-        Eup += 1000.*binwidths[++i];
+      /* double Eup = Emin + 1000.*binwidths[FIRST]; */
+      /* i = 0; */
+      /* while (Ereco >= Eup && i < TOT) */
+      /*   Eup += 1000.*binwidths[++i]; */
+      i = mc_nu_bin[k][2];
       if (i < TOT && Ereco >= Emin)
-#ifdef FULL_OSC
+#if defined(FULL_OSC) && defined(RESCALING)
         sig[i] += p/p2 * w; /* Pme/Pmm - see discussion with W Louis */
           /* Flux is normalized to \nu_\mu rate, i.e. if there is \nu_\mu
            * disappearance, the flux is underestimated by 1 / Pmm */
 #else
-        sig[i] += p * w; /* Pme/Pmm - see discussion with W Louis */
+        sig[i] += p * w; /* Pme */
 #endif
     }
   
@@ -826,7 +965,11 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       while (Lup[j] <= 0.520 && j <= LBINS-2) j++;
       /* prob rescaling - see discussion with W Louis */
 #ifdef FULL_OSC
+#ifdef RESCALING
       dummy[k][0] = prob_nu[i][j][0][0]/prob_nu[i][j][1][1]*NUEbgnuMU[FIRST+k];
+#else
+      dummy[k][0] = prob_nu[i][j][0][0]*NUEbgnuMU[FIRST+k];
+#endif // RESCALING
       dummy[k][1] = prob_nu[i][j][0][0]/prob_nu_SB[FIRST+k][0][0]*NUEbgnuK[FIRST+k];
       bg[k] = OTHERbgnu[k] + dummy[k][0] + dummy[k][1];
       /* bg[k] = OTHERbgnu[FIRST+k]  */
@@ -907,14 +1050,17 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
           w     = mc_eventsnumu[k][3];
           
           /* Localize event in Etrue -- L grid */
-          i = 0; j = 0;
-          while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
-          while (Lup[j] <= L && j <= LBINS-2) j++;
+          /* i = 0; j = 0; */
+          /* while (Euptrue[i] <= Etrue && i <= EBINS-2) i++; */
+          /* while (Lup[j] <= L && j <= LBINS-2) j++; */
+	  i = mc_numu_bin[k][0];
+	  j = mc_numu_bin[k][1];
           p = prob_nu[i][j][1][1]; /* mu -> mu */
-          double Eup = disbin[0];
-          i = 0;
-          while (Ereco >= Eup && i < 16)
-            Eup = disbin[++i];
+          /* double Eup = disbin[0]; */
+          /* i = 0; */
+          /* while (Ereco >= Eup && i < 16) */
+          /*   Eup = disbin[++i]; */
+	  i = mc_numu_bin[k][2];
           if (i < 16 && Ereco >= 0)
             sig_dis[i] += p * w;
         }
@@ -960,24 +1106,29 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       w     = mc_eventsbar[k][3];
       
       /* Localize event in Etrue -- L grid */
-      i = 0; j = 0;
-      while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
-      while (Lup[j] <= L && j <= LBINS-2) j++;
+      /* i = 0; j = 0; */
+      /* while (Euptrue[i] <= Etrue && i <= EBINS-2) i++; */
+      /* while (Lup[j] <= L && j <= LBINS-2) j++; */
+      i = mc_bar_bin[k][0];
+      j = mc_bar_bin[k][1];
       p = prob_bar[i][j][1][0];  /* mub -> eb  */
       p2 = prob_nu[i][j][1][0];  /* mu  -> e   */
       p3 = prob_bar[i][j][1][1]; /* mub -> mub   */
       p4 = prob_nu[i][j][1][1];  /* mu  -> mu   */
-      double Eup = Emin + 1000.*binwidths[FIRST];
-      i = 0;
-      while (Ereco >= Eup && i < TOT)
-        Eup += 1000.*binwidths[++i];
+      /* double Eup = Emin + 1000.*binwidths[FIRST]; */
+      /* i = 0; */
+      /* while (Ereco >= Eup && i < TOT) */
+      /*   Eup += 1000.*binwidths[++i]; */
+      i = mc_bar_bin[k][2];
       if (i < TOT && Ereco >= Emin) /* Pme/Pmm - see discussion with W Louis */
-#ifdef FULL_OSC
-        sigbar[i] += (p/p3 + p2/p4*numufraction[FIRST+i]) * w; 
+#if defined(FULL_OSC) && defined(RESCALING) /* Pme/Pmm - see discussion with W Louis */
+	sigbar[i] += (p/p3 + p2/p4*numufraction[FIRST+i]) * w; 
+#elif defined(FULL_OSC)
+/* Here, the numu fraction in the nubar mode is assumed to oscillate! */
+        sigbar[i] += (p + p2*numufraction[FIRST+i]) * w; 
 #else
         sigbar[i] += p * w; 
 #endif
-      /* Here, the numu fraction in the nubar mode is assumed to oscillate! */
     }
 
   for (i=0; i < TOT; i++)
@@ -992,8 +1143,13 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       while (Lup[j] <= 0.520 && j <= LBINS-2) j++;
       /* prob rescaling - see discussion with W Louis */
 #ifdef FULL_OSC
+#ifdef RESCALING
       dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar[i][j][1][1]
 		      + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu[i][j][1][1] )*NUEbgbarMU[FIRST+k];
+#else
+      dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]
+		      + nuefraction[FIRST+k]*prob_nu[i][j][0][0] )*NUEbgbarMU[FIRST+k];
+#endif //RESCALING
       dummy[k][1] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar_SB[FIRST+k][0][0]
 	    + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu_SB[FIRST+k][0][0] )*NUEbgbarK[FIRST+k];
       bgbar[k] = OTHERbgbar[k] + dummy[k][0] + dummy[k][1];
@@ -1081,9 +1237,11 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       w     = mc_events_MB[k][3];
       
       /* Localize event in Etrue -- L grid */
-      i = 0; j = 0;
-      while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
-      while (Lup[j] <= L && j <= LBINS-2) j++;
+      /* i = 0; j = 0; */
+      /* while (Euptrue[i] <= Etrue && i <= EBINS-2) i++; */
+      /* while (Lup[j] <= L && j <= LBINS-2) j++; */
+      i = mc_MB_bin[k][0];
+      j = mc_MB_bin[k][1];
 #ifdef FULL_OSC
       if(type==14)  p = prob_nu[i][j][1][1];  /* mu    -> mu */
       if(type==-14) p = prob_bar[i][j][1][1]; /* mubar -> mubar */
@@ -1095,10 +1253,11 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       if(type==12)  p = 0;  /* e     -> mu */
       if(type==-12) p = 0; /* ebar  -> mubar */
 #endif
-      double Eup = bins_MBSB[0][0];
-      i = 0;
-      while (Ereco >= Eup && i < 21)
-        Eup = bins_MBSB[++i][0];
+      /* double Eup = bins_MBSB[0][0]; */
+      /* i = 0; */
+      /* while (Ereco >= Eup && i < 21) */
+      /*   Eup = bins_MBSB[++i][0]; */
+      i = mc_MB_bin[k][2];
       if (i < 21 && Ereco >= 0.3 && Ereco < 1.9)
         { if(type<0)sig_MBSB[i][0][0] += p * w; /* RS */
           if(type>0)sig_MBSB[i][0][1] += p * w; } /* WS */
@@ -1121,10 +1280,12 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       w     = mc_events_SB[k][3];
       
       /* Localize event in Etrue -- L grid */
-      i = 0; j = 0;
-      while (Euptrue[i] <= Etrue && i <= EBINS-2) i++;
-      while (Lup_SB[j] <= L && j <= LBINS-2) j++;
+      /* i = 0; j = 0; */
+      /* while (Euptrue[i] <= Etrue && i <= EBINS-2) i++; */
+      /* while (Lup_SB[j] <= L && j <= LBINS-2) j++; */
       /* if(L>0.105 || L<0.040)printf("%g!!!!!!!!!!\n",L); */
+      i = mc_SB_bin[k][0];
+      j = mc_SB_bin[k][1];
 #ifdef FULL_OSC
       if(type==14)  p = prob_nu_SB2[i][j][1][1];  /* mu    -> mu */
       if(type==-14) p = prob_bar_SB2[i][j][1][1]; /* mubar -> mubar */
@@ -1136,10 +1297,11 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       if(type==12)  p = 0;  /* e     -> mu */
       if(type==-12) p = 0; /* ebar  -> mubar */
 #endif
-      double Eup = bins_MBSB[0][1];
-      i = 0;
-      while (Ereco >= Eup && i < 21)
-        Eup = bins_MBSB[++i][1];
+      /* double Eup = bins_MBSB[0][1]; */
+      /* i = 0; */
+      /* while (Ereco >= Eup && i < 21) */
+      /*   Eup = bins_MBSB[++i][1]; */
+      i = mc_SB_bin[k][2];
       if (i < 21 && Ereco >= 0.3 && Ereco < 1.9)
       { if(type<0)sig_MBSB[i][1][0] += p * w; /* RS */
         if(type>0)sig_MBSB[i][1][1] += p * w; } /* WS */
@@ -1271,7 +1433,8 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       chi2 += P2comb[i] * _M2inv[i][j] * P2comb[j];
 #endif
 
-//  printf("MB chi^2: %g\n",chi2);
+  if (isnan(chi2))
+    chi2 = 1.e101;
   last_chi2_mb = chi2;
   return chi2;
 }

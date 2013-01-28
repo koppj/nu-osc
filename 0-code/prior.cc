@@ -20,6 +20,9 @@ using namespace std;
 #include "atm/LibWrap/out.interface.hh"
 #include "solar/LibWrap/out.interface.hh"
 
+#define USE_ATM              // Call Michele's atmospherics code
+#define USE_SOLAR            // Call Michele's solar code
+
 // Global variables
 extern gsl_matrix_complex *U;
 extern int n_flavors;
@@ -37,6 +40,10 @@ namespace ns_reactor
   extern Fit fit;
   extern Rate_coef rate;
 }
+
+// Parameters for Michele's atmospheric neutrino analysis
+extern int atm_decouple_e; // Whether to decouple electron neutrinos by hand
+                           // and instead include sterile neutrino matter effects
 
 // ATTENTION: Since the 2012 update of Thomas' reactor code, I'm not
 // sure if this flag is still used consistently. Therefore, DO NOT
@@ -267,12 +274,18 @@ int ext_init(int ext_flags)
 
   if (ext_flags & EXT_ATM_COMP)      // Michele's atmospherics code
   {
+#ifdef USE_ATM
     printf("# Initializing atmospheric neutrino code ...\n");
     atm_init(0x01);
+#else
+    printf("ext_init: Compiled without atmospherics support.\n");
+    exit(-1);
+#endif
   }
 
   if (ext_flags & EXT_SOLAR)         // Michele's solar neutrino code
   {
+#ifdef USE_SOLAR
     printf("# Initializing solar neutrino code ...\n");
     solar_dm21_min = true_sdm;
     solar_dm21_max = true_sdm;
@@ -293,6 +306,10 @@ int ext_init(int ext_flags)
                                 EXP_SNO_pure | EXP_SNO_salt | EXP_SNO_henc;
 //    sun_init(1, &solar_exp_mask); // This is for the slower, non-adiabatic solar code
     sun_init(solar_exp_mask); // This is for the new, adiabatic solar code
+#else
+    printf("ext_init: Compiled without solar support.\n");
+    exit(-1);
+#endif
   }
 
   return 0;
@@ -323,24 +340,27 @@ double my_prior(const glb_params in, void* user_data)
   double pv = 0.0;
   double fitvalue,centralvalue,inputerror;
 
+  // We do, however check that none of the parameters in "in" are NAN because
+  // that is snu_set_oscillation_parameter's way of indicating inconsistencies
+  for (int i=0; i < glbGetNumOfOscParams(); i++)
+    if (isnan(glbGetOscParams(params, i)))
+    {
+      pv += 1.e25;
+      goto my_prior_end;
+    }
 
   // Force the active-sterile mixing angles to be < \pi/4 to prevent the minimizer
   // from jumping between the 3+2 and 1+3+1 cases FIXME
   // FIXME Check if this should be fabs or no fabs
-  if (n_flavors >= 4  &&
-      (fabs(glbGetOscParamByName(params, "TH14")) > M_PI/4  ||
-       fabs(glbGetOscParamByName(params, "TH24")) > M_PI/4  ||
-       fabs(glbGetOscParamByName(params, "TH34")) > M_PI/4))
-  {
-    pv += 1e11;
-    goto my_prior_end;
-  }
   if (n_flavors >= 5  &&
-      (fabs(glbGetOscParamByName(params, "TH15")) > M_PI/4  ||
-       fabs(glbGetOscParamByName(params, "TH25")) > M_PI/4  ||
+      (fabs(glbGetOscParamByName(params, "TH14")) > M_PI/4 ||
+       fabs(glbGetOscParamByName(params, "TH24")) > M_PI/4 ||
+       fabs(glbGetOscParamByName(params, "TH34")) > M_PI/4 ||
+       fabs(glbGetOscParamByName(params, "TH15")) > M_PI/4 ||
+       fabs(glbGetOscParamByName(params, "TH25")) > M_PI/4 ||
        fabs(glbGetOscParamByName(params, "TH35")) > M_PI/4))
   {
-    pv += 2e11;
+    pv += 1e11;
     goto my_prior_end;
   }
 
@@ -428,14 +448,15 @@ double my_prior(const glb_params in, void* user_data)
     sbl_params.delta   = 0.0;
     if (n_flavors >= 4)
     {
-      sbl_params.Ue[I4]  = gsl_complex_abs(_U[0][3]);
+      // Don't allow zero Ue4 since Thomas' code cannot handle this
+      sbl_params.Ue[I4]  = MAX(1.e-7, gsl_complex_abs(_U[0][3]));
       sbl_params.Um[I4]  = gsl_complex_abs(_U[1][3]);
       sbl_params.Ue3     = gsl_complex_abs(_U[0][2]);
       sbl_params.dmq[I4] = fabs(glbGetOscParamByName(params, "DM41"));
     }
     if (n_flavors >= 5)
     {
-      sbl_params.Ue[I5]  = gsl_complex_abs(_U[0][4]);
+      sbl_params.Ue[I5]  = MAX(1.e-7, gsl_complex_abs(_U[0][4]));
       sbl_params.Um[I5]  = gsl_complex_abs(_U[1][4]);
       sbl_params.dmq[I5] = fabs(glbGetOscParamByName(params, "DM51"));
       sbl_params.delta   = gsl_complex_arg(
@@ -519,6 +540,7 @@ double my_prior(const glb_params in, void* user_data)
 //      if (fabs(glbGetOscParamByName(params, "DM31")) > 0.99e-2)
 //        pv += 1e15;
 //      else if (glbGetNumOfOscParams() == 51+1)  // 3 flavors
+//                               // Remember to change when adding parameters!
 //        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
 //                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 //                        glbGetOscParamByName(params, "DM31"));
@@ -531,7 +553,7 @@ double my_prior(const glb_params in, void* user_data)
 //                        0.0, //FIXME Include phases
 //                        0.0,
 //                        glbGetOscParamByName(params, "DM31"));
-//      else if (glbGetNumOfOscParams() == 145+6) // 5 flavors
+//      else if (glbGetNumOfOscParams() == 145+7) // 5 flavors
 //        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
 //                        glbGetOscParamByName(params, "TH24"),
 //                        glbGetOscParamByName(params, "TH25"),
@@ -549,6 +571,7 @@ double my_prior(const glb_params in, void* user_data)
     // ----------------------------------------
     if (ext_flags & EXT_ATM_COMP)
     {
+#ifdef USE_ATM
       complx (*_U)[n_flavors] =
         (complx (*)[n_flavors]) gsl_matrix_complex_ptr(snu_get_U(), 0, 0);
       complx Uatm[5][5];
@@ -566,15 +589,17 @@ double my_prior(const glb_params in, void* user_data)
         Uatm[i][i] = 1.0;
       }
 
-//FIXME      for (int i=0; i < n_flavors; i++)
-//FIXME        for (int j=0; j < n_flavors; j++)
-//FIXME          printf("*** %g + %g*I\n", Uatm[i][j].real(), Uatm[i][j].imag());
-
       // Workaround for Michele's code requiring dm31sq < 1e-2
       if (fabs(glbGetOscParamByName(params, "DM31")) > 0.99e-2)
         pv += 1e15;
+      else if (atm_decouple_e)
+        pv += atm_chisq(Uatm, glbGetOscParamByName(params, "DM31"), 1.051);
       else
         pv += atm_chisq(Uatm, glbGetOscParamByName(params, "DM31"), 0.0);
+#else
+    printf("my_prior: Compiled without atmospherics support.\n");
+    exit(-2);
+#endif
     } // ext_flags & EXT_ATM_COMP
 
 
@@ -582,6 +607,7 @@ double my_prior(const glb_params in, void* user_data)
     // ------------------------------------------
     if (ext_flags & EXT_SOLAR)
     {
+#ifdef USE_SOLAR
       static Angles last_a = { NAN, NAN, NAN, NAN, NAN, NAN, NAN };
       static double last_dm21 = NAN;
       static double last_chi2_solar = NAN;
@@ -590,14 +616,17 @@ double my_prior(const glb_params in, void* user_data)
       double dm21 = glbGetOscParamByName(params, "DM21");
 
       if (dm21 < solar_dm21_min || dm21 > solar_dm21_max)
-        return 1.e25;
+      {
+        pv += 1.e26;
+        goto my_prior_end;
+      }
 
       solar_parameters(snu_get_U(), &a); // Determine parameters of Michele's parameterization
       if (memcmp(&last_a, &a, sizeof(a)) != 0) // Recompute probabilities only if mixing angles
       {                                        // have changed
         // If this is a degfinder prescan (indicated by systematics OFF), compute solar
         // probabilities only once FIXME
-        if (glbGetSysOnOffState(0,0)==GLB_ON  ||  isnan(last_a.the12))
+        if (glb_num_of_exps == 0  ||  glbGetSysOnOffState(0,0)==GLB_ON  ||  isnan(last_a.the12))
         {
           if (debug_level > 1)
           {
@@ -627,6 +656,9 @@ double my_prior(const glb_params in, void* user_data)
         chi2_solar = last_chi2_solar;
 
       pv += chi2_solar;
+#else
+    printf("my_prior: Compiled without solar support.\n");
+#endif
     }
   } // if (ext_flags)
 

@@ -26,8 +26,8 @@ nuflux(#Flux_Flat)<
 $target_mass = 5.4       // kt
 
 $profiletype = 3
-//FIXME$densitytab  = {2.8}     // g/cm^3
-$densitytab  = {0.0}     // g/cm^3
+$densitytab  = {2.8}     // g/cm^3
+//$densitytab  = {0.0}     // g/cm^3
 $lengthtab   = {735}     // km
 
 // Cross sections

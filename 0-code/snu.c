@@ -682,20 +682,22 @@ int snu_init_probability_engine(int _n_flavors, int _rotation_order[][2], int _p
     sprintf(snu_param_strings[k++], "Ue3");
     n_params++;
   }
-  if (n_flavors >= 4)
+  if (n_flavors == 4)
   {
     sprintf(snu_param_strings[k++], "Ue4");
     sprintf(snu_param_strings[k++], "Um4");
     sprintf(snu_param_strings[k++], "s22thmue");
     n_params += 3;
   }
-  if (n_flavors >= 5)
+  if (n_flavors == 5)
   {
+    sprintf(snu_param_strings[k++], "Ue4");
+    sprintf(snu_param_strings[k++], "Um4");
     sprintf(snu_param_strings[k++], "Ue5");
     sprintf(snu_param_strings[k++], "Um5");
     sprintf(snu_param_strings[k++], "Ue4Um4");
     sprintf(snu_param_strings[k++], "Ue5Um5");
-    n_params += 4;
+    n_params += 6;  // Remember to change when adding parameters!
   }
 
   if (k != n_params)
@@ -823,16 +825,17 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     if (fabs(glbGetOscParamByName(p, "Ue3")) > 1e-12)
     {
       double _th13 = asin(glbGetOscParamByName(p, "Ue3"));
-      if (!isfinite(_th13))
-      {
-        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue3 ignored.\n");
-        status = -1;
-      }
-      else if (fabs(th[1][3]) > 1e-12)
+      if (fabs(th[1][3]) > 1e-12)
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH13 and Ue3 != 0. "
                         "Ignoring Ue3.\n");
         status = -2;
+      }
+      else if (!isfinite(_th13))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue3 ignored.\n");
+        status = -1;
+        th[1][3] = NAN;
       }
       else
         th[1][3] = _th13;
@@ -845,16 +848,17 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     if (fabs(glbGetOscParamByName(p, "Ue4")) > 1e-12)
     {
       double _th14 = asin(glbGetOscParamByName(p, "Ue4"));
-      if (!isfinite(_th14))
-      {
-        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue4 ignored.\n");
-        status = -3;
-      }
-      else if (fabs(th[1][4]) > 1e-12)
+      if (fabs(th[1][4]) > 1e-12)
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH14 and Ue4 != 0. "
                         "Ignoring Ue4.\n");
         status = -4;
+      }
+      else if (!isfinite(_th14))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue4 ignored.\n");
+        status = -3;
+        th[1][4] = NAN;
       }
       else
         th[1][4] = _th14;
@@ -863,16 +867,17 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     if (fabs(glbGetOscParamByName(p, "Um4")) > 1e-12)
     {
       double _th24 = asin(glbGetOscParamByName(p, "Um4")/cos(th[1][4]));
-      if (!isfinite(_th24))
-      {
-        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Um4 ignored.\n");
-        status = -5;
-      }
-      else if (fabs(th[2][4]) > 1e-12)
+      if (fabs(th[2][4]) > 1e-12)
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH24 and Um4 != 0. "
                         "Ignoring Um4.\n");
         status = -6;
+      }
+      else if (!isfinite(_th24))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Um4 ignored.\n");
+        status = -5;
+        th[2][4] = NAN;
       }
       else
         th[2][4] = _th24;
@@ -881,16 +886,17 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     if (fabs(glbGetOscParamByName(p, "Ue3")) > 1e-12)
     {
       double _th13 = asin(glbGetOscParamByName(p, "Ue3")/cos(th[1][4]));
-      if (!isfinite(_th13))
-      {
-        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue3 ignored.\n");
-        status = -7;
-      }
-      else if (fabs(th[1][3]) > 1e-12)
+      if (fabs(th[1][3]) > 1e-12)
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH13 and Ue3 != 0. "
                         "Ignoring Ue3.\n");
         status = -8;
+      }
+      else if (!isfinite(_th13))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue3 ignored.\n");
+        status = -7;
+        th[1][3] = NAN;
       }
       else
         th[1][3] = _th13;
@@ -905,6 +911,7 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
                         "s22thmue=%g ignored (th24=%g).\n",
                         fabs(glbGetOscParamByName(p, "s22thmue")), th[2][4]);
         status = -9;
+        th[1][4] = NAN;
       }
       else
         th[1][4] = _th14;
@@ -918,16 +925,17 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     if (fabs(glbGetOscParamByName(p, "Ue5")) > 1e-12)
     {
       double _th15 = asin(glbGetOscParamByName(p, "Ue5"));
-      if (!isfinite(_th15))
-      {
-        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue5 ignored.\n");
-        status = -10;
-      }
-      else if (fabs(th[1][5]) > 1e-12)
+      if (fabs(th[1][5]) > 1e-12)
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH15 and Ue5 != 0. "
                         "Ignoring Ue5.\n");
         status = -11;
+      }
+      else if (!isfinite(_th15))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue5 ignored.\n");
+        status = -10;
+        th[1][5] = NAN;
       }
       else
         th[1][5] = _th15;
@@ -952,6 +960,7 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
             fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue5Um5 ignored "
                             "(Ue5Um5=%g, th15=%g).\n", glbGetOscParamByName(p, "Ue5Um5"), th[1][5]);
             status = -21;
+            th[2][5] = NAN;
           }
           else
             th[2][5] = _th25;
@@ -971,6 +980,7 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
         {
           fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue5Um5 ignored.\n");
           status = -23;
+          th[1][5] = NAN;
         }
         else
           th[1][5] = _th15;
@@ -982,6 +992,7 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
         {
           fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue5Um5 ignored.\n");
           status = -24;
+          th[1][5] = NAN;
         }
         else
           th[1][5] = _th15;
@@ -992,16 +1003,17 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     if (fabs(glbGetOscParamByName(p, "Um5")) > 1e-12)
     {
       double _th25 = asin(glbGetOscParamByName(p, "Um5")/cos(th[1][5]));
-      if (!isfinite(_th25))
-      {
-        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Um5 ignored.\n");
-        status = -12;
-      }
-      else if (fabs(th[2][5]) > 1e-12)
+      if (fabs(th[2][5]) > 1e-12)
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH25 and Um5 != 0. "
                         "Ignoring Um5.\n");
         status = -13;
+      }
+      else if (!isfinite(_th25))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Um5 ignored.\n");
+        status = -12;
+        th[2][5] = NAN;
       }
       else
         th[2][5] = _th25;
@@ -1011,16 +1023,17 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     if (fabs(glbGetOscParamByName(p, "Ue4")) > 1e-12)
     {
       double _th14 = asin(glbGetOscParamByName(p, "Ue4")/cos(th[1][5]));
-      if (!isfinite(_th14))
-      {
-        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue4 ignored.\n");
-        status = -14;
-      }
-      else if (fabs(th[1][4]) > 1e-12)
+      if (fabs(th[1][4]) > 1e-12)
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH14 and Ue4 != 0. "
                         "Ignoring Ue4.\n");
         status = -15;
+      }
+      else if (!isfinite(_th14))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue4 ignored.\n");
+        status = -14;
+        th[1][4] = NAN;
       }
       else
         th[1][4] = _th14;
@@ -1051,6 +1064,7 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
             fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue4Um4 ignored "
                             "(D^2 < 0).\n");
             status = -31;
+            th[2][4] = NAN;
           }
           else
           {
@@ -1066,6 +1080,7 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
               fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue4Um4 ignored "
                               "(|sin(th24)| > 1).\n");
               status = -32;
+              th[2][4] = NAN;
             }
             else
               th[2][4] = asin(_sinth24);
@@ -1090,17 +1105,18 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
       double delta = glbGetOscParamByName(p, "DELTA_2") - glbGetOscParamByName(p, "DELTA_1");
       double D     = sqrt( Um4sq - SQR(B)*SQR(sin(delta)) );
 
-      if (!isfinite(D))
-      {
-        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Um4 ignored "
-                        "(D^2 < 0).\n");
-        status = -16;
-      }
-      else if (fabs(th[2][4]) > 1e-12)
+      if (fabs(th[2][4]) > 1e-12)
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH24 and Um4 != 0. "
                         "Ignoring Um4.\n");
         status = -17;
+      }
+      else if (!isfinite(D))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Um4 ignored "
+                        "(D^2 < 0).\n");
+        status = -16;
+        th[2][4] = NAN;
       }
       else
       {
@@ -1116,6 +1132,7 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
           fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Um4 ignored "
                           "(|sin(th24)| > 1).\n");
           status = -18;
+          th[2][4] = NAN;
         }
         else
           th[2][4] = asin(_sinth24);
@@ -1126,16 +1143,17 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     if (fabs(glbGetOscParamByName(p, "Ue3")) > 1e-12)
     {
       double _th13 = asin(glbGetOscParamByName(p, "Ue3")/(cos(th[1][4])*cos(th[1][5])));
-      if (!isfinite(_th13))
-      {
-        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue3 ignored.\n");
-        status = -18;
-      }
-      else if (fabs(th[1][3]) > 1e-12)
+      if (fabs(th[1][3]) > 1e-12)
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH13 and Ue3 != 0. "
                         "Ignoring Ue3.\n");
         status = -19;
+      }
+      else if (!isfinite(_th13))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ue3 ignored.\n");
+        status = -18;
+        th[1][3] = NAN;
       }
       else
         th[1][3] = _th13;
@@ -1265,9 +1283,16 @@ int snu_get_oscillation_parameters(glb_params p, void *user_data)
     glbSetOscParamByName(p, sin(th[1][3])*cos(th[1][4])*cos(th[1][5]), "Ue3");
     glbSetOscParamByName(p, sin(th[1][4])*cos(th[1][5]), "Ue4");
     glbSetOscParamByName(p, sin(th[1][5]), "Ue5");
-    glbSetOscParamByName(p, sin(th[2][4])*cos(th[1][4])*cos(th[2][5])
-                          - sin(th[1][4])*sin(th[1][5])*sin(th[2][5]), "Um4");
+
+    double A = sin(th[2][4])*cos(th[1][4])*cos(th[2][5]);
+    double B = sin(th[1][4])*sin(th[1][5])*sin(th[2][5]);
+    glbSetOscParamByName(p, sqrt(SQR(A - B*cos(delta[2] - delta[1]))
+                               + SQR(B*sin(delta[2] - delta[1]))), "Um4");
     glbSetOscParamByName(p, sin(th[2][5])*cos(th[1][5]), "Um5");
+    glbSetOscParamByName(p, glbGetOscParamByName(p,"Ue5")*glbGetOscParamByName(p,"Um5"),
+                         "Ue5Um5");
+    glbSetOscParamByName(p, glbGetOscParamByName(p,"Ue4")*glbGetOscParamByName(p,"Um4"),
+                         "Ue4Um4");
   }
 
   return 0;
