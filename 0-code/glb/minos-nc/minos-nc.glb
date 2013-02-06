@@ -9,7 +9,10 @@ $target_mass = 0.980     // kt
 
 $profiletype = 3
 $densitytab  = {0.0}     // g/cm^3
-$lengthtab   = {1.04}    // km
+//$lengthtab   = {1.04}    // km
+$lengthtab   = {0.7}    // km
+BLcorrection = 0.7^2 / 1.04^2 // Correction factor for efficiencies; became necessary
+                              // after the average ND baseline has been changed (Jan 2013, JK)
 
 // Energy resolution for NC events
 include "smear_nc_mc-near-1001.0336.dat"
@@ -32,8 +35,8 @@ channel(#ch_NC_tau)<     // NC signal from \nu_\tau
 
 // Rules
 // -----
-ND_EFF1 = 1.08e-5 / 0.22e-3 // Empirical factors, copied from simulations based on 1001.0336
-ND_EFF2 = 0.39e-20 / 9.8e-20
+ND_EFF1 = BLcorrection * 1.08e-5 / 0.22e-3   // Empirical factors, from simulations based on 1001.0336
+ND_EFF2 = BLcorrection * 0.39e-20 / 9.8e-20  // corrected for modified baseline in Jan 2013 (JK)
 rule(#rule_NC_near)<
   @signal           = ND_EFF2@#ch_NC_e : ND_EFF2@#ch_NC_mu : ND_EFF2@#ch_NC_tau
   @background       = ND_EFF1@#ch_CC_BG : ND_EFF1@#ch_CC_BG_e

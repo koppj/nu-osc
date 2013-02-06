@@ -149,9 +149,9 @@ static int rotation_order[MAX_ANGLES][2];
 // phase_order[0] corresponds to the leftmost rotation matrix
 static int phase_order[MAX_ANGLES];
 
-//FIXME FIXME Check if CP violation works the right way in mass-to-flavor
+//FIXME Check if CP violation works the right way in mass-to-flavor
 //
-//FIXME Reintroduce static keyword for all variables
+//TODO: Reintroduce static keyword for all variables
 
 
 // ----------------------------------------------------------------------------
@@ -542,7 +542,7 @@ int snu_print_gsl_matrix_complex(gsl_matrix_complex *A)
 //      printf("%10.4g +%10.4g*I   ", GSL_REAL(gsl_matrix_complex_get(A, i, j)),
 //             GSL_IMAG(gsl_matrix_complex_get(A, i, j)));
       printf("%15.7g +%15.7g*I   ", GSL_REAL(gsl_matrix_complex_get(A, i, j)),
-             GSL_IMAG(gsl_matrix_complex_get(A, i, j))); //FIXME
+             GSL_IMAG(gsl_matrix_complex_get(A, i, j))); //TODO: Revert to old format?
     } 
     printf("\n");
   }
@@ -1361,7 +1361,7 @@ int snu_hamiltonian_cd(double E, double rho, double Ne, int cp_sign)
 
 
 // ----------------------------------------------------------------------------
-int snu_S_matrix_cd(double E, double L, double rho, int cp_sign)
+int snu_S_matrix_cd(double E, double L, double rho, int cp_sign, void *user_data)
 // ----------------------------------------------------------------------------
 // Calculates the S matrix for neutrino oscillations in matter of constant
 // density.
@@ -1371,6 +1371,8 @@ int snu_S_matrix_cd(double E, double L, double rho, int cp_sign)
 //   L: Baseline
 //   rho: Matter density (must be > 0 even for antineutrinos)
 //   cp_sign: +1 for neutrinos, -1 for antineutrinos
+//   user_data: User-defined parameters (used for instance to tell the
+//            probability engine which experiment it is being run for)
 // ----------------------------------------------------------------------------
 {
   // Introduce some abbreviations
@@ -1494,7 +1496,7 @@ int snu_S_matrix_cd(double E, double L, double rho, int cp_sign)
 
 // ----------------------------------------------------------------------------
 int snu_filtered_probability_matrix_cd(double P[MAX_FLAVORS][MAX_FLAVORS],
-        double E, double L, double rho, double sigma, int cp_sign)
+        double E, double L, double rho, double sigma, int cp_sign, void *user_data)
 // ----------------------------------------------------------------------------
 // Calculates the probability matrix for neutrino oscillations in matter
 // of constant density, including a low pass filter to suppress aliasing
@@ -1502,11 +1504,13 @@ int snu_filtered_probability_matrix_cd(double P[MAX_FLAVORS][MAX_FLAVORS],
 // ----------------------------------------------------------------------------
 // Parameters:
 //   P: Storage buffer for the probability matrix
-//   E: Neutrino energy
-//   L: Baseline
+//   E: Neutrino energy (in eV)
+//   L: Baseline (in eV^-1)
 //   rho: Matter density (must be > 0 even for antineutrinos)
 //   sigma: Width of Gaussian filter (in GeV)
 //   cp_sign: +1 for neutrinos, -1 for antineutrinos
+//   user_data: User-defined parameters (used for instance to tell the
+//            probability engine which experiment it is being run for)
 // ----------------------------------------------------------------------------
 {
   // Introduce some abbreviations
@@ -1517,7 +1521,16 @@ int snu_filtered_probability_matrix_cd(double P[MAX_FLAVORS][MAX_FLAVORS],
   double *_lambda = gsl_vector_ptr(lambda,0);
   int status;
   int i, j, k, l;
- 
+
+  // Special treatment of MINOS near detector, where additional smearing is introduced to
+  // emulate the effect of the non-vanishing length of the decay pip 
+  if (user_data != NULL  &&  *(int *)user_data == MINOS_ND_PROBABILITY)
+  {
+    sigma = sqrt(SQR(sigma) + SQR(-3.0 / (E/1.e9) + 2.0));
+//    printf("MINOS Probability! L=%g, E=%g, sigma=%g", L, E/1.e9, sigma);
+//    getchar();
+  }
+
   // Vacuum: Use vacuum mixing angles and masses
   if (fabs(rho) < RHO_THRESHOLD)
   {
@@ -1657,7 +1670,8 @@ int snu_probability_matrix_all(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sign, 
 //   length:  Lengths of the layers in the matter density profile in km
 //   density: The matter densities in g/cm^3
 //   filter_sigma: Width of low-pass filter or <0 for no filter
-//   user_data: Unused here, should be NULL
+//   user_data: User-defined parameters (used for instance to tell the
+//            probability engine which experiment it is being run for)
 // ----------------------------------------------------------------------------
 {
   int status;
@@ -1670,7 +1684,7 @@ int snu_probability_matrix_all(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sign, 
   {
     if (psteps == 1)
       snu_filtered_probability_matrix_cd(P, E, GLB_KM_TO_EV(length[0]),
-                                         density[0], filter_sigma, cp_sign);
+                                         density[0], filter_sigma, cp_sign, user_data);
     else
       return -1;
   }
@@ -1681,7 +1695,7 @@ int snu_probability_matrix_all(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sign, 
       gsl_matrix_complex_set_identity(S1);                                 // S1 = 1
       for (i=0; i < psteps; i++)
       {
-        status = snu_S_matrix_cd(E, GLB_KM_TO_EV(length[i]), density[i], cp_sign);
+        status = snu_S_matrix_cd(E, GLB_KM_TO_EV(length[i]), density[i], cp_sign, user_data);
         if (status != 0)
           return status;
         gsl_blas_zgemm(CblasNoTrans, CblasNoTrans, GSL_COMPLEX_ONE, S, S1, // T0 = S.S1
@@ -1692,7 +1706,7 @@ int snu_probability_matrix_all(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sign, 
     }
     else
     {
-      status = snu_S_matrix_cd(E, GLB_KM_TO_EV(length[0]), density[0], cp_sign);
+      status = snu_S_matrix_cd(E, GLB_KM_TO_EV(length[0]), density[0], cp_sign, user_data);
       if (status != 0)
         return status;
     }
@@ -1724,7 +1738,8 @@ int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sig
 //   length:  Lengths of the layers in the matter density profile in km
 //   density: The matter densities in g/cm^3
 //   filter_sigma: Width of low-pass filter or <0 for no filter
-//   user_data: Unused here, should be NULL
+//   user_data: User-defined parameters (used for instance to tell the
+//            probability engine which experiment it is being run for)
 // ----------------------------------------------------------------------------
 {
   int status;
@@ -1737,7 +1752,7 @@ int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sig
   {
     if (psteps == 1)
       snu_filtered_probability_matrix_m_to_f(P, E, GLB_KM_TO_EV(length[0]),
-                                             density[0], filter_sigma, cp_sign);
+                                             density[0], filter_sigma, cp_sign, user_data);
     else
     {
       fprintf(stderr, "ERROR: Filter feature not implemented for non-constant density\n");
@@ -1752,7 +1767,7 @@ int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sig
       gsl_matrix_complex_set_identity(S1);                                 // S1 = 1
       for (i=0; i < psteps; i++)
       {
-        status = snu_S_matrix_cd(E, GLB_KM_TO_EV(length[i]), density[i], cp_sign);
+        status = snu_S_matrix_cd(E, GLB_KM_TO_EV(length[i]), density[i], cp_sign, user_data);
         if (status != 0)
           return status;
         gsl_blas_zgemm(CblasNoTrans, CblasNoTrans, GSL_COMPLEX_ONE, S, S1, // T0 = S.S1
@@ -1763,7 +1778,7 @@ int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sig
     }
     else
     {
-      status = snu_S_matrix_cd(E, GLB_KM_TO_EV(length[0]), density[0], cp_sign);
+      status = snu_S_matrix_cd(E, GLB_KM_TO_EV(length[0]), density[0], cp_sign, user_data);
       if (status != 0)
         return status;
     }
@@ -1797,7 +1812,7 @@ int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sig
 
 // ----------------------------------------------------------------------------
 int snu_filtered_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS],
-        double E, double L, double rho, double sigma, int cp_sign)
+        double E, double L, double rho, double sigma, int cp_sign, void *user_data)
 // ----------------------------------------------------------------------------
 // Calculates the probability matrix for neutrino oscillations in matter
 // of constant density, assuming that the initial state is a vacuum _mass_
@@ -1815,6 +1830,8 @@ int snu_filtered_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS],
 //   rho: Matter density (must be > 0 even for antineutrinos)
 //   sigma: Width of Gaussian filter (in GeV)
 //   cp_sign: +1 for neutrinos, -1 for antineutrinos
+//   user_data: User-defined parameters (used for instance to tell the
+//            probability engine which experiment it is being run for)
 // ----------------------------------------------------------------------------
 {
   // Introduce some abbreviations

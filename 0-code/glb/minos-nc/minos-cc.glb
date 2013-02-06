@@ -9,7 +9,10 @@ $target_mass = 0.980     // kt
 
 $profiletype = 3
 $densitytab  = {0.0}     // g/cm^3
-$lengthtab   = {1.04}    // km
+//FIXME $lengthtab   = {1.04}    // km
+$lengthtab   = {0.7}    // km
+BLcorrection = 0.7^2 / 1.04^2 // Correction factor for efficiencies; became necessary
+                              // after the average ND baseline has been changed (Jan 2013, JK)
 
 // Energy resolution for NC events
 //include "smear_nc_mc-near-1103.0340.dat"  // Use this file for nonlinear binning
@@ -57,7 +60,7 @@ channel(#ch_NC_BG)<      // NC BG in CC sample - we neglect oscillations into \n
 
 // Rules
 // -----
-ND_EFF1 = 0.09
+ND_EFF1 = 0.09 * BLcorrection
 rule(#rule_CC_near)<
   @signal           = ND_EFF1@#ch_CC_nu : ND_EFF1@#ch_CC_nubar
   @background       = 0.0@#ch_NC_BG // Neglect NC background (doesn't appear for ND in 1103.0340)

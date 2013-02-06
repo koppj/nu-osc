@@ -479,7 +479,7 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
     }
 
     // For 5-neutrino scenarios, the distinction between 3+2 and 1+3+1 is hardcoded
-    // for compatibility with Thomas' code FIXME
+    // for compatibility with Thomas' code TODO: Find a better solution
     if (n_flavors >= 5)
     {
 #ifndef Ip3pI

@@ -28,6 +28,9 @@ extern char snu_param_strings[][64];
 
 #define MAX_FLAVORS      5 // ADD-ON: Thomas' parametrization is implemented only up to 5 flavors
 
+// A flag that switched on special treatment of MINOS ND
+#define MINOS_ND_PROBABILITY 777
+
 
 // Function declarations
 // ---------------------
@@ -43,7 +46,7 @@ int snu_free_probability_engine();
 int snu_set_oscillation_parameters(glb_params p, void *user_data);
 int snu_get_oscillation_parameters(glb_params p, void *user_data);
 int snu_filtered_probability_matrix_cd(double P[MAX_FLAVORS][MAX_FLAVORS],
-      double E, double L, double V, double sigma, int cp_sign);
+      double E, double L, double V, double sigma, int cp_sign, void *user_data);
 int snu_probability_matrix(double _P[3][3], int cp_sign, double E,
       int psteps, const double *length, const double *density,
       double filter_sigma, void *user_data);
@@ -54,7 +57,7 @@ int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sig
       int psteps, const double *length, const double *density,
       double filter_sigma, void *user_data);
 int snu_filtered_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS],
-      double E, double L, double V, double sigma, int cp_sign);
+      double E, double L, double V, double sigma, int cp_sign, void *user_data);
 gsl_matrix_complex *snu_get_U();
 int snu_print_gsl_matrix_complex(gsl_matrix_complex *A);
 

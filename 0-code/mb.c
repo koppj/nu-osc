@@ -31,6 +31,8 @@
 #define FULL_OSC             // TAG_DEF
 //#define RESCALING            // TAG_DEF
 
+#define GOF_CHI2             // subtract mu contribution to APP chi2?
+
 #define DIS_RANK 42
 
 /* External variables */
@@ -149,6 +151,17 @@ static gsl_matrix *M2        = NULL;
 static gsl_matrix *M2inv     = NULL;
 static gsl_permutation *perm = NULL;
 
+#ifdef GOF_CHI2                 /* subtract mu contribution to APP chi2 */
+static gsl_matrix *Mee          = NULL;
+static gsl_matrix *Meeinv       = NULL;
+static gsl_permutation *perm_ee = NULL;
+#ifndef COMBINED_APP
+  static gsl_matrix *Meebar         = NULL;
+  static gsl_matrix *Meebarinv      = NULL;
+static gsl_permutation *perm_ee_bar = NULL;
+#endif
+#endif
+
 static long Neventsnu;  /* app neutrino MC events */
 static double mc_eventsnu[128000][4];
 static long Neventsbar; /* app antineutrino MC events */
@@ -174,6 +187,11 @@ static int mc_nu_bin[128000][3],mc_bar_bin[128000][3],mc_numu_bin[1267007][3],
   double prob_bar_SB2[EBINS][LBINS][NU_FLAVOURS][NU_FLAVOURS];
   double prob_nu_SB[11][NU_FLAVOURS][NU_FLAVOURS];
   double prob_bar_SB[11][NU_FLAVOURS][NU_FLAVOURS];
+
+double chi2CC[2],chi2C;         /* This is the contribution in app
+                                   mode due to the disapp data. See
+                                   Thomas email from January 24, 2013
+                                   11:53:09 GMT-02:00 */
 
 double chiMB(int exper, int rule, int n_params, double *x, double *errors,
              void *user_data);
@@ -242,14 +260,14 @@ int getspectrum(const char *fname)
 #if defined(NU_APP) || defined(COMBINED_APP)
   for(int i=0; i<11; i++) 
     fprintf(file,"%f  %f  %f  %f\n",app_nu_spectrum[i][0],
-	    app_nu_spectrum[i][1],app_nu_spectrum[i][2],app_nu_spectrum[i][3]);
+            app_nu_spectrum[i][1],app_nu_spectrum[i][2],app_nu_spectrum[i][3]);
   fprintf(file,"\n");
 #endif
 
 #if defined(NUBAR_APP) || defined(COMBINED_APP)
   for(int i=0; i<11; i++) 
     fprintf(file,"%f  %f  %f  %f\n",app_bar_spectrum[i][0],app_bar_spectrum[i][1],
-	    app_bar_spectrum[i][2],app_bar_spectrum[i][3]);
+            app_bar_spectrum[i][2],app_bar_spectrum[i][3]);
 #endif
 
   return 0;
@@ -286,7 +304,7 @@ int tabulate_bins()
       double Eup = Emin + 1000.*binwidths[FIRST];
       i = 0;
       while (Ereco >= Eup && i < TOT)
-	Eup += 1000.*binwidths[++i];
+        Eup += 1000.*binwidths[++i];
       mc_nu_bin[k][2] = i;
     }
       
@@ -307,7 +325,7 @@ int tabulate_bins()
       double Eup = disbin[0];
       i = 0;
       while (Ereco >= Eup && i < 16)
-	Eup = disbin[++i];
+        Eup = disbin[++i];
       mc_numu_bin[k][2] = i;
     }
 
@@ -327,7 +345,7 @@ int tabulate_bins()
       double Eup = Emin + 1000.*binwidths[FIRST];
       i = 0;
       while (Ereco >= Eup && i < TOT)
-	Eup += 1000.*binwidths[++i];
+        Eup += 1000.*binwidths[++i];
       mc_bar_bin[k][2] = i;
     }
 
@@ -349,7 +367,7 @@ int tabulate_bins()
       double Eup = bins_MBSB[0][0];
       i = 0;
       while (Ereco >= Eup && i < 21)
-	Eup = bins_MBSB[++i][0];
+        Eup = bins_MBSB[++i][0];
       mc_MB_bin[k][2] = i;
     }
 
@@ -371,7 +389,7 @@ int tabulate_bins()
       double Eup = bins_MBSB[0][1];
       i = 0;
       while (Ereco >= Eup && i < 21)
-	Eup = bins_MBSB[++i][1];
+        Eup = bins_MBSB[++i][1];
       mc_SB_bin[k][2] = i;
     }
 
@@ -416,6 +434,9 @@ int chiMB_init(int threshold)
 #endif
 #ifdef RESCALING
   printf("RESCALING ");
+#endif
+#ifdef GOF_CHI2                 /* subtract mu contribution to APP chi2 */
+  printf("GOF_CHI2 ");
 #endif
   printf("\n");
 
@@ -468,6 +489,21 @@ int chiMB_init(int threshold)
   M_MBSB     = gsl_matrix_alloc(DIS_RANK, DIS_RANK);
   M_MBSB_inv = gsl_matrix_alloc(DIS_RANK, DIS_RANK);
   perm_MBSB  = gsl_permutation_alloc(DIS_RANK);
+
+#ifdef GOF_CHI2                 /* subtract mu contribution to APP chi2 */
+#ifdef COMBINED_APP
+  Mee        = gsl_matrix_alloc(2*NE, 2*NE);
+  Meeinv     = gsl_matrix_alloc(2*NE, 2*NE);
+  perm_ee    = gsl_permutation_alloc(2*NE);
+#else
+  Mee         = gsl_matrix_alloc(NE, NE);
+  Meebar      = gsl_matrix_alloc(NE, NE);
+  Meeinv      = gsl_matrix_alloc(NE, NE);
+  Meebarinv   = gsl_matrix_alloc(NE, NE);
+  perm_ee     = gsl_permutation_alloc(NE);
+  perm_ee_bar = gsl_permutation_alloc(NE);
+#endif
+#endif
 
   /* Nothing is taken from the glb files */
   glbDefineChiFunction(&chiMB,0,"chiMB",NULL);
@@ -794,6 +830,18 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
   double (*_M_MBSB)[DIS_RANK]        = (double (*)[DIS_RANK]) gsl_matrix_ptr(M_MBSB,     0, 0);
   double (*_M_MBSB_inv)[DIS_RANK]    = (double (*)[DIS_RANK]) gsl_matrix_ptr(M_MBSB_inv, 0, 0);
 
+#ifdef GOF_CHI2                 /* subtract mu contribution to APP chi2 */
+#ifdef COMBINED_APP
+  double (*_Mee)[2*NE] = (double (*)[2*NE]) gsl_matrix_ptr(Mee, 0, 0);
+  double (*_Meeinv)[2*NE] = (double (*)[2*NE]) gsl_matrix_ptr(Meeinv, 0, 0);
+#else
+  double (*_Mee)[NE] = (double (*)[NE]) gsl_matrix_ptr(Mee, 0, 0);
+  double (*_Meeinv)[NE] = (double (*)[NE]) gsl_matrix_ptr(Meeinv, 0, 0);
+  double (*_Meebar)[NE] = (double (*)[NE]) gsl_matrix_ptr(Meebar, 0, 0);
+  double (*_Meebarinv)[NE] = (double (*)[NE]) gsl_matrix_ptr(Meebarinv, 0, 0);
+#endif
+#endif
+
   double prob_temp[NU_FLAVOURS][NU_FLAVOURS];
   double p = 0, p2=0, p3=0,p4=0;
   double *length, *density,(*pp)[NU_FLAVOURS];
@@ -1028,6 +1076,61 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
   gsl_linalg_LU_decomp(M2nu, permnu, &signum);
   gsl_linalg_LU_invert(M2nu, permnu, M2invnu);
 
+#ifdef GOF_CHI2
+  /**************************************************/
+  /* subtracting contribution of mu data to APP chi2 */
+  /**************************************************/
+  double M_ee[NE][NE],Mem[NE][NMU],Mmm[NMU][NMU];
+
+  for(i=0; i<NE; i++)           /* ee - block */
+    for(j=0; j<NE; j++)
+      _Mee[i][j] = _M2invnu[i][j];
+
+  /* I need to keep a copy of the Mee matrix, since the inversion will
+     destroy it */
+  for(i=0; i<NE; i++)           /* ee - block */
+    for(j=0; j<NE; j++)
+      M_ee[i][j] = _Mee[i][j];
+
+  /* Inverting Mee block (for proper GOF test - see Thomas email from
+                             January 24, 2013 11:53:09 GMT-02:00) */
+  gsl_linalg_LU_decomp(Mee, perm_ee, &signum);
+  gsl_linalg_LU_invert(Mee, perm_ee, Meeinv);
+
+  for(i=NE; i<NE+NMU; i++)              /* mm - block */
+    for(j=NE; j<NE+NMU; j++)
+      Mmm[i-NE][j-NE] = _M2invnu[i][j];
+
+  for(i=0; i<NE; i++)                   /* em - block */
+      for(j=NE; j<NE+NMU; j++)
+        Mem[i][j-NE] = _M2invnu[i][j];
+
+  double de[NE],dm[NMU],D[NE];
+  for (i=0; i < NE; i++)
+    de[i]      = ALLdatanu[FIRST+i]  - (sig[i] + bg[i]);
+  for (i=0; i < NMU; i++)
+    dm[i]      = ALLdatanu[i+LAST]  - pred_numu[i];
+
+  for (i=0; i<NE; i++) D[i] = 0;
+  for(i=0; i<NE; i++)
+    for(j=0; j<NE; j++)
+      for(k=0; k<NMU; k++)
+        D[i] += _Meeinv[i][j]*Mem[j][k]*dm[k];
+
+  for (i=0; i < NE; i++)
+    for (j=0; j < NE; j++)
+        chi2 += (de[i]+D[i])*M_ee[i][j]*(de[j]+D[j]);
+
+  chi2CC[0] = 0;
+  for (i=0; i < NMU; i++)
+    for (j=0; j < NMU; j++)
+      chi2CC[0] += dm[i]*Mmm[i][j]*dm[j];
+
+  for (i=0; i < NE; i++)
+        for (j=0; j < NE; j++)
+          chi2CC[0] -= D[i]*M_ee[i][j]*D[j];
+
+#else  /* NO GOF_CHI2 ==> USE OFFICIAL CHI2 */
   for (i=0; i < NE; i++)
     P2[i] = ALLdatanu[FIRST+i] - (sig[i] + bg[i]);
   for (i=0; i < NMU; i++)
@@ -1035,6 +1138,8 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
   for (i=0; i < NE+NMU; i++)
     for (j=0; j < NE+NMU; j++)
       chi2 += P2[i] * _M2invnu[i][j] * P2[j];
+#endif  /* GOF_CHI2 */
+
 #endif  /* not def COMBINED_APP */
 #endif  /* any APP defined */
 
@@ -1053,14 +1158,14 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
           /* i = 0; j = 0; */
           /* while (Euptrue[i] <= Etrue && i <= EBINS-2) i++; */
           /* while (Lup[j] <= L && j <= LBINS-2) j++; */
-	  i = mc_numu_bin[k][0];
-	  j = mc_numu_bin[k][1];
+          i = mc_numu_bin[k][0];
+          j = mc_numu_bin[k][1];
           p = prob_nu[i][j][1][1]; /* mu -> mu */
           /* double Eup = disbin[0]; */
           /* i = 0; */
           /* while (Ereco >= Eup && i < 16) */
           /*   Eup = disbin[++i]; */
-	  i = mc_numu_bin[k][2];
+          i = mc_numu_bin[k][2];
           if (i < 16 && Ereco >= 0)
             sig_dis[i] += p * w;
         }
@@ -1122,7 +1227,7 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
       i = mc_bar_bin[k][2];
       if (i < TOT && Ereco >= Emin) /* Pme/Pmm - see discussion with W Louis */
 #if defined(FULL_OSC) && defined(RESCALING) /* Pme/Pmm - see discussion with W Louis */
-	sigbar[i] += (p/p3 + p2/p4*numufraction[FIRST+i]) * w; 
+        sigbar[i] += (p/p3 + p2/p4*numufraction[FIRST+i]) * w; 
 #elif defined(FULL_OSC)
 /* Here, the numu fraction in the nubar mode is assumed to oscillate! */
         sigbar[i] += (p + p2*numufraction[FIRST+i]) * w; 
@@ -1145,13 +1250,13 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
 #ifdef FULL_OSC
 #ifdef RESCALING
       dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar[i][j][1][1]
-		      + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu[i][j][1][1] )*NUEbgbarMU[FIRST+k];
+                      + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu[i][j][1][1] )*NUEbgbarMU[FIRST+k];
 #else
       dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]
-		      + nuefraction[FIRST+k]*prob_nu[i][j][0][0] )*NUEbgbarMU[FIRST+k];
+                      + nuefraction[FIRST+k]*prob_nu[i][j][0][0] )*NUEbgbarMU[FIRST+k];
 #endif //RESCALING
       dummy[k][1] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar_SB[FIRST+k][0][0]
-	    + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu_SB[FIRST+k][0][0] )*NUEbgbarK[FIRST+k];
+            + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu_SB[FIRST+k][0][0] )*NUEbgbarK[FIRST+k];
       bgbar[k] = OTHERbgbar[k] + dummy[k][0] + dummy[k][1];
       /* bgbar[k] = OTHERbgbar[FIRST+k] */
       /*   + ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar[i][j][1][1] */
@@ -1207,7 +1312,64 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
   /* Invert covariance matrix and compute log-likelihood */
   gsl_linalg_LU_decomp(M2bar, permbar, &signum);
   gsl_linalg_LU_invert(M2bar, permbar, M2invbar);
-  
+
+#ifdef GOF_CHI2
+  /**************************************************/
+  /* subtracting contribution of mu data to APP chi2 */
+  /**************************************************/
+#ifndef NU_APP
+  double M_ee[NE][NE],Mem[NE][NMU],Mmm[NMU][NMU];
+  double de[NE],dm[NMU],D[NE];
+#endif
+
+  for(i=0; i<NE; i++)           /* ee - block */
+    for(j=0; j<NE; j++)
+      _Meebar[i][j] = _M2invbar[i][j];
+
+  /* I need to keep a copy of the Mee matrix, since the inversion will
+     destroy it */
+  for(i=0; i<NE; i++)           /* ee - block */
+    for(j=0; j<NE; j++)
+      M_ee[i][j] = _Meebar[i][j];
+
+  /* Inverting Mee block (for proper GOF test - see Thomas email from
+                             January 24, 2013 11:53:09 GMT-02:00) */
+  gsl_linalg_LU_decomp(Meebar, perm_ee_bar, &signum);
+  gsl_linalg_LU_invert(Meebar, perm_ee_bar, Meebarinv);
+
+  for(i=NE; i<NE+NMU; i++)              /* mm - block */
+    for(j=NE; j<NE+NMU; j++)
+      Mmm[i-NE][j-NE] = _M2invbar[i][j];
+
+  for(i=0; i<NE; i++)                   /* em - block */
+      for(j=NE; j<NE+NMU; j++)
+        Mem[i][j-NE] = _M2invbar[i][j];
+
+  for (i=0; i < NE; i++)
+    de[i]      = ALLdatabar[FIRST+i]  - (sigbar[i] + bgbar[i]);
+  for (i=0; i < NMU; i++)
+    dm[i]      = ALLdatabar[i+LAST]  - pred_numubar[i];
+
+  for (i=0; i<NE; i++) D[i] = 0;
+  for(i=0; i<NE; i++)
+    for(j=0; j<NE; j++)
+      for(k=0; k<NMU; k++)
+        D[i] += _Meebarinv[i][j]*Mem[j][k]*dm[k];
+
+  for (i=0; i < NE; i++)
+    for (j=0; j < NE; j++)
+        chi2 += (de[i]+D[i])*M_ee[i][j]*(de[j]+D[j]);
+
+  chi2CC[1] = 0;
+  for (i=0; i < NMU; i++)
+    for (j=0; j < NMU; j++)
+      chi2CC[1] += dm[i]*Mmm[i][j]*dm[j];
+
+  for (i=0; i < NE; i++)
+        for (j=0; j < NE; j++)
+          chi2CC[1] -= D[i]*M_ee[i][j]*D[j];
+
+#else  /* NO GOF_CHI2 ==> USE OFFICIAL CHI2 */
   for (i=0; i < NE; i++)
     P2[i] = ALLdatabar[FIRST+i] - (sigbar[i] + bgbar[i]);
   for (i=0; i < NMU; i++)
@@ -1215,7 +1377,8 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
   for (i=0; i < NE+NMU; i++)
     for (j=0; j < NE+NMU; j++)
       chi2 += P2[i] * _M2invbar[i][j] * P2[j];
-  /* chi2 += gsl_linalg_LU_lndet(M2bar); */
+#endif  /* GOF_CHI2 */
+
 #endif
 #endif
 
@@ -1416,7 +1579,98 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
   /* Invert covariance matrix and compute log-likelihood */
   gsl_linalg_LU_decomp(M2, perm, &signum);
   gsl_linalg_LU_invert(M2, perm, M2inv);
-  
+
+#ifdef GOF_CHI2
+  /**************************************************/
+  /* subtracting contribution of mu data to APP chi2 */
+  /**************************************************/
+  double M_ee[2*NE][2*NE],Mem[2*NE][2*NMU],Mmm[2*NMU][2*NMU];
+
+  for(i=0; i<NE; i++)           /* ee - block */
+    for(j=0; j<NE; j++)
+      {
+        _Mee[i][j] = _M2inv[i][j];
+        _Mee[NE+i][j] = _M2inv[NE+NMU+i][j];
+        _Mee[i][NE+j] = _M2inv[i][NE+NMU+j];
+        _Mee[NE+i][NE+j] = _M2inv[NE+NMU+i][NE+NMU+j];
+      }
+
+  /* I need to keep a copy of the Mee matrix, since the inversion will
+     destroy it */
+  for(i=0; i<2*NE; i++)         /* ee - block */
+    for(j=0; j<2*NE; j++)
+      M_ee[i][j] = _Mee[i][j];
+
+  /* Inverting Mee block (for proper GOF test - see Thomas email from
+                             January 24, 2013 11:53:09 GMT-02:00) */
+  gsl_linalg_LU_decomp(Mee, perm_ee, &signum);
+  gsl_linalg_LU_invert(Mee, perm_ee, Meeinv);
+
+  for(i=NE; i<NE+NMU; i++)              /* mm - block */
+    for(j=NE; j<NE+NMU; j++)
+      {
+        Mmm[i-NE][j-NE] = _M2inv[i][j];
+        Mmm[NMU+i-NE][j-NE] = _M2inv[NE+NMU+i][j];
+        Mmm[i-NE][NMU+j-NE] = _M2inv[i][NE+NMU+j];
+        Mmm[NMU+i-NE][NMU+j-NE] = _M2inv[NE+NMU+i][NE+NMU+j];
+      }
+
+  for(i=0; i<NE; i++)           /* em - block */
+      for(j=NE; j<NE+NMU; j++)
+        {
+          Mem[i][j-NE] = _M2inv[i][j];  /* e-mu */
+          Mem[NE+i][j-NE] = _M2inv[NE+NMU+i][j]; /* ebar-mu */
+        }
+  for(i=0; i<NE; i++)
+    for(j=2*NE+NMU; j<2*(NE+NMU); j++)
+        {
+          Mem[i][j-2*NE] = _M2inv[i][j];
+          Mem[NE+i][j-2*NE] = _M2inv[NE+NMU+i][j];
+        }
+
+  double de[2*NE],dm[2*NMU],D[2*NE];
+  for (i=0; i < NE; i++)
+    {
+      de[i]      = ALLdatanu[FIRST+i]  - (sig[i] + bg[i]);
+      de[i+NE]     = ALLdatabar[FIRST+i] - (sigbar[i] + bgbar[i]);
+    }
+
+  for (i=0; i < NMU; i++)
+    { 
+      dm[i]      = ALLdatanu[i+LAST]  - pred_numu[i];
+      dm[i+NMU]  = ALLdatabar[i+LAST] - pred_numubar[i];
+    }
+
+  for (i=0; i<2*NE; i++) D[i] = 0;
+  for(i=0; i<2*NE; i++)
+    for(j=0; j<2*NE; j++)
+      for(k=0; k<2*NMU; k++)
+        D[i] += _Meeinv[i][j]*Mem[j][k]*dm[k];
+
+  for (i=0; i < 2*NE; i++)
+    for (j=0; j < 2*NE; j++)
+        chi2 += (de[i]+D[i])*M_ee[i][j]*(de[j]+D[j]);
+
+  chi2C = 0;
+  for (i=0; i < 2*NMU; i++)
+    for (j=0; j < 2*NMU; j++)
+      chi2C += dm[i]*Mmm[i][j]*dm[j];
+
+  for (i=0; i < 2*NE; i++)
+        for (j=0; j < 2*NE; j++)
+          chi2C -= D[i]*M_ee[i][j]*D[j];
+
+  /* chi2 += C; */
+
+  /* FOR CHECKING: */
+  /* for (i=0; i < 2*NE; i++) */
+  /*   for (j=0; j < 2*NE; j++)  chi2 += de[i]*M_ee[i][j]*de[j]; */
+  /* for (i=0; i < 2*NMU; i++) */
+  /*   for (j=0; j < 2*NMU; j++) chi2 += dm[i]*Mmm[i][j]*dm[j]; */
+  /* for (i=0; i < 2*NE; i++) */
+  /*   for (j=0; j < 2*NMU; j++) chi2 += 2*de[i]*Mem[i][j]*dm[j]; */
+
+#else  /* NO GOF_CHI2 ==> USE OFFICIAL CHI2 */
   double P2comb[2*(NE+NMU)];
   for (i=0; i < NE; i++)
     {
@@ -1430,7 +1684,9 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
     }
   for (i=0; i < 2*(NE+NMU); i++)
     for (j=0; j < 2*(NE+NMU); j++)
-      chi2 += P2comb[i] * _M2inv[i][j] * P2comb[j];
+        chi2 += P2comb[i] * _M2inv[i][j] * P2comb[j];
+#endif  /* GOF_CHI2 */
+
 #endif
 
   if (isnan(chi2))

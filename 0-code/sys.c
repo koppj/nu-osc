@@ -1011,222 +1011,6 @@ double chiDCNorm(int exp, int rule, int n_params, double *x, double *errors,
 
 
 // -------------------------------------------------------------------------
-double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
-                void *user_data)
-// -------------------------------------------------------------------------
-// Calculate chi^2 for NC or CC events in the MINOS sterile neutrino search.
-// The function produces sensible results for n_params=0 (systematics OFF)
-// and for n_params=5 (systematics ON). In the latter case, the following
-// nuisance parameters are included:
-//   x[0]: Overall normalization of F/N ratio
-//   x[1]: Error in BG normalization - near
-//   x[2]: Error in BG normalization - far
-//   x[3]: Signal energy calibration error - far
-//   x[4]: BG energy calibration error - far
-// user_data should be pointing to an integer 
-// -------------------------------------------------------------------------
-{ 
-  // NC data shown at Neutrino 2010
-  static const double data_NC_N[] =  { 23.07692e4, 45.44379e4, 47.04142e4, 41.36095e4,
-      28.40237e4, 17.92899e4, 12.78106e4, 9.76331e4, 7.98817e4, 6.56805e4,
-       5.50296e4,  4.61538e4,  4.08284e4, 3.55030e4, 3.01775e4, 2.66272e4,
-       2.48521e4,  2.13018e4,  1.77515e4, 1.77515e4 };
-  static const double data_NC_F[] = { 92, 129, 106, 100, 73, 47, 52, 27, 22, 21, 10, 16,
-      12, 8, 9, 10, 2, 8, 8, 2 };
-
-  // CC data set from 1103.0340 - rebinned to 1 GeV bins between 0 and 20 GeV
-  static const double data_CC_N[] = { 79474.4, 1.08292e6, 2.75959e6, 2.9265e6,
-    1.66333e6, 957837., 722416., 638357., 582196., 526039., 477828., 429627., 393376.,
-     361109.,  320876., 280643., 248376., 220098., 199777., 175483.};
-  static const double data_CC_F[] = { 8.59002, 28.308, 145.64, 237.007, 175.705,
-    94.8805, 86.2907, 89.0238, 92.9283, 89.0239, 86.6811, 64.8156, 68.7202, 51.5401,
-    56.2256, 63.2538, 46.8547, 42.9501, 40.6074, 32.7983, 163.991, 109.328 };
-
-  const double *data_N, *data_F;
-  if (user_data)
-  {
-    switch (*((int *) user_data))
-    {
-      case MINOS_NC:
-        data_N = data_NC_N;
-        data_F = data_NC_F;
-        break;
-      case MINOS_CC:
-        data_N = data_CC_N;
-        data_F = data_CC_F;
-        break;
-      default:
-        return -2e-10;
-    }
-  }
-  else
-    return -1e10;
-
-  int exp_near = exp + 1;
-  int exp_far  = exp;
-  int n_bins = glbGetNumberOfBins(exp);
-  double *sig_N = glbGetSignalFitRatePtr(exp_near, rule);
-  double *bg_N  = glbGetBGFitRatePtr(exp_near, rule);
-  int ew_low, ew_high;
-  double emin, emax;
-  double fit_rate;
-  double chi2   = 0.0;
-  int i;
-
-  glbGetEminEmax(exp, &emin, &emax);
-  glbGetEnergyWindowBins(exp_far, rule, &ew_low, &ew_high);
-  if (n_params)                    // Systematics ON
-  {
-    double sig_F[n_bins], bg_F[n_bins];
-    double norm_tot = 1.0 + x[0];
-    double norm_bgN = 1.0 + x[1];
-    double norm_bgF = 1.0 + x[2];
-    glbShiftEnergyScale(x[3], glbGetSignalFitRatePtr(exp_far, rule), sig_F, n_bins, emin, emax);
-    glbShiftEnergyScale(x[4], glbGetBGFitRatePtr(exp_far, rule), bg_F, n_bins, emin, emax);
-    for (i=ew_low; i <= ew_high; i++)
-    {
-      // Predicted rate at far detector is F_th/N_th * N_data
-      fit_rate = norm_tot * (sig_F[i] + norm_bgF*bg_F[i])/(sig_N[i] + norm_bgN*bg_N[i]) * data_N[i];
-      chi2 += poisson_likelihood(data_F[i], fit_rate);
-    }
-  }
-  else                             // Systematics OFF
-  {
-    double *sig_F = glbGetSignalFitRatePtr(exp_far, rule);
-    double *bg_F  = glbGetBGFitRatePtr(exp_far, rule);
-    for (i=ew_low; i <= ew_high; i++)
-    {
-      // Predicted rate at far detector is F_th/N_th * N_data
-      fit_rate = (sig_F[i] + bg_F[i])/(sig_N[i] + bg_N[i]) * data_N[i];
-      chi2 += poisson_likelihood(data_F[i], fit_rate);
-    }
-  }
-
-  // Systematical part of chi^2 (= priors)
-  for (i=0; i < n_params; i++)
-    chi2 += square(x[i] / errors[i]);
-
-  return chi2;
-}
-
-
-// -------------------------------------------------------------------------
-double chiMINOS_2010(int exp, int rule, int n_params, double *x, double *errors,
-                     void *user_data)
-// -------------------------------------------------------------------------
-// Calculate chi^2 for NC or CC events in the MINOS sterile neutrino search.
-// The function produces sensible results for n_params=0 (systematics OFF)
-// and for n_params=5 (systematics ON). In the latter case, the following
-// nuisance parameters are included:
-//   x[0]: Overall normalization of F/N ratio
-//   x[1]: Error in BG normalization - near
-//   x[2]: Error in BG normalization - far
-//   x[3]: Signal energy calibration error - far
-//   x[4]: BG energy calibration error - far
-// user_data should be pointing to an integer 
-// -------------------------------------------------------------------------
-{ 
-  // NC data set from 1001.0336 //2010
-//  double data_NC_N[] =  { 25.58376e4, 29.34010e4, 26.70051e4, 24.06091e4, //2010
-//    17.36041e4, 11.06599e4, 7.51269e4, 5.58376e4, 4.46701e4, 3.75635e4, 3.24873e4, //2010
-//     2.63959e4,  2.33503e4, 2.03046e4, 1.72589e4, 1.52284e4, 1.31980e4, 1.21827e4, //2010
-//     1.01523e4,  0.91371e4 }; //2010
-//  double data_NC_F[] = { 42, 58, 41, 52, 40, 23, 22, 19, 11, 12, 8, 4, 7, //2010
-//     5, 5, 1, 6, 0, 2, 5 }; //2010
-
-  // NC data shown at Neutrino 2010 //2010
-  static const double data_NC_N[] =  { 23.07692e4, 45.44379e4, 47.04142e4, 41.36095e4, //2010
-      28.40237e4, 17.92899e4, 12.78106e4, 9.76331e4, 7.98817e4, 6.56805e4, //2010
-       5.50296e4,  4.61538e4,  4.08284e4, 3.55030e4, 3.01775e4, 2.66272e4, //2010
-       2.48521e4,  2.13018e4,  1.77515e4, 1.77515e4 }; //2010
-  static const double data_NC_F[] = { 92, 129, 106, 100, 73, 47, 52, 27, 22, 21, 10, 16, //2010
-      12, 8, 9, 10, 2, 8, 8, 2 }; //2010
-
-  // CC data set from 1001.0336 //2010
-  static const double data_CC_N[] = { 1.96970e4, 20.77135e4, 50.67493e4, 56.04683e4, //2010
-    34.91735e4, 20.59229e4, 14.86226e4, 12.35537e4, 11.10193e4, 10.20661e4, 9.49036e4, //2010
-     8.59504e4,  7.87879e4,  7.16253e4,  6.62534e4,  5.73003e4,  5.19284e4, 4.47658e4, //2010
-     3.93939e4,  3.58127e4 }; //2010
-  static const double data_CC_F[] = { 2, 11, 51, 80, 64, 21, 31, 28, 22, 22, 12, 21, 16, //2010
-    20, 19, 17, 20, 11, 14, 7 }; //2010
-
-  const double *data_N, *data_F; //2010
-//  const char *rule_name = glbValueToName(exp, "rule", rule); //2010
-//  if (strcmp(rule_name, "#rule_NC") == 0) //2010
-  if (user_data) //2010
-  { //2010
-    switch (*((int *) user_data)) //2010
-    { //2010
-      case MINOS_NC: //2010
-        data_N = data_NC_N; //2010
-        data_F = data_NC_F; //2010
-        break; //2010
-      case MINOS_CC: //2010
-        data_N = data_CC_N; //2010
-        data_F = data_CC_F; //2010
-        break; //2010
-      default: //2010
-        return -2e-10; //2010
-    } //2010
-  } //2010
-  else //2010
-    return -1e10; //2010
- //2010
-  int exp_near = exp + 1; //2010
-  int exp_far  = exp; //2010
-  int n_bins = glbGetNumberOfBins(exp); //2010
-  double *sig_N = glbGetSignalFitRatePtr(exp_near, rule); //2010
-  double *bg_N  = glbGetBGFitRatePtr(exp_near, rule); //2010
-  int ew_low, ew_high; //2010
-  double emin, emax; //2010
-  double fit_rate; //2010
-  double chi2   = 0.0; //2010
-  int i; //2010
- //2010
-  glbGetEminEmax(exp, &emin, &emax); //2010
-  glbGetEnergyWindowBins(exp_far, rule, &ew_low, &ew_high); //2010
-  if (n_params)                    // Systematics ON //2010
-  { //2010
-    double sig_F[n_bins], bg_F[n_bins]; //2010
-    double norm_tot = 1.0 + x[0]; //2010
-    double norm_bgN = 1.0 + x[1]; //2010
-    double norm_bgF = 1.0 + x[2]; //2010
-    glbShiftEnergyScale(x[3], glbGetSignalFitRatePtr(exp_far, rule), sig_F, n_bins, emin, emax); //2010
-    glbShiftEnergyScale(x[4], glbGetBGFitRatePtr(exp_far, rule), bg_F, n_bins, emin, emax); //2010
-    for (i=ew_low; i <= ew_high; i++) //2010
-    { //2010
-      // Predicted rate at far detector is F_th/N_th * N_data //2010
-      fit_rate = norm_tot * (sig_F[i] + norm_bgF*bg_F[i])/(sig_N[i] + norm_bgN*bg_N[i]) * data_N[i]; //2010
- //2010
-      // NC only: Rescale to pot from 1001.0336 to verify their sensitivities //2010
-      if (rule == 0) // Beware: This is error-prone if the rules in the glb file change //2010
-        chi2 += poisson_likelihood(3.18/7.2*data_F[i], 3.18/7.2*fit_rate); //2010
-      else //2010
-        chi2 += poisson_likelihood(data_F[i], fit_rate); //2010
-    } //2010
-  } //2010
-  else                             // Systematics OFF //2010
-  { //2010
-    double *sig_F = glbGetSignalFitRatePtr(exp_far, rule); //2010
-    double *bg_F  = glbGetBGFitRatePtr(exp_far, rule); //2010
-    for (i=ew_low; i <= ew_high; i++) //2010
-    { //2010
-      // Predicted rate at far detector is F_th/N_th * N_data //2010
-      fit_rate = (sig_F[i] + bg_F[i])/(sig_N[i] + bg_N[i]) * data_N[i]; //2010
-      chi2 += poisson_likelihood(data_F[i], fit_rate); //2010
-    } //2010
-  } //2010
- //2010
-  // Systematical part of chi^2 (= priors) //2010
-  for (i=0; i < n_params; i++) //2010
-    chi2 += square(x[i] / errors[i]); //2010
- //2010
-  return chi2; //2010
-} //2010
-
-
-
-// -------------------------------------------------------------------------
 double chiKamLAND(int exp, int rule, int n_params, double *x, double *errors,
                   void *user_data)
 // -------------------------------------------------------------------------
@@ -1279,58 +1063,58 @@ double chiKamLAND(int exp, int rule, int n_params, double *x, double *errors,
 }
 
 
-// -------------------------------------------------------------------------
-double chiLSNDspectrum(int exp, int rule, int n_params, double *x, double *errors,
-                       void *user_data)
-// -------------------------------------------------------------------------
-// chi^2 function for the LSND experiment. Nuisance parameters are:
-//   x[0]: Signal normalization (no prior!)
-//   x[1]: Background normalization
-// Author: Patrick Huber
-// -------------------------------------------------------------------------
-{
-  // FIXME: JK - I think there are several oddities in this function, e.g.
-  // why is the error multiplied by 2?
-  // Also, check the glb file!
-  return NAN;
-
-  const double error_bars[] = { 1.36364, 0.909091, 1.81818, 2.72727, 2.72727, 3.18182,
-                                3.40909, 3.40909,  3.40909, 3.86364, 2.27273 };
-  double *true_rates_N = glbGetRuleRatePtr(exp, rule);
-  double *signal,*bg;
-  double signal_norm_N;
-  int ew_low, ew_high;
-  double emin, emax;
-  double fit_rate;
-  double chi2 = 0.0;
-  int i;
-
-  /* Request simulated energy interval and analysis energy window */
-  glbGetEminEmax(exp, &emin, &emax);
-  glbGetEnergyWindowBins(exp, rule, &ew_low, &ew_high);
-
-  /* Apply energy calibration error 
-     glbShiftEnergyScale(x[3], glbGetSignalFitRatePtr(EXP_FAR, 0),
-     signal_fit_rates_F, n_bins, emin, emax);
-     glbShiftEnergyScale(x[4], glbGetSignalFitRatePtr(EXP_NEAR, 0),
-     signal_fit_rates_N, n_bins, emin, emax);
-  */
-  /* Loop over all bins in energy window */
-  signal=glbGetSignalFitRatePtr(exp, rule);
-  bg=glbGetBGFitRatePtr(exp, rule);
-  signal_norm_N = 1.0 + x[0];
-  for (i=ew_low; i <= ew_high; i++)
-  {
-    /* Statistical part of chi^2 for near detector
-     * Normalization is affected by flux error x[0] and fiducial mass error x[2] */
-    fit_rate  = signal_norm_N * signal[i] + x[1]*bg[i];
-    chi2 += gauss_likelihood(true_rates_N[i], fit_rate, 2.0*square(error_bars[i]));
-  }
-
-  /* Systematical part of chi^2 (= priors) */
-  for (i=1; i < n_params; i++)
-    chi2 += square(x[i] / errors[i]);
-
-  return chi2;
-}
+//// -------------------------------------------------------------------------
+//double chiLSNDspectrum(int exp, int rule, int n_params, double *x, double *errors,
+//                       void *user_data)
+//// -------------------------------------------------------------------------
+//// chi^2 function for the LSND experiment. Nuisance parameters are:
+////   x[0]: Signal normalization (no prior!)
+////   x[1]: Background normalization
+//// Author: Patrick Huber
+//// -------------------------------------------------------------------------
+//{
+//  // FIXME: JK - I think there are several oddities in this function, e.g.
+//  // why is the error multiplied by 2?
+//  // Also, check the glb file!
+//  return NAN;
+//
+//  const double error_bars[] = { 1.36364, 0.909091, 1.81818, 2.72727, 2.72727, 3.18182,
+//                                3.40909, 3.40909,  3.40909, 3.86364, 2.27273 };
+//  double *true_rates_N = glbGetRuleRatePtr(exp, rule);
+//  double *signal,*bg;
+//  double signal_norm_N;
+//  int ew_low, ew_high;
+//  double emin, emax;
+//  double fit_rate;
+//  double chi2 = 0.0;
+//  int i;
+//
+//  /* Request simulated energy interval and analysis energy window */
+//  glbGetEminEmax(exp, &emin, &emax);
+//  glbGetEnergyWindowBins(exp, rule, &ew_low, &ew_high);
+//
+//  /* Apply energy calibration error 
+//     glbShiftEnergyScale(x[3], glbGetSignalFitRatePtr(EXP_FAR, 0),
+//     signal_fit_rates_F, n_bins, emin, emax);
+//     glbShiftEnergyScale(x[4], glbGetSignalFitRatePtr(EXP_NEAR, 0),
+//     signal_fit_rates_N, n_bins, emin, emax);
+//  */
+//  /* Loop over all bins in energy window */
+//  signal=glbGetSignalFitRatePtr(exp, rule);
+//  bg=glbGetBGFitRatePtr(exp, rule);
+//  signal_norm_N = 1.0 + x[0];
+//  for (i=ew_low; i <= ew_high; i++)
+//  {
+//    /* Statistical part of chi^2 for near detector
+//     * Normalization is affected by flux error x[0] and fiducial mass error x[2] */
+//    fit_rate  = signal_norm_N * signal[i] + x[1]*bg[i];
+//    chi2 += gauss_likelihood(true_rates_N[i], fit_rate, 2.0*square(error_bars[i]));
+//  }
+//
+//  /* Systematical part of chi^2 (= priors) */
+//  for (i=1; i < n_params; i++)
+//    chi2 += square(x[i] / errors[i]);
+//
+//  return chi2;
+//}
 

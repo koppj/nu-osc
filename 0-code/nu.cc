@@ -705,6 +705,16 @@ int load_exps(const int n_exps, char **exps)
     }
 
     // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
+    else if (strcasecmp(exps[i], "MINOS_NC_noDecayPipe") == 0)
+    {
+      setenv("GLB_PATH", "glb/minos-nc", 1);
+      glb_setup_path();
+      glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      L_opt[1] = L_opt[3] = 0;
+    }
+
+    // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
     else if (strcasecmp(exps[i], "MINOS_NC") == 0)
     {
       setenv("GLB_PATH", "glb/minos-nc", 1);
@@ -712,6 +722,16 @@ int load_exps(const int n_exps, char **exps)
       glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       L_opt[1] = L_opt[3] = 0;
+      
+      for (int i=glb_num_of_exps-3; i < glb_num_of_exps; i+=2)  // Loop over ND for CC and NC analysis
+      {
+        glb_experiment *e = glb_experiment_list[i];
+        e->probability_user_data  = new int(MINOS_ND_PROBABILITY);
+//        for (int j=0; j < e->num_of_sm; j++)
+//          minos_smear(e->smear_data[j], e->smear[j], e->lowrange[j], e->uprange[j]);
+//        glbPrintExp(i);
+//        getchar();
+      }
     }
 
     // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
@@ -1075,7 +1095,7 @@ int main(int argc, char *argv[])
   glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-NC-2010",&minos_nc);
   glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-CC-2010",&minos_cc);
 
-  glbDefineChiFunction(&chiLSNDspectrum,  2, "chiLSNDspectrum",  NULL);
+//  glbDefineChiFunction(&chiLSNDspectrum,  2, "chiLSNDspectrum",  NULL);
 //  chiMB_init(); // for 2010 version of MiniBooNE code
 //  glbDefineChiFunction(&chiMBanti_nu2010, 0, "chiMBanti_nu2010", NULL);
   glbDefineChiFunction(&chi_E776,         4, "chi_E776",         NULL);
@@ -1160,7 +1180,7 @@ int main(int argc, char *argv[])
 
   // --------------------------------------------------------------------
   // The following code is used for debugging the implementation of the
-  // 4- and 5-flavor parameterizations FIXME
+  // 4- and 5-flavor parameterizations TODO: Remove
 //  {
 //    gsl_matrix_complex *U = snu_get_U();
 //    glbSetOscParamByName(true_values, 0.9*M_PI/4, "TH23");
@@ -1328,6 +1348,17 @@ int main(int argc, char *argv[])
   if (load_exps(n_exps, exps) < 0)  // Load experiments 
     return -5;
   ext_init(ext_flags);              // Initialize external codes 
+
+  // TODO: Remove
+//  glbSetOscillationParameters(true_values);
+//  for (double E=1.; E <=20; E+=0.1)
+//  {
+//    double P[MAX_FLAVORS][MAX_FLAVORS];
+//    int flags = MINOS_ND_PROBABILITY;
+//    snu_filtered_probability_matrix_cd(P, E*1.e9, 0.7*KM, 0.0, 0.0, +1, &flags);
+//    printf(" %g   %10.7g  %10.7g\n", E, P[1][1], P[1][4]);
+//  }
+//  exit(0);
 
   switch (action)
   {

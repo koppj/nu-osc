@@ -350,7 +350,7 @@ double my_prior(const glb_params in, void* user_data)
     }
 
   // Force the active-sterile mixing angles to be < \pi/4 to prevent the minimizer
-  // from jumping between the 3+2 and 1+3+1 cases FIXME
+  // from jumping between the 3+2 and 1+3+1 cases TODO: Find a better solution here?
   // FIXME Check if this should be fabs or no fabs
   if (n_flavors >= 5  &&
       (fabs(glbGetOscParamByName(params, "TH14")) > M_PI/4 ||
@@ -365,7 +365,7 @@ double my_prior(const glb_params in, void* user_data)
   }
 
   // For 5-neutrino scenarios, the distinction between 3+2 and 1+3+1 is hardcoded
-  // for compatibility with Thomas' code FIXME
+  // for compatibility with Thomas' code TODO: Find a better solution here?
   if (n_flavors >= 5)
   {
 #ifndef Ip3pI
@@ -550,7 +550,7 @@ double my_prior(const glb_params in, void* user_data)
 //                        0.0,
 //                        glbGetOscParamByName(params, "TH34"),
 //                        0.0,
-//                        0.0, //FIXME Include phases
+//                        0.0, //TODO: Include phases
 //                        0.0,
 //                        glbGetOscParamByName(params, "DM31"));
 //      else if (glbGetNumOfOscParams() == 145+7) // 5 flavors
@@ -625,7 +625,7 @@ double my_prior(const glb_params in, void* user_data)
       if (memcmp(&last_a, &a, sizeof(a)) != 0) // Recompute probabilities only if mixing angles
       {                                        // have changed
         // If this is a degfinder prescan (indicated by systematics OFF), compute solar
-        // probabilities only once FIXME
+        // probabilities only once TODO: Find a better solution here
         if (glb_num_of_exps == 0  ||  glbGetSysOnOffState(0,0)==GLB_ON  ||  isnan(last_a.the12))
         {
           if (debug_level > 1)

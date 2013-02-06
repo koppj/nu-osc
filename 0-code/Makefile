@@ -75,7 +75,7 @@ export CXXFLAGS = -Wall -g -O2 -Wno-write-strings $(INCFLAGS)
 
 BIN     = nu
 OBJ     = nu.o const.o sys.o snu.o degfinder.o sensitivities.o prem.o \
-	  mb.o e776.o c12.o icarus.o prior.o
+	  mb.o e776.o c12.o icarus.o minos.o prior.o
 HEADER  = nu.h const.h snu.h sbl/definitions.h reactors/definitions.h
 SUBDIRS = sbl reactors
 

@@ -70,24 +70,25 @@ Counting of degrees of freedom for fall 2012 simulation:
   RENO:                     1  --   2 bins,    11 pulls (1 of them free)
   Gallium:                  4  --   4 bins,     2 pulls
   KamLAND:                 17  --  17 bins,   109 pulls
-  ********* Total SBL: 136 ***********
+  ********* Total reactor: 136 ***********
 
   Atmospheric neutrinos:   80 (see Michele's email from Mar 29, 2011)
   MINOS_NC:                40 (20 NC, 20 CC), 10 pulls (5 NC, 5 CC)
   C12:                     32 (6 for LSND, 26 for KARMEN), 3 pulls
   CDHS:                    15
   solar:                  162 (see Michele's email from 2012-10-19)
-  ********* Total other disapp: 329 ***********
-
-  LSND:                    11
-FIXME COUNT NU_MU HERE?  MiniBooNE app nu+nubar:  38 (11 nu_e, 8 nu_mu, times 2 for nu+nubar)
   MiniBooNE disapp nu:     15  --  16 bins, normalization adjusted to data
   MiniBooNE disapp nubar:  42 bins (21 MiniBooNE, 21 SciBooNE)
+  ********* Total other disapp: 386 ***********
+
+  LSND:                    11
+  MiniBooNE app nu+nubar:  22 (11 nu_e bins per polarity, do not count nu_mu bins
+                               (8 per polarity) when subtraction is done)
   KARMEN:                   9
   NOMAD:                    1
   E776:                    24 (2 * (14-2) bins,   4 pulls)
   ICARUS:                   1 bin,      0 pulls
-  
+  ********** Total appearance: 68 ************
 
 
 parameter counting in my simulation:
@@ -163,6 +164,11 @@ include electron neutrinos, but not both.
 
 Important changes
 -----------------
+
+2013-02-06  Discovered mistake in run-all with DELTA_0 prescan (Upper limit "0.4.7")
+
+2013-01-31  Implemented additional low-pass filter in near detector
+            to account for non-zero length of the decay pipe
 
 2013-01-25  Include matter effects in MINOS
 

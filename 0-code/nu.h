@@ -8,6 +8,7 @@
 #endif
 
 #include <globes/globes.h>
+#include "glb_smear.h"
 #include "const.h"
 #include "snu.h"
 
@@ -169,13 +170,16 @@ double chiWBB_LAr(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 double chiDCNorm(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
-double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
-              void *user_data);
-double chiMINOS_2010(int exp, int rule, int n_params, double *x, double *errors,
-              void *user_data);
 double chiKamLAND(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 double chiLSNDspectrum(int exp, int rule, int n_params, double *x, double *errors,
+              void *user_data);
+
+/* minos.c */
+int minos_smear(glb_smear *s, double **matrix, int *lower, int *upper);
+double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
+              void *user_data);
+double chiMINOS_2010(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 
 /* mb-2010.c */
