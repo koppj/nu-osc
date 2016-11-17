@@ -22,14 +22,14 @@
 // Path for external data files. Note: #include's need to be adjusted separately
 #define MB_DATA_PATH "./glb/mb-2012/mb-data/"
 
-// TAG_DEFS - This signals ./compile-and-run where to insert new #define's
-#define NU_APP               // TAG_DEF - this signals ./compile-and-run
-#define NU_DISAPP            // TAG_DEF   which #define's to replace
-#define NUBAR_APP            // TAG_DEF
-#define NUBAR_DISAPP         // TAG_DEF
-#define COMBINED_APP         // TAG_DEF
-#define FULL_OSC             // TAG_DEF
-//#define RESCALING            // TAG_DEF
+
+#define NU_APP
+#define NU_DISAPP
+#define NUBAR_APP
+#define NUBAR_DISAPP
+#define COMBINED_APP
+#define FULL_OSC
+//#error MiniBooNE channels
 
 #define GOF_CHI2             // subtract mu contribution to APP chi2?
 
@@ -52,9 +52,8 @@ int MB_EXP  = -1;
 /* #define NN 40 */
 
 /************************ MINIBOONE DATA ************************/
-/* Common to both modes */
-//const double numubin[8] = { 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9 }; // JK - NOT USED
-const double disbin[16] = { 0.4,  0.5,  0.6,  0.7,  0.8,  0.9,  1.0,  1.1,  
+const double numubin[8] = { 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9 };
+const double disbin[16] = { 0.4,  0.5,  0.6,  0.7,  0.8,  0.9,  1.0,  1.1,
                             1.2,  1.3,  1.4,  1.5,  1.6,  1.7,  1.8,  1.9 };
 
 /* NU MODE: */
@@ -65,14 +64,14 @@ double pred_numu[8]    = { 19402.247,   29854.561,   26700.085,   18701.467,
 double ALLbgnu[11]     = { 180.80171,   108.22448,   120.03353,   63.887782,   89.806966,
                            67.249431,   69.855878,   57.014477,   51.846417,   38.586738,   69.381391 };
 /* separate beam nue background from others: */
-double OTHERbgnu[11]  = { 163.326, 86.1045, 80.638, 34.8518, 42.7113, 
+double OTHERbgnu[11]  = { 163.326, 86.1045, 80.638, 34.8518, 42.7113,
                           21.355,  22.551,  16.401, 13.668,  9.568,   20.505};
-double NUEbgnuMU[11]  = { 13.3757, 15.9692, 27.7785, 18.2728, 30.012, 
-                          29.6644, 28.8534, 23.188, 19.0444, 12.6187, 18.1264 };
-double NUEbgnuK[11]    = { 4.1,   6.15075, 11.617,  10.7632, 17.0838, 
+double NUEbgnuMU[11]    = { 13.667,  16.401, 28.018, 18.4508, 29.8975,
+                            29.8975, 29.727, 23.577, 20.5,    13.668, 20.505};
+double NUEbgnuK[11]    = { 4.1,   6.15075, 11.617,  10.7632, 17.0838,
                            16.23, 18.4515, 17.4255, 19.134,  16.4, 30.75};
-double nudisdata[16]  = {  8852, 16237, 22150, 24367, 23827, 
-                          21895, 19142, 14996, 11673,  8963, 
+double nudisdata[16]  = {  8852, 16237, 22150, 24367, 23827,
+                          21895, 19142, 14996, 11673,  8963,
                            6348,  4669,  3094,  2070,  1286,  885 };
 
 /* NUBAR MODE: */
@@ -82,12 +81,13 @@ double pred_numubar[8] = { 9998.9575,   13461.302,    11298.24,   7604.9604,
                            4331.8869,   2125.5371,   891.22261,   336.98711 };
 double ALLbgbar[11]    = { 90.289907,   53.077595,   57.098801,   32.937945,   43.159072,
                            34.174322,   36.383542,   28.737807,   28.750297,   20.098079,   42.697791 };
-double OTHERbgbar[11]  = { 75.73, 38.3175, 33.617, 14.913, 14.6988, 
-                           8.4325, 7.2705, 4.8855, 4.57, 1.998, 14.19 };
-double NUEbgbarMU[11]  = { 8.105, 7.71375, 11.844, 8.649, 14.805, 
+double NUEbgbarMU[11]  = { 8.105, 7.71375, 11.844, 8.649, 14.805,
                            12.0775, 12.6225, 10.752, 9.974, 6.856, 4.71};
-double NUEbgbarK[11]  = { 6.233, 7.47975, 11.843, 9.58425, 14.805, 
+double NUEbgbarK[11]  = { 6.233, 7.47975, 11.843, 9.58425, 14.805,
                           14.0262, 15.897, 13.0935, 13.716, 10.596, 14.085 };
+double OTHERbgbar[11]  = { 75.73, 38.3175, 33.617, 14.913, 14.6988,
+                           8.4325, 7.2705, 4.8855, 4.57, 1.998, 14.19 };
+
 double nubardisdata[16] = { 1565, 2476, 3121, 3203, 3117,
                             2919, 2496, 2006, 1761, 1322,
                             997,   750,  505,  377,  257, 181 };
@@ -114,12 +114,13 @@ static gsl_permutation *perm_MBSB = NULL;
  * http://www-boone.fnal.gov/for_physicists/data_release/nue_nuebar_2012/ */
 double binwidths[11] = { 0.1, 0.075, 0.1, 0.075, 0.125, 0.125, 0.15, 0.15, 0.2, 0.2, 1.5 };
 double bincenter[11];
+double binbounds[12] = { 0.200, 0.300, 0.475, 0.575, 0.650, 0.675, 
+                         0.800, 0.950, 1.100, 1.300, 1.500, 3.000 };
 
 /* for binning the MC data */
-//#define LBINS (10)
-//#define EBINS (60)
 #define LBINS (7)
-#define EBINS (40)
+#define EBINS (60)
+#define EBGBINS (15)          /* # of points for BG probability mean */
 double Emin,Euptrue[EBINS],Ecenter[EBINS],Lup[LBINS],Lcenter[LBINS],
        Lup_SB[LBINS],Lcenter_SB[LBINS];
 
@@ -187,6 +188,8 @@ static int mc_nu_bin[128000][3],mc_bar_bin[128000][3],mc_numu_bin[1267007][3],
   double prob_bar_SB2[EBINS][LBINS][NU_FLAVOURS][NU_FLAVOURS];
   double prob_nu_SB[11][NU_FLAVOURS][NU_FLAVOURS];
   double prob_bar_SB[11][NU_FLAVOURS][NU_FLAVOURS];
+  double prob_nu_BG[11][NU_FLAVOURS][NU_FLAVOURS];
+  double prob_bar_BG[11][NU_FLAVOURS][NU_FLAVOURS];
 
 double chi2CC[2],chi2C;         /* This is the contribution in app
                                    mode due to the disapp data. See
@@ -847,7 +850,7 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
   double *length, *density,(*pp)[NU_FLAVOURS];
   double dens[1] = {0}; density = &dens[0];
   double filter_sigma  = .2E-2;
-  double filter_sigma2 = 1E-2;
+  double filter_sigma2 = .2E-2;
   int i, j, k;
   double Pdis[16],P2dis[16],tot;
   int signum;
@@ -945,25 +948,68 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
 
       }
 
-  /* Generating probability for SciBooNE baseline 
-     (this should be used just for the appearance background) */
+  /* PROBABILITIES FOR THE BACKGROUND OSCILLATIONS */
+  /* SciBooNE baseline (should be used just for the APP bg) */
   double LSB[1] = {0.100};
+  for(int A=0; A<NU_FLAVOURS; A++) 
+    for(int B=0; B<NU_FLAVOURS; B++)   
+      for(i=0; i<11; i++) {prob_nu_SB[i][A][B] = 0; prob_bar_SB[i][A][B] = 0;}
   for(i=0; i<11; i++)
       {
         length = &LSB[0];
         pp = prob_temp;
-        mb_probability_matrix(max_dmsq, pp, 1, bincenter[i],
-                              1, length, density, filter_sigma2, NULL);
-        for(int A=0; A<NU_FLAVOURS; A++)
-          for(int B=0; B<NU_FLAVOURS; B++)
-            prob_nu_SB[i][A][B] = prob_temp[A][B];
-
-        mb_probability_matrix(max_dmsq, pp, -1, bincenter[i],
-                              1, length, density, filter_sigma2, NULL);
-        for(int A=0; A<NU_FLAVOURS; A++)
-          for(int B=0; B<NU_FLAVOURS; B++)
-            prob_bar_SB[i][A][B] = prob_temp[A][B];
+        for(j=0; j<EBGBINS; j++)
+          {
+            mb_probability_matrix(max_dmsq, pp, 1, binbounds[i]+binwidths[i]*(j+0.5)/EBGBINS,
+                                  1, length, density, filter_sigma2, NULL);
+            for(int A=0; A<NU_FLAVOURS; A++)
+              for(int B=0; B<NU_FLAVOURS; B++)
+                prob_nu_SB[i][A][B] += prob_temp[A][B];
+           
+            mb_probability_matrix(max_dmsq, pp, -1, binbounds[i]+binwidths[i]*(j+0.5)/EBGBINS,
+                                  1, length, density, filter_sigma2, NULL);
+            for(int A=0; A<NU_FLAVOURS; A++)
+              for(int B=0; B<NU_FLAVOURS; B++)
+                prob_bar_SB[i][A][B] += prob_temp[A][B];
+          }
       }
+
+  /* normalizing: */
+  for(int A=0; A<NU_FLAVOURS; A++) 
+    for(int B=0; B<NU_FLAVOURS; B++) 
+      for(i=0; i<11; i++) 
+      {prob_nu_SB[i][A][B] /= EBGBINS; prob_bar_SB[i][A][B] /= EBGBINS;}
+  
+  /* MB baseline */
+  double LMB[1] = {0.520};
+  for(int A=0; A<NU_FLAVOURS; A++) 
+    for(int B=0; B<NU_FLAVOURS; B++)   
+      for(i=0; i<11; i++) {prob_nu_BG[i][A][B] = 0; prob_bar_BG[i][A][B] = 0;}
+  for(i=0; i<11; i++)
+      {
+      length = &LMB[0];
+      pp = prob_temp;
+      for(j=0; j<EBGBINS; j++)
+        {
+          mb_probability_matrix(max_dmsq, pp, 1, binbounds[i]+binwidths[i]*(j+0.5)/EBGBINS, 
+               1, length, density, filter_sigma2, NULL);
+          for(int A=0; A<NU_FLAVOURS; A++)
+            for(int B=0; B<NU_FLAVOURS; B++)
+              prob_nu_BG[i][A][B] += prob_temp[A][B];
+ 
+          mb_probability_matrix(max_dmsq, pp, -1, binbounds[i]+binwidths[i]*(j+0.5)/EBGBINS, 
+               1, length, density, filter_sigma2, NULL);
+          for(int A=0; A<NU_FLAVOURS; A++)
+            for(int B=0; B<NU_FLAVOURS; B++)
+              prob_bar_BG[i][A][B] += prob_temp[A][B];
+        }
+      }
+  /* normalizing: */
+  for(int A=0; A<NU_FLAVOURS; A++) 
+    for(int B=0; B<NU_FLAVOURS; B++) 
+      for(i=0; i<11; i++) 
+      {prob_nu_BG[i][A][B] /= EBGBINS; prob_bar_BG[i][A][B] /= EBGBINS;}
+
 
 #if defined(COMBINED_APP) || defined(NU_APP)
   /************* NEUTRINO EVENTS *************/
@@ -1008,17 +1054,21 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
   for(int k=0; k<TOT; k++)
     {
       /* Localize event in Etrue -- L grid */
-      i = 0; j = 0;
-      while (Euptrue[i] <= bincenter[FIRST+k] && i <= EBINS-2) i++;
-      while (Lup[j] <= 0.520 && j <= LBINS-2) j++;
+//      i = 0; j = 0;
+//      while (Euptrue[i] <= bincenter[FIRST+k] && i <= EBINS-2) i++;
+//      while (Lup[j] <= 0.520 && j <= LBINS-2) j++;
+      i = FIRST + k;
       /* prob rescaling - see discussion with W Louis */
 #ifdef FULL_OSC
 #ifdef RESCALING
-      dummy[k][0] = prob_nu[i][j][0][0]/prob_nu[i][j][1][1]*NUEbgnuMU[FIRST+k];
+      /* dummy[k][0] = prob_nu[i][j][0][0]/prob_nu[i][j][1][1]*NUEbgnuMU[FIRST+k]; */
+      dummy[k][0] = prob_nu_BG[i][0][0]/prob_nu_BG[i][1][1]*NUEbgnuMU[FIRST+k];
 #else
-      dummy[k][0] = prob_nu[i][j][0][0]*NUEbgnuMU[FIRST+k];
+      /* dummy[k][0] = prob_nu[i][j][0][0]*NUEbgnuMU[FIRST+k]; */
+      dummy[k][0] = prob_nu_BG[i][0][0]*NUEbgnuMU[FIRST+k];
 #endif // RESCALING
-      dummy[k][1] = prob_nu[i][j][0][0]/prob_nu_SB[FIRST+k][0][0]*NUEbgnuK[FIRST+k];
+      /* dummy[k][1] = prob_nu[i][j][0][0]/prob_nu_SB[FIRST+k][0][0]*NUEbgnuK[FIRST+k]; */
+      dummy[k][1] = prob_nu_BG[i][0][0]/prob_nu_SB[i][0][0]*NUEbgnuK[FIRST+k];
       bg[k] = OTHERbgnu[k] + dummy[k][0] + dummy[k][1];
       /* bg[k] = OTHERbgnu[FIRST+k]  */
       /*   + prob_nu[i][j][0][0]/prob_nu[i][j][1][1]*NUEbgnuMU[FIRST+k]  */
@@ -1243,26 +1293,28 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
   for(k=0; k<TOT; k++)
     {
       /* Localize event in Etrue -- L grid */
-      i = 0; j = 0;
-      while (Euptrue[i] <= bincenter[FIRST+k] && i <= EBINS-2) i++;
-      while (Lup[j] <= 0.520 && j <= LBINS-2) j++;
+//      i = 0; j = 0;
+//      while (Euptrue[i] <= bincenter[FIRST+k] && i <= EBINS-2) i++;
+//      while (Lup[j] <= 0.520 && j <= LBINS-2) j++;
+      i = FIRST + k;
       /* prob rescaling - see discussion with W Louis */
 #ifdef FULL_OSC
 #ifdef RESCALING
-      dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar[i][j][1][1]
-                      + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu[i][j][1][1] )*NUEbgbarMU[FIRST+k];
+      /* dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar[i][j][1][1] */
+      /*                      + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu[i][j][1][1] )*               NUEbgbarMU[FIRST+k]; */
+      dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar_BG[i][0][0]/prob_bar_BG[i][1][1]
+                      + nuefraction[FIRST+k]*prob_nu_BG[i][0][0]/prob_nu_BG[i][1][1] )*NUEbgbarMU[FIRST+k];
 #else
-      dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]
-                      + nuefraction[FIRST+k]*prob_nu[i][j][0][0] )*NUEbgbarMU[FIRST+k];
+      /* dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0] */
+      /*                      + nuefraction[FIRST+k]*prob_nu[i][j][0][0] )*NUEbgbarMU[FIRST+k]; */
+      dummy[k][0] = ( (1.0 - nuefraction[FIRST+k])*prob_bar_BG[i][0][0]
+                 + nuefraction[FIRST+k]*prob_nu_BG[i][0][0] )*NUEbgbarMU[FIRST+k];
 #endif //RESCALING
-      dummy[k][1] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar_SB[FIRST+k][0][0]
-            + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu_SB[FIRST+k][0][0] )*NUEbgbarK[FIRST+k];
+      /* dummy[k][1] = ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar_SB[FIRST+k][0][0] */
+      /*            + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu_SB[FIRST+k][0][0] )*NUEbgbarK[FIRST+   k]; */
+      dummy[k][1] = ( (1.0 - nuefraction[FIRST+k])*prob_bar_BG[i][0][0]/prob_bar_SB[FIRST+k][0][0]
+            + nuefraction[FIRST+k]*prob_nu_BG[i][0][0]/prob_nu_SB[FIRST+k][0][0] )*NUEbgbarK[FIRST+k];
       bgbar[k] = OTHERbgbar[k] + dummy[k][0] + dummy[k][1];
-      /* bgbar[k] = OTHERbgbar[FIRST+k] */
-      /*   + ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar[i][j][1][1] */
-      /*       + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu[i][j][1][1] )*NUEbgbarMU[FIRST+k] */
-      /*   + ( (1.0 - nuefraction[FIRST+k])*prob_bar[i][j][0][0]/prob_bar_SB[FIRST+k][0][0] */
-      /*       + nuefraction[FIRST+k]*prob_nu[i][j][0][0]/prob_nu_SB[FIRST+k][0][0] )*NUEbgbarK[FIRST+k]; */
 
   /* Exporting background */
   for(i=0; i<TOT; i++)

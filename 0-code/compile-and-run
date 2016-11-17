@@ -1,0 +1,151 @@
+#!/bin/bash
+
+# -----------------------------------------------------------------
+function on_exit()
+# -----------------------------------------------------------------
+# Graceful exit
+# -----------------------------------------------------------------
+{
+  if [[ -e mb-orig.c ]]; then
+    echo "**********************************************************************"
+    echo "WARNING: #define's in mb.c may be in undefined state"
+    echo "**********************************************************************"
+    mv mb-orig.c mb.c
+    touch mb.c
+  fi
+  if [[ -e reactors/definitions-orig.h ]]; then
+    echo "**********************************************************************"
+    echo "WARNING: #define's in reactors/definitions.h may be in undefined state"
+    echo "**********************************************************************"
+    mv reactors/definitions-orig.h reactors/definitions.h
+    touch reactors/definitions.h
+  fi
+  exit 0
+}
+
+
+# -----------------------------------------------------------------
+#                     M A I N   S C R I P T
+# -----------------------------------------------------------------
+
+trap on_exit HUP QUIT KILL ABRT SEGV INT TERM EXIT
+
+# Parse command line options
+RUN_LOCALLY=false
+while getopts ":l" opt; do
+  case $opt in
+    l)
+       RUN_LOCALLY=true
+      ;;
+  esac
+done
+shift $((OPTIND-2))
+
+
+# Pick name for temporary executable
+EXE=$(mktemp -u nu-tmp-XXXXX)
+
+# Definitions for Thomas' SBL codes
+if [[ -z $SBLDEFS ]]; then
+  SBLDEFS="SBL CHOOZ PV DC DB KAML RENO BUGEY_SP GAL"
+fi
+
+CODE=""
+for D in $SBLDEFS; do
+  CODE="$CODE\n#define USE_"$D
+done
+
+echo "# Extra define's for SBL codes: " $SBLDEFS
+cp reactors/definitions.h reactors/definitions-orig.h
+sed -i "/#define USE_.*/d;s/\/\/ TAG_DEFS.*/$CODE/" reactors/definitions.h
+
+
+# Definitions for Pedro's MiniBooNE code
+if [[ -z $MBDEFS ]]; then
+  MBDEFS="NU_APP NU_DISAPP NUBAR_APP NUBAR_DISAPP COMBINED_APP FULL_OSC"
+fi
+
+CODE=""
+for D in $MBDEFS; do
+  CODE="$CODE\n#define "$D
+done
+
+echo "# Extra define's for MiniBooNE codes: " $MBDEFS
+cp mb.c mb-orig.c
+sed -i "/#define.*\/\/ TAG_DEF/d;s/\/\/ TAG_DEFS.*/$CODE/" mb.c
+
+
+# Compilation
+echo "# Compiling ..."
+#make clean > /dev/null
+make > /dev/null
+mv nu $EXE
+
+mv reactors/definitions-orig.h reactors/definitions.h
+touch reactors/definitions.h
+mv mb-orig.c mb.c
+touch mb.c
+
+
+# Run - possibly in parallel
+if [[ -z $NU_SIZE ]]; then
+  export NU_SIZE=1;
+fi
+
+OF=$OUT_FILE
+if [[ -z $NU_RANK ]]; then
+  for (( I=0; $I < $NU_SIZE; I++ )); do
+    export NU_RANK=$I
+    export NU_SIZE
+    if (( $NU_SIZE > 1 )); then
+      export OUT_FILE="${OF%%.dat}_${NU_RANK}.dat"
+    fi
+
+    # Submit to MOGON
+    #   -q <queue>
+    #   -n <no of cores>
+    #   -o <name of output file (stdout, stderr)>
+    #   -N            --   Send email when job is finished
+    #   -W <hrs:min>  --   Maximum wall clock time (hrs:min)
+    #   -M xxx        --   Memory limit
+    if $RUN_LOCALLY; then
+      echo "# Running job $EXE locally ..."
+      ./$EXE $@ | tee ../results/$OUT_FILE &
+    else
+      echo "# Submitting job $EXE, output file $OUT_FILE ..."
+      bsub -q thepshort \
+           -n 1 \
+           -N \
+           -M 1000000 \
+           "./$EXE $@ > ../results/$OUT_FILE"
+    fi
+  done
+else
+  export NU_RANK
+  export NU_SIZE
+  if (( $NU_SIZE > 1 )); then
+    export OUT_FILE="${OF%%.dat}_${NU_RANK}.dat"
+  fi
+
+  # Submit to MOGON
+  #   -q <queue>
+  #   -n <no of cores>
+  #   -o <name of output file (stdout, stderr)>
+  #   -N            --   Send email when job is finished
+  #   -W <hrs:min>  --   Maximum wall clock time (hrs:min)
+  #   -M xxx        --   Memory limit
+  if $RUN_LOCALLY; then
+    echo "# Running job $EXE locally ..."
+    ./$EXE $@ | tee ../results/$OUT_FILE &
+  else
+    echo "# Submitting job $EXE, output file $OUT_FILE ..."
+    bsub -q theplong \
+         -n 1 \
+         -N \
+         -W 96:00 \
+         -M 1000000 \
+         "./$EXE $@ > ../results/$OUT_FILE"
+  fi
+fi
+
+

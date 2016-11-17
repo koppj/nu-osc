@@ -24,6 +24,9 @@
 #define ROUND(x)    ( (int)((x) + 0.5) )
 
 
+/* Debug level */
+extern int debug_level;
+
 /* MPI-related global variables and definition of parallelized for loop */
 #if defined NU_MPI || defined NU_PSEUDO_MPI
   extern int mpi_rank;
@@ -57,6 +60,15 @@ typedef struct
   double E_1st_min;
 } wbb_params_type;
 
+/* Neutrino flavors */
+#define NU_E    0
+#define NU_MU   1
+#define NU_TAU  2
+#define NU_S1   3
+#define NU_S2   4
+#define NU_S3   5
+#define NU_S    NU_S1
+
 /* Different plot types */
 enum { NU_ACTION_SPECTRUM, NU_ACTION_PARAM_SCAN, NU_ACTION_EXPOSURE_SCAN/*,
        NU_ACTION_CHECK_BF*/ };
@@ -73,7 +85,8 @@ enum { EXT_MB         = 0x0001,
        EXT_CDHS       = 0x0100,
        EXT_ATM_TABLE  = 0x0200,
        EXT_ATM_COMP   = 0x0400,
-       EXT_SOLAR      = 0x0800};
+       EXT_SOLAR      = 0x0800,
+       EXT_MINOS2016  = 0x1000};
 
 /* Experiment and rule numbers */
 extern int EXP_BEAM_NEAR;
@@ -84,12 +97,9 @@ extern int EXP_REACTOR_FAR;
 
 #define KAMLAND_N_REACT      16  // Number of reactors in KamLAND experiments
 
-#define RULE_T2K_NUE_QE       0
-#define RULE_T2K_NUE_BAR_QE   1
-#define RULE_T2K_NUMU_QE      2
-#define RULE_T2K_NUMU_BAR_QE  3
-#define RULE_T2K_NUE_CC       4
-#define RULE_T2K_NUE_BAR_CC   5
+#define RULE_T2K_NUMU         0
+#define RULE_T2K_NUE          1
+#define RULE_T2K_NUMU_NOSC    1
 
 #define RULE_NOVA_NUE         0
 #define RULE_NOVA_NUMU        1
@@ -158,8 +168,6 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
       const unsigned long *prescan_flags);
 
 /* sys.c */
-double chiT2K(int exp, int rule, int n_params, double *x, double *errors,
-              void *user_data);
 double chiNOvA(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 double chiWBB_WC(int exp, int rule, int n_params, double *x, double *errors,
@@ -174,13 +182,20 @@ double chiKamLAND(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 double chiLSNDspectrum(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
+double chiT2K(int exp, int rule, int n_params, double *x, double *errors,
+              void *user_data);
+
 
 /* minos.c */
 int minos_smear(glb_smear *s, double **matrix, int *lower, int *upper);
-double chiMINOS(int exp, int rule, int n_params, double *x, double *errors,
+double chiMINOS_2016(int exp, int rule, int n_params, double *x, double *errors,
+              void *user_data);
+double chiMINOS_2011(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 double chiMINOS_2010(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
+int MINOS_2016_init();
+double MINOS_2016_prior(glb_params params);
 
 /* mb-2010.c */
 int chiMB_init(int threshold);
@@ -207,10 +222,20 @@ double chi_nue_carbon_spectrum(int exp, int rule, int n_params,
               double *x, double *errors, void *user_data);
 void init_nue_carbon(int KM_spectrum);
 
-/* icarus.c */
-int init_icarus();
-double chi_ICARUS(int exp, int rule, int n_params, double *x, double *errors,
-                  void *user_data);
+/* icarus-2012.c */
+int init_icarus_2012();
+double chi_ICARUS_2012(int exp, int rule, int n_params, double *x, double *errors,
+                       void *user_data);
+
+/* icarus-2014.c */
+int init_icarus_2014();
+double chi_ICARUS_2014(int exp, int rule, int n_params, double *x, double *errors,
+                       void *user_data);
+
+/* opera-2013.c */
+int init_OPERA();
+double chi_OPERA(int exp, int rule, int n_params, double *x, double *errors,
+                 void *user_data);
 
 /* sensitivities.c */
 double sample(double min, double max, int steps, int i);

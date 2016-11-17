@@ -1,0 +1,6 @@
+#!/bin/bash
+# Useful commands for running GENIE
+
+# Generate splines
+gmkspl -p "12,14,16,-12,-14,-16" -t 1000260560 -o gxspl-fe56.xml
+

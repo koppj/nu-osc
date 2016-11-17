@@ -1,24 +1,31 @@
 #!/bin/bash
-# Compute event rates *without* including background efficiencies.
+# Compute MINOS event rates *without* including background efficiencies.
 # This is needed when converting MINOS sample purities to BG efficiencies
-globes=$HOME/software/installed/globes-devel/bin/globes
-SUFFIX=""
+globes=$HOME/papers/sterile-nu/globes/bin/globes
 
 cd 0-code/
 
 # Create temporary GLoBES files not including efficiencies
-sed -e "s/\(1.0@#ch_.*_BG\)/\1_noeff/" \
-    glb/minos-nc/MINOS-NC-near.glb > glb/minos-nc/MINOS-NC-near-noeff.glb
-sed -e "s/\(1.0@#ch_.*_BG\)/\1_noeff/" \
-    glb/minos-nc/MINOS-NC-far.glb > glb/minos-nc/MINOS-NC-far-noeff.glb
+sed -e "s/@post_smearing_efficiencies.*//" glb/minos-2016/minos-nc-far.glb \
+  > glb/minos-2016/minos-nc-far-noeff.glb
+sed -e "s/@post_smearing_efficiencies.*//" glb/minos-2016/minos-cc-far.glb \
+  > glb/minos-2016/minos-cc-far-noeff.glb
+sed -e "s/@post_smearing_efficiencies.*//" glb/minos-2016/minos-nc.glb \
+  > glb/minos-2016/minos-nc-noeff.glb
+sed -e "s/@post_smearing_efficiencies.*//" glb/minos-2016/minos-cc.glb \
+  > glb/minos-2016/minos-cc-noeff.glb
 
-export GLB_PATH="glb/minos-nc"
-$globes -N -r0 -s -S -m MINOS-NC-near-noeff.glb > ../1-spectra/minos-nc-near-noosc.dat
-$globes -N -r1 -s -S -m MINOS-NC-near-noeff.glb > ../1-spectra/minos-cc-near-noosc.dat
-$globes -N -r0 -s -S -m MINOS-NC-far-noeff.glb  > ../1-spectra/minos-nc-far-noosc.dat
-$globes -N -r1 -s -S -m MINOS-NC-far-noeff.glb  > ../1-spectra/minos-cc-far-noosc.dat
-export OSC_PARAMS=""
 
-rm -f glb/minos-nc/MINOS-NC-near-noeff.glb
-rm -f glb/minos-nc/MINOS-NC-far-noeff.glb
+# Event spectra (standard oscillations)
+export GLB_PATH="glb/minos-2016"
+export OSC_PARAMS="0.587,0.149,0.695,0,7.54e-5,2.445e-3"
+$globes -p $OSC_PARAMS -r0 -s -S -m -e 1 minos-nc-noeff.glb > ../1-spectra/minos-nc-near.dat
+$globes -p $OSC_PARAMS -r0 -s -S -m -e 0 minos-nc-far-noeff.glb > ../1-spectra/minos-nc-far.dat
+$globes -p $OSC_PARAMS -r0 -s -S -m -e 1 minos-cc-noeff.glb > ../1-spectra/minos-cc-near.dat
+$globes -p $OSC_PARAMS -r0 -s -S -m -e 0 minos-cc-far-noeff.glb > ../1-spectra/minos-cc-far.dat
+$globes -N -r0 -s -S -m -e 0 minos-cc-far-noeff.glb > ../1-spectra/minos-cc-far-noosc.dat
+unset OSC_PARAMS
+
+rm -f glb/minos-2016/minos-nc-far-noeff.glb
+rm -f glb/minos-2016/minos-cc-far-noeff.glb
 

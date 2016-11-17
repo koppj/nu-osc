@@ -1,0 +1,90 @@
+%!GLoBES
+
+include "minos-nc-far.glb"
+
+#DETECTOR#
+
+
+// Beam data
+// ---------
+//
+// Note on normalization:
+//   Mary Bishai's flux files are in neutrino/GeV/pot/m^2 at 735 km.
+//   Cross sections are in 10^-42 m^2
+//   Detector masses are in kt (1 kt = 6.02e32 nucleons)
+// --> Normalization: (735 km^2) * 6.02e32 * 1e-42 = 3.252e-4.
+//     Small deviations come from tuning to MINOS
+nuflux(#NUMI_nu_near)<
+//FIXME  @flux_file = "fluxes/flugg_le010z185i_run1_735km_0kmoa_flux.txt"
+  @flux_file = "fluxes/fluka05_le010z185i_near_flux_new.txt"
+  @time      = 1
+  @power     = 10.56e20  // pot
+//  @norm      = 2.8e-4
+  @norm      = 0.65e-24
+>
+
+
+// Detector properties
+// -------------------
+$target_mass = 0.0286    // kt fiducial, see e.g.
+                         // minos-docdb.fnal.gov/0060/006010/001/BoehmThesis_2sided.pdf
+
+$profiletype = 3
+$densitytab  = {0.0}     // g/cm^3
+//$lengthtab   = {1.04}    // km
+$lengthtab   = {0.7}    // km
+BLcorrection = 0.7^2 / 1.04^2 // Correction factor for efficiencies; became necessary
+                              // after the average ND baseline has been changed (Jan 2013, JK)
+
+// Energy resolution for NC events
+include "smear_nc_nc_analysis_genie-near.dat"
+
+
+// Oscillation channels
+// --------------------
+
+%eff_near = {
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1
+}
+
+// Channel definitions
+channel(#ch_NC_e_near)<       // NC signal from \nu_e
+  @channel = #NUMI_nu_near : + :      m :      e : #XNC : #ERES_NC_NC_ANALYSIS_NEAR
+  @post_smearing_efficiencies = copy(%eff_near)
+>
+channel(#ch_NC_mu_near)<      // NC signal from \nu_\mu
+  @channel = #NUMI_nu_near : + :      m :      m : #XNC : #ERES_NC_NC_ANALYSIS_NEAR
+  @post_smearing_efficiencies = copy(%eff_near)
+>
+channel(#ch_NC_tau_near)<     // NC signal from \nu_\tau
+  @channel = #NUMI_nu_near : + :      m :      t : #XNC : #ERES_NC_NC_ANALYSIS_NEAR
+  @post_smearing_efficiencies = copy(%eff_near)
+>
+
+channel(#ch_CC_BG_near)<      // CC \nu_\mu BG in NC sample
+  @channel = #NUMI_nu_near : + :      m :      m : #XCC : #ERES_CC
+  @post_smearing_efficiencies = copy(%eff_near)
+>
+channel(#ch_CC_BG_e_near)<    // CC \nu_e BG in NC sample
+  @channel = #NUMI_nu_near : + :      m :      e : #XCC : #ERES_CC
+  @post_smearing_efficiencies = copy(%eff_near)
+>
+
+
+// Rules (efficiencies from 1607.01176, p.3)
+// -----------------------------------------
+//ND_EFF1 = BLcorrection
+//ND_EFF2 = BLcorrection
+ND_EFF1 = 0.154 * BLcorrection
+ND_EFF2 = 0.799 * BLcorrection
+rule(#rule_NC_near)<
+  @signal           = ND_EFF2@#ch_NC_e_near : ND_EFF2@#ch_NC_mu_near : ND_EFF2@#ch_NC_tau_near
+  @background       = ND_EFF1@#ch_CC_BG_near : ND_EFF1@#ch_CC_BG_e_near
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = {}
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = {}
+>
+

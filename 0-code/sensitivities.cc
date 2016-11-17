@@ -25,7 +25,6 @@ extern const double param_bounds[];
 extern int scenario;
 extern int mode;
 extern int nsi_index;
-extern const int debug_level;
 extern int use_nsi_constraints;
 
 extern int n_nsi_fit_params;
@@ -265,7 +264,8 @@ int print_rates()
   for (exp=0; exp < glb_num_of_exps; exp++)
   {
     glbPrintDelimiter(stream,'l');
-    fprintf(stream, " (* Begin experiment %d -- %s *)\n", exp, glbGetFilenameOfExperiment(exp));
+    fprintf(stream, " (* Begin experiment %d -- %s *)\n", exp,
+                    glbGetFilenameOfExperiment(exp));
     for (rule=0; rule < glbGetNumberOfRules(exp); rule++)
     {
       glbPrintDelimiter(stream,'l');

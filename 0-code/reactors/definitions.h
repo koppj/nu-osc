@@ -8,13 +8,13 @@
 #define EnuMAX 10.
 
 // Which experiments to include
-// TAG_DEFS - This signals ./compile-and-run where to insert new #define's
+
 #define USE_SBL
 #define USE_CHOOZ
 #define USE_PV
-#define USE_KAML
 #define USE_DC
 #define USE_DB
+#define USE_KAML
 #define USE_RENO
 #define USE_BUGEY_SP
 #define USE_GAL

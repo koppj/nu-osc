@@ -31,5 +31,6 @@ const env_param ext_scenarios[] =
   { "ATM_COMP",         EXT_ATM_COMP         },
   { "ATM",              EXT_ATM_COMP         },
   { "SOLAR",            EXT_SOLAR            },
+  { "MINOS_2016",       EXT_MINOS2016        },
   { NULL, -1 }
 };

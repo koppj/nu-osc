@@ -1,12 +1,10 @@
 TODO
 ----
 
-- Make plot of Ue4 vs. Um4 for ATM.
+- Why is the sensitivity to th24 and th34 so different in the solar sector?
 
 - Understand why including ATM_COMP rather than ATM_TAB changes the PG
   test by so much.
-
-- RENO ND spectrum?
 
 - Understand differences between my MINOS code and Michele's
 
@@ -18,12 +16,6 @@ not the 3+2 case)
 
 - Study consistency of app and disapp evidence, e.g. by plotting chi^2
 marginalized vs. dmsq.
-
-- What are the artifacts in the Um4-Ut4 plots at high CL?
-
-- Counting of degrees of freedom in MB?
-
-- Write summary of MINOS analysis
 
 - Study impact of sterile neutrinos on th23 (deviation from maximal)
 
@@ -60,7 +52,7 @@ degrees of freedom (see 1103.4570, Thomas' code, and Thomas' email from Apr 6, 2
   (in Thomas' analysis for 1103.4570, 1 dof is included for atmospherics)
 
 
-Counting of degrees of freedom for fall 2012 simulation:
+Counting of degrees of freedom for winter 2013 simulation:
   Bugey-3 spectra:         60  --  60 bins,     1 pull
   SBL rate measurements:   16  --  19 reactors, (3 of them Bugey 3, don't double-count!), 0 pulls
   Chooz:                   14  --  14 bins,     1 pull
@@ -76,10 +68,12 @@ Counting of degrees of freedom for fall 2012 simulation:
   MINOS_NC:                40 (20 NC, 20 CC), 10 pulls (5 NC, 5 CC)
   C12:                     32 (6 for LSND, 26 for KARMEN), 3 pulls
   CDHS:                    15
-  solar:                  162 (see Michele's email from 2012-10-19)
+  solar:                  261 (162+33+42+24, see Michele's email from 2013-02-24,
+                               we're using SK1_nadir rather than SK1_spect;
+                               was 162 in the previous solar code, see Michele's email from 2012-10-19)
   MiniBooNE disapp nu:     15  --  16 bins, normalization adjusted to data
   MiniBooNE disapp nubar:  42 bins (21 MiniBooNE, 21 SciBooNE)
-  ********* Total other disapp: 386 ***********
+  ********* Total other disapp: 485 ***********
 
   LSND:                    11
   MiniBooNE app nu+nubar:  22 (11 nu_e bins per polarity, do not count nu_mu bins
@@ -133,7 +127,8 @@ Miscellaneous Notes
 -------------------
 
 - Differences of our results compared to Giunti-Laveder:
---> see my email from 2012-06-12
+--> see my email from 2012-06-12; for differences in the solar neutrino analysis,
+  see Thomas' email from 2012-10-23 ("Re: solar limit").
 
 - Using Thomas' code, "all except KamLAND" gives worse limit than
 SBL+BUGEY_SP. Is this related to th13 fixed? Plot in th13-th14 plane
@@ -161,13 +156,43 @@ include electron neutrinos, but not both.
 - Quantify tensions within the appearance data
 --> Done, plot is in the paper (currently fig. 7)
 
+- What are the artifacts in the Um4-Ut4 plots at high CL?
+--> Seems to be real physics, occuring when the mixing angle gets close to
+    maximal. In eq. (13) of http://arxiv.org/abs/1001.0336, for alpha=s the
+    leading part of the complex term is proportional to sin^2(th34) cos^2(th34) =
+    1/4 * sin^2(2*th34), which is symmetric about th34=pi/4. The first term,
+    on the other hand, is proportional to sin^2(th34). The sum of the two
+    can thus have a bumpy feature.
+
+- Make plot of Ue4 vs. Um4 for ATM.
+--> see Dropbox/sterile-nu/plots/th24th14-atm.pdf
+
 
 Important changes
 -----------------
 
+2013-03-08  Undid the second modification from 2013-02-24: ATM_MIN/MAX are
+              not for the ATM analysis, but for Thomas' reactor code!
+              --> Use this constraint when reactors are included!
+            Require dm41, dm51 < 0.5 * (LIMIT) in 1+3+1 to avoid potential problems
+              when dm45 = 2*LIMIT (which can happen in 1+3+1)
+
+2013-03-07  Fix in the MiniBooNE code to avoid aliasing in BG oscillations
+            Removed energy calibration uncertainty from MINOS code because it
+              led to systematics minimization problems at very large th34
+
+2013-03-05  Changed chi^2 function for "sys off" in MB and ICARUS to the real one
+            intead of chiZero
+
+2013-02-24  Add "Run ended at" line to end of data files
+            Require dm41, dm51 to be within the ATM limits only when ATM_COMP
+              code is included in the fit
+
+2013-02-23  New solar code
+
 2013-02-06  Discovered mistake in run-all with DELTA_0 prescan (Upper limit "0.4.7")
 
-2013-01-31  Implemented additional low-pass filter in near detector
+2013-01-31  Implemented additional low-pass filter in MINOS near detector
             to account for non-zero length of the decay pipe
 
 2013-01-25  Include matter effects in MINOS

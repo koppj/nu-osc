@@ -1,0 +1,129 @@
+%!GLoBES
+// See README file for citation and version information
+
+$version="3.1.10"        // Minimal GLoBES version required for this file
+
+// Beam data
+// ---------
+//
+// Note on normalization:
+//   Mary Bishai's flux files are in neutrino/GeV/pot/m^2 at 735 km.
+//   Cross sections are in 10^-42 m^2
+//   Detector masses are in kt (1 kt = 6.02e32 nucleons)
+// --> Normalization: (735 km^2) * 6.02e32 * 1e-42 = 3.252e-4.
+//     Small deviations come from tuning to MINOS
+nuflux(#NUMI_nu_far)<
+  @flux_file = "fluxes/flugg_le010z185i_run1_735km_0kmoa_flux.txt"
+//  @flux_file = "fluxes/fluka05_le010z185i_near_flux_new.txt"
+  @time      = 1
+  @power     = 10.56e20  // pot
+  @norm      = 2.8e-4
+//  @norm      = 0.65e-24
+>
+
+
+// Detector properties
+// -------------------
+$target_mass = 3.9       // kt fiducial, see e.g.
+                         // minos-docdb.fnal.gov/0060/006010/001/BoehmThesis_2sided.pdf
+
+$profiletype = 3
+$densitytab  = {2.8}     // g/cm^3
+$lengthtab   = {735}     // km
+
+// Cross sections
+cross(#XCC)<
+  @cross_file = "XCC.dat"
+>
+
+cross(#XNC)<
+  @cross_file = "XNC_fe56.dat"
+>
+
+cross (#XFlat)<
+  @cross_file = "XFlat.dat"
+>
+
+// Binning
+$emin            =   0.0 // GeV
+$emax            =  40.0 // GeV
+$binsize         = { // a 1 GeV bin from 0-1 GeV, 0.2 GeV steps to 5 GeV,
+                     // 1 GeV to 20 GeV, 2 GeV to 30 GeV, 5 GeV to 40 GeV
+  1,
+  0.2, 0.2, 0.2, 0.2, 0.2,  0.2, 0.2, 0.2, 0.2, 0.2,  0.2, 0.2, 0.2, 0.2, 0.2,
+  0.2, 0.2, 0.2, 0.2, 0.2,  1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1, 1,
+  2, 2, 2, 2, 2,  5, 5
+}
+
+$sampling_min    =   0.0 // GeV
+$sampling_max    = 120.0 // GeV
+$sampling_stepsize = { // 0.25 GeV steps from 0-10 GeV, 0.5 GeV to 30 GeV, 1 GeV steps above
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+}
+
+// Use low pass filter to smoothen rapid oscillations
+$filter_state = 1
+$filter_value = 0.3
+
+// Energy resolution for CC events (1607.01176 says 17.3% on average, flux peaks at ~1 GeV)
+// (Note, however, that we introduce some additional energy smearing through
+// the low-pass filter.)
+energy(#ERES_CC)<
+  @type = 1
+//  @sigma_e = {0, 0.173, 0}   // \sigma(E) = \alpha * E + \beta * sqrt{E} + \gamma
+  @sigma_e = {0, 0.1, 0}   // \sigma(E) = \alpha * E + \beta * sqrt{E} + \gamma
+>
+
+// Energy resolution for NC events
+include "smear_nc_cc_analysis-far.dat"
+
+
+// Oscillation channels
+// --------------------
+
+%eff_far = {
+0.620679, 1.15642, 1.11325, 1.20266, 1.24991, 1.26649, 1.28435,
+1.23884, 1.185, 1.14273, 1.07701, 1.03224, 0.98756, 0.935021,
+0.914068, 0.895013, 0.895117, 0.911134, 0.947422, 0.985779, 1.04979,
+1.20584, 1.42919, 1.49485, 1.55423, 1.63722, 1.65154, 1.68328,
+1.69948, 1.65695, 1.65695, 1.65695, 1.65695, 1.65695, 1.65695,
+1.65695, 1.65695, 1.65695, 1.65695, 1.65695, 1.65695, 1.65695, 1.65695
+}
+
+// Channel definitions
+channel(#ch_CC_nu_far)<     // CC signal
+  @channel = #NUMI_nu_far : + :      m :      m : #XCC : #ERES_CC
+  @post_smearing_efficiencies = copy(%eff_far)
+>
+channel(#ch_CC_nubar_far)<  // Wrong sign muons in the beam
+  @channel = #NUMI_nu_far : - :      m :      m : #XCC : #ERES_CC
+  @post_smearing_efficiencies = copy(%eff_far)
+>
+channel(#ch_NC_BG_far)<     // NC BG in CC sample - we neglect oscillations into \nu_s here
+  @channel = #NUMI_nu_far : + : NOSC_m : NOSC_m : #XNC : #ERES_NC_CC_ANALYSIS_FAR
+  @post_smearing_efficiencies = copy(%eff_far)
+>
+
+
+// Rules (efficiencies from 1607.01176, p.3)
+// -----------------------------------------
+
+rule(#rule_CC)<
+  @signal           = 0.846@#ch_CC_nu_far : 0.846@#ch_CC_nubar_far
+  @background       = 2.261e-7@#ch_NC_BG_far
+  @sys_on_function  = "chiMINOS-CC-2016"
+  @sys_on_errors    = { 0.05, 0.2, 0.2, 0.05, 0.05 }
+  @sys_off_function = "chiMINOS-nosys-CC-2016"
+  @sys_off_errors   = {}
+>
+

@@ -1,0 +1,139 @@
+%!GLoBES
+// See README file for citation and version information
+
+$version="3.1.10"        // Minimal GLoBES version required for this file
+
+// Beam data
+// ---------
+nuflux(#NUMI_nu)<
+//  @flux_file = "flugg_le010z185i_run1_735km_0kmoa_flux.txt"
+  @flux_file = "fluka05_le010z185i_735km_flux.txt"
+  @time      = 1
+  @power     = 3.18e20  // pot
+  @norm      = 0.22e-3
+>
+
+nuflux(#Flux_Flat)<
+  @flux_file = "flux_flat.dat"
+  @time      = 1
+  @power     = 7.2e20   // pot
+  @norm      = 9.8e-20
+>
+
+
+// Detector properties
+// -------------------
+$target_mass = 5.4       // kt
+
+$profiletype = 3
+$densitytab  = {2.8}     // g/cm^3
+//$densitytab  = {0.0}     // g/cm^3
+$lengthtab   = {735}     // km
+
+// Cross sections
+cross(#XCC)<
+  @cross_file = "XCC.dat"
+>
+
+cross(#XNC)<
+  @cross_file = "XNC_fe56.dat"
+>
+
+cross (#XFlat)<
+  @cross_file = "XFlat.dat"
+>
+
+// Binning
+$emin            =   0.0 // GeV
+$emax            =  20.0 // GeV
+$bins            =  20
+
+$sampling_min    =   0.0 // GeV
+$sampling_max    = 120.0 // GeV
+$sampling_stepsize = { // 0.25 GeV steps from 0-10 GeV, 0.5 GeV to 30 GeV, 1 GeV steps above
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,  0.25, 0.25, 0.25, 0.25,
+  0.25, 0.25, 0.25, 0.25,  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,
+  0.5, 0.5,   0.5, 0.5,    0.5, 0.5,   0.5, 0.5,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+}
+
+// Use low pass filter to smoothen rapid oscillations?
+$filter_state = 1
+$filter_value = 0.3
+
+// Energy resolution for CC events, taken from Pedro's code for CC
+energy(#ERES_CC)<
+        @type = 1
+        @sigma_e = {0.16,0.07,0.0}
+>
+
+// Energy resolution for NC events
+include "smear_nc_mc-far-1001.0336.dat"
+
+
+// Oscillation channels
+// --------------------
+
+// Efficiencies for NC selection (from fig. 5 of 1001.0336)
+%bc           = bincenter()
+//%E_table_NC   = { 0.33,     0.53576,  1.48472,  3.70281,  6.36605,  7.37991,  9.34564, 10.54968,
+//                 12.51481, 13.33919, 14.28966, 16.38248, 17.39603, 19.29838, 22.40425,
+//                 27.72902, 32.10291, 37.36509 }
+//%eff_table_NC = { 0.0,      0.83820,  0.88415,  0.89878,  0.87961,  0.88934,  0.87496,  0.88470,
+//                  0.88482,  0.87762,  0.88734,  0.86573,  0.88270,  0.86832,  0.87575,
+//                  0.87849,  0.88117,  0.86458 }
+//%eff_NC       = interpolation(%E_table_NC, %eff_table_NC, 1, %bc)
+
+
+// Channel definitions
+channel(#ch_NC_e)<       // NC signal from \nu_e
+  @channel = #Flux_Flat : + :      m :      e : #XFlat : #ERES_NC_1001_0336_far
+>
+channel(#ch_NC_mu)<      // NC signal from \nu_\mu
+  @channel = #Flux_Flat : + :      m :      m : #XFlat : #ERES_NC_1001_0336_far
+>
+channel(#ch_NC_tau)<     // NC signal from \nu_\tau
+  @channel = #Flux_Flat : + :      m :      t : #XFlat : #ERES_NC_1001_0336_far
+>
+
+channel(#ch_CC_BG)<      // CC \nu_\mu BG in NC sample
+  @channel = #NUMI_nu : + :      m :      m : #XCC : #ERES_CC
+  @post_smearing_efficiencies =            // taken from ND simulation (works better)
+{1.12466,0.435997,0.318037,0.309596,0.328685,0.345146,0.356098,0.337814,0.300697,0.28817,0.266693,0.249046,0.245356,0.224797,0.216089,0.206548,0.197618,0.198483,0.190414,0.185443}
+//  @post_smearing_efficiencies =            // derived from data provided by Alex Sousa
+//{0.91157,0.354907,0.253365,0.25827,0.305747,0.396002,0.50077,0.558518,0.580881,0.603479,0.60703,0.630974,0.622166,0.628168,0.639896,0.624359,0.633535,0.6293,0.62291,0.621873}
+>
+
+channel(#ch_CC_BG_e)<    // CC \nu_e BG in NC sample
+  @channel = #NUMI_nu : + :      m :      e : #XCC : #ERES_CC
+>
+
+
+// The following channels are used only when computing efficiencies
+channel(#ch_CC_BG_noeff)<  // CC BG in NC sample
+  @channel = #NUMI_nu : + : NOSC_m : NOSC_m : #XCC : #ERES_CC
+>
+
+
+// Rules
+// -----
+rule(#rule_NC)<
+  @signal           = 1.0@#ch_NC_e : 1.0@#ch_NC_mu : 1.0@#ch_NC_tau
+  @background       = 1.0@#ch_CC_BG : 1.0@#ch_CC_BG_e
+  @sys_on_function  = "chiMINOS-NC-2011"
+  @sys_on_errors    = { 0.04, 0.15, 0.15, 0.03, 0.01 } // from 1001.0336 sec. VI
+    // Note: Larger BG norm near makes th34 and th24 limits worse
+    //       Larger BG norm far makes th34 limit worse, th24 limit *better* (abs. chi^2 smaller)
+    //       Signal E-cal far seems to affect only th34 limits
+    //       BG E-cal far is quite irrelevant
+  @sys_off_function = "chiMINOS-nosys-NC-2011"
+  @sys_off_errors   = {}
+>
+

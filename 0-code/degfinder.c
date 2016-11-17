@@ -12,9 +12,6 @@
 #include "nu.h"
 #include "snu.h"
 
-/* Global variables */
-extern const int debug_level;
-
 
 /* ---------------------------------------------------------------------------- */
 double ChiNPWrapper(glb_params base_values, double th12, double th13, double th23,

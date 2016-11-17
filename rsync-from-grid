@@ -1,9 +1,0 @@
-#!/bin/bash
-rsync -avz fnpcsrv1.fnal.gov:/grid/app/jkopp/sterile-nu/results/* \
-      $HOME/papers/sterile-nu/sim/results/ \
-      --exclude condor_script* \
-      --exclude nu_script* \
-      --exclude nu_tarball* \
-      --exclude *.dat.err \
-      --exclude *.dat.log \
-      --exclude *Inputs*

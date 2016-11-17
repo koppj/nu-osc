@@ -73,174 +73,174 @@ void glbShiftAbsoluteEnergy(double b, double *rates_in, double *rates_out,
     else if (k == -1)         // Assume out-of-bounds bins to contain 0 events
       rates_out[i] = rates_in[k+1] * (delta - k);
     else if (k == n_bins - 1)
-      rates_out[i] = rates_in[k] * (delta - k) + rates_in[k];
+      rates_out[i] = -rates_in[k] * (delta - k) + rates_in[k];
     else
       rates_out[i] = (rates_in[k+1] - rates_in[k]) * (delta - k) + rates_in[k];
   }
 }
 
 
-/***************************************************************************
- * Calculate chi^2 for T2K, including the following systematical errors:   *
- *   x[ 0]: Correlated beam flux normalization error                       *
- *   x[ 1]: Correlated normalization of intrinsic nu_e background          *
- *   x[ 2]: Uncorr. signal norm error for nu_mu QE events in the ND        *
- *   x[ 3]: Uncorr. signal norm error for nu_mu QE events in the FD        *
- *   x[ 4]: Uncorr. background norm error for nu_mu QE events in the ND    *
- *   x[ 5]: Uncorr. background norm error for nu_mu QE events in the FD    *
- *   x[ 6]: Uncorr. signal norm error for nu_e QE events in the ND         *
- *   x[ 7]: Uncorr. signal norm error for nu_e QE events in the FD         *
- *   x[ 8]: Uncorr. background norm error for nu_e QE events in the ND     *
- *   x[ 9]: Uncorr. background norm error for nu_e QE events in the FD     *
- *   x[10]: Uncorr. background tilt error for nu_e QE events in the ND     *
- *   x[11]: Uncorr. background tilt error for nu_e QE events in the FD     *
- *   x[12]: Uncorr. signal norm error for nu_e CC events in the ND         *
- *   x[13]: Uncorr. signal norm error for nu_e CC events in the FD         *
- *   x[14]: Uncorr. background norm error for nu_e CC events in the ND     *
- *   x[15]: Uncorr. background norm error for nu_e CC events in the FD     *
- ***************************************************************************/
-double chiT2K(int exp, int rule, int n_params, double *x, double *errors,
-              void *user_data)
-{
-  double *true_rates_mu_N, *true_rates_mu_F;
-  double *true_rates_QE_N, *true_rates_QE_F;
-  double *true_rates_CC_N, *true_rates_CC_F;
-  double *signal_fit_rates_mu_N, *signal_fit_rates_mu_F, *bg_fit_rates_mu_N, *bg_fit_rates_mu_F;
-  double *signal_fit_rates_QE_N, *signal_fit_rates_QE_F, *bg_fit_rates_QE_N, *bg_fit_rates_QE_F;
-  double *signal_fit_rates_CC_N, *signal_fit_rates_CC_F, *bg_fit_rates_CC_N, *bg_fit_rates_CC_F;
-  if (rule == RULE_T2K_NUMU_QE)
-  {
-    true_rates_mu_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUMU_QE);
-    true_rates_mu_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUMU_QE);
-    true_rates_QE_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_QE);
-    true_rates_QE_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_QE);
-    true_rates_CC_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_CC);
-    true_rates_CC_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_CC);
-    
-    signal_fit_rates_mu_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUMU_QE);
-    signal_fit_rates_mu_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUMU_QE);
-    bg_fit_rates_mu_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUMU_QE);
-    bg_fit_rates_mu_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUMU_QE);
-    signal_fit_rates_QE_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_QE);
-    signal_fit_rates_QE_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_QE);
-    bg_fit_rates_QE_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUE_QE);
-    bg_fit_rates_QE_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUE_QE);
-    signal_fit_rates_CC_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_CC);
-    signal_fit_rates_CC_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_CC);
-    bg_fit_rates_CC_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUE_CC);
-    bg_fit_rates_CC_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUE_CC);
-  }
-  else
-  {
-    true_rates_mu_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUMU_BAR_QE);
-    true_rates_mu_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUMU_BAR_QE);
-    true_rates_QE_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_QE);
-    true_rates_QE_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_QE);
-    true_rates_CC_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_CC);
-    true_rates_CC_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_CC);
-    
-    signal_fit_rates_mu_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUMU_BAR_QE);
-    signal_fit_rates_mu_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUMU_BAR_QE);
-    bg_fit_rates_mu_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUMU_BAR_QE);
-    bg_fit_rates_mu_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUMU_BAR_QE);
-    signal_fit_rates_QE_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_QE);
-    signal_fit_rates_QE_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_QE);
-    bg_fit_rates_QE_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_QE);
-    bg_fit_rates_QE_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_QE);
-    signal_fit_rates_CC_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_CC);
-    signal_fit_rates_CC_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_CC);
-    bg_fit_rates_CC_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_CC);
-    bg_fit_rates_CC_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_CC);
-  }
-  
-  double signal_norm_mu_N, bg_norm_mu_N, signal_norm_mu_F, bg_norm_mu_F;
-  double signal_norm_QE_N, bg_norm_QE_N, signal_norm_QE_F, bg_norm_QE_F;
-  double signal_norm_CC_N, bg_norm_CC_N, signal_norm_CC_F, bg_norm_CC_F;
-  double bg_tilt_QE_N, bg_tilt_QE_F;
-  double emin, emax, ecenter;
-  double *bin_centers;
-  int ew_low, ew_high;
-  double fit_rate;
-  double total_fit_rate_CC_N, total_fit_rate_CC_F;
-  double total_true_rate_CC_N, total_true_rate_CC_F;
-  double chi2 = 0.0;
-  int i;
-
-
-  /* Request energy window */
-  glbGetEminEmax(exp, &emin, &emax);
-  glbGetEnergyWindowBins(exp, rule, &ew_low, &ew_high);
-  bin_centers = glbGetBinCentersListPtr(exp);
-  ecenter = 0.5 * (emax + emin);
-  bg_tilt_QE_N = x[10] / (emax - emin); 
-  bg_tilt_QE_F = x[11] / (emax - emin); 
-  
-  /* Calculate nuisance parameters */
-  signal_norm_mu_N = 1.0 + x[0] + x[2];
-  signal_norm_mu_F = 1.0 + x[0] + x[3];
-  bg_norm_mu_N     = 1.0 + x[0] + x[4];
-  bg_norm_mu_F     = 1.0 + x[0] + x[5];
-  signal_norm_QE_N = 1.0 + x[0] + x[6];
-  signal_norm_QE_F = 1.0 + x[0] + x[7];
-  bg_norm_QE_N     = 1.0 + x[0] + x[1] + x[8];
-  bg_norm_QE_F     = 1.0 + x[0] + x[1] + x[9];
-  signal_norm_CC_N = 1.0 + x[0] + x[12];
-  signal_norm_CC_F = 1.0 + x[0] + x[13];
-  bg_norm_CC_N     = 1.0 + x[0] + x[1] + x[14];
-  bg_norm_CC_F     = 1.0 + x[0] + x[1] + x[15];
-
-  /* Loop over all bins in energy window */
-  total_fit_rate_CC_N  = 0.0;
-  total_fit_rate_CC_F  = 0.0;
-  total_true_rate_CC_N = 0.0;
-  total_true_rate_CC_F = 0.0;
-  for (i=ew_low; i <= ew_high; i++)
-  {
-    /* Spectral analysis for QE nu_mu disappearance events */
-    fit_rate = signal_norm_mu_N * signal_fit_rates_mu_N[i] + bg_norm_mu_N * bg_fit_rates_mu_N[i];
-    chi2    += poisson_likelihood(true_rates_mu_N[i], fit_rate);
-
-    fit_rate = signal_norm_mu_F * signal_fit_rates_mu_F[i] + bg_norm_mu_F * bg_fit_rates_mu_F[i];
-    chi2    += poisson_likelihood(true_rates_mu_F[i], fit_rate);
-
-    /* Spectral analysis for QE nu_e appearance events */
-    fit_rate = signal_norm_QE_N * signal_fit_rates_QE_N[i]
-      + bg_norm_QE_N * bg_fit_rates_QE_N[i]
-      + bg_tilt_QE_N * (bin_centers[i]-ecenter) * bg_fit_rates_QE_N[i];
-    chi2 += poisson_likelihood(true_rates_QE_N[i], fit_rate);
-
-    fit_rate = signal_norm_QE_F * signal_fit_rates_QE_F[i]
-      + bg_norm_QE_F * bg_fit_rates_QE_F[i]
-      + bg_tilt_QE_F * (bin_centers[i]-ecenter) * bg_fit_rates_QE_F[i];
-    chi2 += poisson_likelihood(true_rates_QE_F[i], fit_rate);
-
-    /* Total rates analysis for CC nu_e appearance events */
-    total_fit_rate_CC_N  += signal_norm_CC_N * signal_fit_rates_CC_N[i]
-                                +  bg_norm_CC_N * bg_fit_rates_CC_N[i];
-    total_true_rate_CC_N += true_rates_CC_N[i];
-
-    total_fit_rate_CC_F  += signal_norm_CC_F * signal_fit_rates_CC_F[i]
-                                +  bg_norm_CC_F * bg_fit_rates_CC_F[i];
-    total_true_rate_CC_F += true_rates_CC_F[i];
-  }
-  chi2 += poisson_likelihood(total_true_rate_CC_N, total_fit_rate_CC_N);
-  chi2 += poisson_likelihood(total_true_rate_CC_F, total_fit_rate_CC_F);
-
-  /* Systematics priors */
-  for (i=0; i < n_params; i++)
-    chi2 += square(x[i] / errors[i]);
-
-  /* Save the systematics parameters as starting values for the next step */
-  if (rule == RULE_T2K_NUMU_QE)
-    for (i=0; i < n_params; i++)
-      sys_startval_beam_plus[i] = x[i];
-  else
-    for (i=0; i < n_params; i++)
-      sys_startval_beam_minus[i] = x[i];
-  
-  return chi2;
-}
-
+///***************************************************************************
+// * Calculate chi^2 for T2K, including the following systematical errors:   *
+// *   x[ 0]: Correlated beam flux normalization error                       *
+// *   x[ 1]: Correlated normalization of intrinsic nu_e background          *
+// *   x[ 2]: Uncorr. signal norm error for nu_mu QE events in the ND        *
+// *   x[ 3]: Uncorr. signal norm error for nu_mu QE events in the FD        *
+// *   x[ 4]: Uncorr. background norm error for nu_mu QE events in the ND    *
+// *   x[ 5]: Uncorr. background norm error for nu_mu QE events in the FD    *
+// *   x[ 6]: Uncorr. signal norm error for nu_e QE events in the ND         *
+// *   x[ 7]: Uncorr. signal norm error for nu_e QE events in the FD         *
+// *   x[ 8]: Uncorr. background norm error for nu_e QE events in the ND     *
+// *   x[ 9]: Uncorr. background norm error for nu_e QE events in the FD     *
+// *   x[10]: Uncorr. background tilt error for nu_e QE events in the ND     *
+// *   x[11]: Uncorr. background tilt error for nu_e QE events in the FD     *
+// *   x[12]: Uncorr. signal norm error for nu_e CC events in the ND         *
+// *   x[13]: Uncorr. signal norm error for nu_e CC events in the FD         *
+// *   x[14]: Uncorr. background norm error for nu_e CC events in the ND     *
+// *   x[15]: Uncorr. background norm error for nu_e CC events in the FD     *
+// ***************************************************************************/
+//double chiT2K(int exp, int rule, int n_params, double *x, double *errors,
+//              void *user_data)
+//{
+//  double *true_rates_mu_N, *true_rates_mu_F;
+//  double *true_rates_QE_N, *true_rates_QE_F;
+//  double *true_rates_CC_N, *true_rates_CC_F;
+//  double *signal_fit_rates_mu_N, *signal_fit_rates_mu_F, *bg_fit_rates_mu_N, *bg_fit_rates_mu_F;
+//  double *signal_fit_rates_QE_N, *signal_fit_rates_QE_F, *bg_fit_rates_QE_N, *bg_fit_rates_QE_F;
+//  double *signal_fit_rates_CC_N, *signal_fit_rates_CC_F, *bg_fit_rates_CC_N, *bg_fit_rates_CC_F;
+//  if (rule == RULE_T2K_NUMU_QE)
+//  {
+//    true_rates_mu_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUMU_QE);
+//    true_rates_mu_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUMU_QE);
+//    true_rates_QE_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_QE);
+//    true_rates_QE_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_QE);
+//    true_rates_CC_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_CC);
+//    true_rates_CC_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_CC);
+//    
+//    signal_fit_rates_mu_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUMU_QE);
+//    signal_fit_rates_mu_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUMU_QE);
+//    bg_fit_rates_mu_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUMU_QE);
+//    bg_fit_rates_mu_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUMU_QE);
+//    signal_fit_rates_QE_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_QE);
+//    signal_fit_rates_QE_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_QE);
+//    bg_fit_rates_QE_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUE_QE);
+//    bg_fit_rates_QE_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUE_QE);
+//    signal_fit_rates_CC_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_CC);
+//    signal_fit_rates_CC_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_CC);
+//    bg_fit_rates_CC_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUE_CC);
+//    bg_fit_rates_CC_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUE_CC);
+//  }
+//  else
+//  {
+//    true_rates_mu_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUMU_BAR_QE);
+//    true_rates_mu_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUMU_BAR_QE);
+//    true_rates_QE_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_QE);
+//    true_rates_QE_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_QE);
+//    true_rates_CC_N       = glbGetRuleRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_CC);
+//    true_rates_CC_F       = glbGetRuleRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_CC);
+//    
+//    signal_fit_rates_mu_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUMU_BAR_QE);
+//    signal_fit_rates_mu_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUMU_BAR_QE);
+//    bg_fit_rates_mu_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUMU_BAR_QE);
+//    bg_fit_rates_mu_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUMU_BAR_QE);
+//    signal_fit_rates_QE_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_QE);
+//    signal_fit_rates_QE_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_QE);
+//    bg_fit_rates_QE_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_QE);
+//    bg_fit_rates_QE_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_QE);
+//    signal_fit_rates_CC_N = glbGetSignalFitRatePtr(EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_CC);
+//    signal_fit_rates_CC_F = glbGetSignalFitRatePtr(EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_CC);
+//    bg_fit_rates_CC_N     = glbGetBGFitRatePtr    (EXP_BEAM_NEAR, RULE_T2K_NUE_BAR_CC);
+//    bg_fit_rates_CC_F     = glbGetBGFitRatePtr    (EXP_BEAM_FAR,  RULE_T2K_NUE_BAR_CC);
+//  }
+//  
+//  double signal_norm_mu_N, bg_norm_mu_N, signal_norm_mu_F, bg_norm_mu_F;
+//  double signal_norm_QE_N, bg_norm_QE_N, signal_norm_QE_F, bg_norm_QE_F;
+//  double signal_norm_CC_N, bg_norm_CC_N, signal_norm_CC_F, bg_norm_CC_F;
+//  double bg_tilt_QE_N, bg_tilt_QE_F;
+//  double emin, emax, ecenter;
+//  double *bin_centers;
+//  int ew_low, ew_high;
+//  double fit_rate;
+//  double total_fit_rate_CC_N, total_fit_rate_CC_F;
+//  double total_true_rate_CC_N, total_true_rate_CC_F;
+//  double chi2 = 0.0;
+//  int i;
+//
+//
+//  /* Request energy window */
+//  glbGetEminEmax(exp, &emin, &emax);
+//  glbGetEnergyWindowBins(exp, rule, &ew_low, &ew_high);
+//  bin_centers = glbGetBinCentersListPtr(exp);
+//  ecenter = 0.5 * (emax + emin);
+//  bg_tilt_QE_N = x[10] / (emax - emin); 
+//  bg_tilt_QE_F = x[11] / (emax - emin); 
+//  
+//  /* Calculate nuisance parameters */
+//  signal_norm_mu_N = 1.0 + x[0] + x[2];
+//  signal_norm_mu_F = 1.0 + x[0] + x[3];
+//  bg_norm_mu_N     = 1.0 + x[0] + x[4];
+//  bg_norm_mu_F     = 1.0 + x[0] + x[5];
+//  signal_norm_QE_N = 1.0 + x[0] + x[6];
+//  signal_norm_QE_F = 1.0 + x[0] + x[7];
+//  bg_norm_QE_N     = 1.0 + x[0] + x[1] + x[8];
+//  bg_norm_QE_F     = 1.0 + x[0] + x[1] + x[9];
+//  signal_norm_CC_N = 1.0 + x[0] + x[12];
+//  signal_norm_CC_F = 1.0 + x[0] + x[13];
+//  bg_norm_CC_N     = 1.0 + x[0] + x[1] + x[14];
+//  bg_norm_CC_F     = 1.0 + x[0] + x[1] + x[15];
+//
+//  /* Loop over all bins in energy window */
+//  total_fit_rate_CC_N  = 0.0;
+//  total_fit_rate_CC_F  = 0.0;
+//  total_true_rate_CC_N = 0.0;
+//  total_true_rate_CC_F = 0.0;
+//  for (i=ew_low; i <= ew_high; i++)
+//  {
+//    /* Spectral analysis for QE nu_mu disappearance events */
+//    fit_rate = signal_norm_mu_N * signal_fit_rates_mu_N[i] + bg_norm_mu_N * bg_fit_rates_mu_N[i];
+//    chi2    += poisson_likelihood(true_rates_mu_N[i], fit_rate);
+//
+//    fit_rate = signal_norm_mu_F * signal_fit_rates_mu_F[i] + bg_norm_mu_F * bg_fit_rates_mu_F[i];
+//    chi2    += poisson_likelihood(true_rates_mu_F[i], fit_rate);
+//
+//    /* Spectral analysis for QE nu_e appearance events */
+//    fit_rate = signal_norm_QE_N * signal_fit_rates_QE_N[i]
+//      + bg_norm_QE_N * bg_fit_rates_QE_N[i]
+//      + bg_tilt_QE_N * (bin_centers[i]-ecenter) * bg_fit_rates_QE_N[i];
+//    chi2 += poisson_likelihood(true_rates_QE_N[i], fit_rate);
+//
+//    fit_rate = signal_norm_QE_F * signal_fit_rates_QE_F[i]
+//      + bg_norm_QE_F * bg_fit_rates_QE_F[i]
+//      + bg_tilt_QE_F * (bin_centers[i]-ecenter) * bg_fit_rates_QE_F[i];
+//    chi2 += poisson_likelihood(true_rates_QE_F[i], fit_rate);
+//
+//    /* Total rates analysis for CC nu_e appearance events */
+//    total_fit_rate_CC_N  += signal_norm_CC_N * signal_fit_rates_CC_N[i]
+//                                +  bg_norm_CC_N * bg_fit_rates_CC_N[i];
+//    total_true_rate_CC_N += true_rates_CC_N[i];
+//
+//    total_fit_rate_CC_F  += signal_norm_CC_F * signal_fit_rates_CC_F[i]
+//                                +  bg_norm_CC_F * bg_fit_rates_CC_F[i];
+//    total_true_rate_CC_F += true_rates_CC_F[i];
+//  }
+//  chi2 += poisson_likelihood(total_true_rate_CC_N, total_fit_rate_CC_N);
+//  chi2 += poisson_likelihood(total_true_rate_CC_F, total_fit_rate_CC_F);
+//
+//  /* Systematics priors */
+//  for (i=0; i < n_params; i++)
+//    chi2 += square(x[i] / errors[i]);
+//
+//  /* Save the systematics parameters as starting values for the next step */
+//  if (rule == RULE_T2K_NUMU_QE)
+//    for (i=0; i < n_params; i++)
+//      sys_startval_beam_plus[i] = x[i];
+//  else
+//    for (i=0; i < n_params; i++)
+//      sys_startval_beam_minus[i] = x[i];
+//  
+//  return chi2;
+//}
+//
 
 /***************************************************************************
  * Calculate chi^2 for NOvA, including the following systematical errors:  *
@@ -1063,21 +1063,21 @@ double chiKamLAND(int exp, int rule, int n_params, double *x, double *errors,
 }
 
 
-//// -------------------------------------------------------------------------
-//double chiLSNDspectrum(int exp, int rule, int n_params, double *x, double *errors,
-//                       void *user_data)
-//// -------------------------------------------------------------------------
-//// chi^2 function for the LSND experiment. Nuisance parameters are:
-////   x[0]: Signal normalization (no prior!)
-////   x[1]: Background normalization
-//// Author: Patrick Huber
-//// -------------------------------------------------------------------------
-//{
-//  // FIXME: JK - I think there are several oddities in this function, e.g.
-//  // why is the error multiplied by 2?
-//  // Also, check the glb file!
-//  return NAN;
-//
+// -------------------------------------------------------------------------
+double chiLSNDspectrum(int exp, int rule, int n_params, double *x, double *errors,
+                       void *user_data)
+// -------------------------------------------------------------------------
+// chi^2 function for the LSND experiment. Nuisance parameters are:
+//   x[0]: Signal normalization (no prior!)
+//   x[1]: Background normalization
+// Author: Patrick Huber
+// -------------------------------------------------------------------------
+{
+  // FIXME: JK - I think there are several oddities in this function, e.g.
+  // why is the error multiplied by 2?
+  // Also, check the glb file!
+  return NAN;
+
 //  const double error_bars[] = { 1.36364, 0.909091, 1.81818, 2.72727, 2.72727, 3.18182,
 //                                3.40909, 3.40909,  3.40909, 3.86364, 2.27273 };
 //  double *true_rates_N = glbGetRuleRatePtr(exp, rule);
@@ -1116,5 +1116,155 @@ double chiKamLAND(int exp, int rule, int n_params, double *x, double *errors,
 //    chi2 += square(x[i] / errors[i]);
 //
 //  return chi2;
-//}
+}
+
+
+///***************************************************************************
+// * Calculate chi^2 for T2K, including the following systematical errors:   *
+// *   x[ 0]: Correlated beam flux normalization error                       *
+// *   x[ 1]: Energy scale error for mu-like events                          *
+// *   x[ 2]: Energy scale error for e-like events                           *
+// *   x[ 3]: Spectral tilt for mu-like events                               *
+// *   x[ 4]: Spectral tilt for e-like events                                *
+// *   x[ 5]: Normalization mu-like events                                   *
+// *   x[ 6]: Normalization e-like events                                    *
+// * The energy scale errors are included even in SYS_OFF simulations to     *
+// * help resolving degeneracies between systematics params and osc. params  *
+// ***************************************************************************/
+double chiT2K(int exp, int rule, int n_params, double *x, double *errors,
+              void *user_data)
+{
+  double exp_F = exp;
+  double exp_N = exp - 1;
+  if (exp_N < 0)
+    return NAN;
+
+  // T2K far detector data from Run 1-4
+  // from Lorena Escudero's thesis, http://www.t2k.org/docs/thesis/070, fig 5.15 (left)
+  static const double data_mu_F[] = {
+    0, 0, 0, 0, 0,  3, 3, 8, 6, 4,
+    4, 2, 3, 1, 4,  1, 1, 4, 4, 2,
+    2, 1, 4, 5, 2,  2, 3, 1, 0, 5,
+    3, 0, 3, 0, 1,  0, 1, 1, 0, 0,
+    1, 1, 0, 2, 1,  0, 1, 2, 0, 1,
+    0, 0, 0, 1, 0,  3, 0, 1, 1, 2, 
+    3, 1, 3, 2,
+    3, 4,  1, 1,
+    1
+  };
+  static const double data_e_F[] = {
+    0, 0, 1, 0, 0,  0, 0, 2, 2, 2,
+    3, 3, 3, 0, 1,  4, 2, 2, 1, 1,
+    0, 0, 1, 0, 0
+  };
+
+  int n_bins_F = glbGetNumberOfBins(exp_F);
+  int n_bins_N = glbGetNumberOfBins(exp_N);
+  double emin_F, emax_F, emin_N, emax_N;
+  int ew_low, ew_high;
+  double fit_rate;
+  double chi2 = 0.0;
+
+  glbGetEminEmax(exp_F, &emin_F, &emax_F);
+  glbGetEminEmax(exp_N, &emin_N, &emax_N);
+
+  // Systematics ON
+  // --------------
+  if (n_params > 0)
+  {
+    double *bin_centers_F = glbGetBinCentersListPtr(exp_F);
+    double E_center_F = 0.5 * (emax_F + emin_F);
+    double signal_mu_F[n_bins_F], signal_e_F[n_bins_F];
+    double bg_mu_F[n_bins_F], bg_e_F[n_bins_F];
+    double signal_mu_N[n_bins_N], bg_mu_N[n_bins_N];
+    double signal_mu_nosc_N[n_bins_N], bg_mu_nosc_N[n_bins_N];
+    glbShiftEnergyScale(x[1], glbGetSignalFitRatePtr(exp_F, RULE_T2K_NUMU),
+                        signal_mu_F, n_bins_F, emin_F, emax_F);
+    glbShiftEnergyScale(x[1], glbGetBGFitRatePtr(exp_F, RULE_T2K_NUMU),
+                        bg_mu_F, n_bins_F, emin_F, emax_F);
+    glbShiftEnergyScale(x[2], glbGetSignalFitRatePtr(exp_F, RULE_T2K_NUE),
+                        signal_e_F, n_bins_F, emin_F, emax_F);
+    glbShiftEnergyScale(x[2], glbGetBGFitRatePtr(exp_F, RULE_T2K_NUE),
+                        bg_e_F, n_bins_F, emin_F, emax_F);
+
+    glbShiftEnergyScale(0.0, glbGetSignalFitRatePtr(exp_N, RULE_T2K_NUMU),
+                        signal_mu_N, n_bins_N, emin_N, emax_N);
+    glbShiftEnergyScale(0.0, glbGetBGFitRatePtr(exp_N, RULE_T2K_NUMU),
+                        bg_mu_N, n_bins_N, emin_N, emax_N);
+    glbShiftEnergyScale(0.0, glbGetSignalFitRatePtr(exp_N, RULE_T2K_NUMU_NOSC),
+                        signal_mu_nosc_N, n_bins_N, emin_N, emax_N);
+    glbShiftEnergyScale(0.0, glbGetBGFitRatePtr(exp_N, RULE_T2K_NUMU_NOSC),
+                        bg_mu_nosc_N, n_bins_N, emin_N, emax_N);
+
+    // Alter far detector prediction according to near detector measurement
+    glbGetEnergyWindowBins(exp_F, RULE_T2K_NUMU, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      signal_mu_F[i] *= (signal_mu_nosc_N[i]+bg_mu_nosc_N[i]) / (signal_mu_N[i]+bg_mu_N[i]);
+      signal_e_F[i]  *= (signal_mu_nosc_N[i]+bg_mu_nosc_N[i]) / (signal_mu_N[i]+bg_mu_N[i]);
+    }
+
+    // Compare FD data to ND-corrected prediction
+    glbGetEnergyWindowBins(exp_F, RULE_T2K_NUMU, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      fit_rate = (1 + x[0] + x[5]) * ( signal_mu_F[i] + bg_mu_F[i]
+                 + x[3] * (bin_centers_F[i] - E_center_F) * (signal_mu_F[i] + bg_mu_F[i]) );
+      chi2    += poisson_likelihood(data_mu_F[i], fit_rate);
+    }
+
+    glbGetEnergyWindowBins(exp_F, RULE_T2K_NUE, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      fit_rate = (1 + x[0] + x[6]) * (signal_e_F[i] + bg_e_F[i]
+                 + x[4] * (bin_centers_F[i] - E_center_F) * (signal_e_F[i] + bg_e_F[i]) );
+      chi2    += poisson_likelihood(data_e_F[i], fit_rate);
+    }
+
+    // Systematics priors
+    for (int i=0; i < n_params; i++)
+      chi2 += square(x[i] / errors[i]);
+  }
+
+  // Systematics OFF
+  // ---------------
+  else
+  {
+    double *signal_mu_F      = glbGetSignalFitRatePtr(exp_F, RULE_T2K_NUMU);
+    double *bg_mu_F          = glbGetBGFitRatePtr(exp_F, RULE_T2K_NUMU);
+    double *signal_e_F       = glbGetSignalFitRatePtr(exp_F, RULE_T2K_NUE);
+    double *bg_e_F           = glbGetBGFitRatePtr(exp_F, RULE_T2K_NUE);
+    double *signal_mu_N      = glbGetSignalFitRatePtr(exp_N, RULE_T2K_NUMU);
+    double *bg_mu_N          = glbGetBGFitRatePtr(exp_N, RULE_T2K_NUMU);
+    double *signal_mu_nosc_N = glbGetSignalFitRatePtr(exp_N, RULE_T2K_NUMU_NOSC);
+    double *bg_mu_nosc_N     = glbGetBGFitRatePtr(exp_N, RULE_T2K_NUMU_NOSC);
+
+    // Alter far detector prediction according to near detector measurement
+    glbGetEnergyWindowBins(exp_F, RULE_T2K_NUMU, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      signal_mu_F[i] *= (signal_mu_nosc_N[i]+bg_mu_nosc_N[i]) / (signal_mu_N[i]+bg_mu_N[i]);
+      signal_e_F[i]  *= (signal_mu_nosc_N[i]+bg_mu_nosc_N[i]) / (signal_mu_N[i]+bg_mu_N[i]);
+    }
+
+    // Compare FD data to ND-corrected prediction
+    glbGetEnergyWindowBins(exp_F, RULE_T2K_NUMU, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      fit_rate = signal_mu_F[i] + bg_mu_F[i];
+      chi2    += poisson_likelihood(data_mu_F[i], fit_rate);
+    }
+
+    glbGetEnergyWindowBins(exp_F, RULE_T2K_NUE, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      fit_rate = signal_e_F[i] + bg_e_F[i];
+      chi2    += poisson_likelihood(data_e_F[i], fit_rate);
+    }
+  }
+
+  return chi2;
+}
+
+
 

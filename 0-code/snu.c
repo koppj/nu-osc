@@ -686,8 +686,9 @@ int snu_init_probability_engine(int _n_flavors, int _rotation_order[][2], int _p
   {
     sprintf(snu_param_strings[k++], "Ue4");
     sprintf(snu_param_strings[k++], "Um4");
+    sprintf(snu_param_strings[k++], "Ut4");
     sprintf(snu_param_strings[k++], "s22thmue");
-    n_params += 3;
+    n_params += 4;
   }
   if (n_flavors == 5)
   {
@@ -842,7 +843,7 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     }
   }
 
-  // 4 flavors: Ue3, Ue4, Um4, s22thmue
+  // 4 flavors: Ue3, Ue4, Um4, Ut4, s22thmue
   else if (n_flavors == 4)
   {
     if (fabs(glbGetOscParamByName(p, "Ue4")) > 1e-12)
@@ -881,6 +882,25 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
       }
       else
         th[2][4] = _th24;
+    }
+
+    if (fabs(glbGetOscParamByName(p, "Ut4")) > 1e-12)
+    {
+      double _th34 = asin(glbGetOscParamByName(p, "Ut4") / (cos(th[1][4])*cos(th[2][4])));
+      if (fabs(th[3][4]) > 1e-12)
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Both TH34 and Ut4 != 0. "
+                        "Ignoring Ut4.\n");
+        status = -30;
+      }
+      else if (!isfinite(_th34))
+      {
+        fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Ut4 ignored.\n");
+        status = -31;
+        th[3][4] = NAN;
+      }
+      else
+        th[3][4] = _th34;
     }
 
     if (fabs(glbGetOscParamByName(p, "Ue3")) > 1e-12)
@@ -1276,6 +1296,7 @@ int snu_get_oscillation_parameters(glb_params p, void *user_data)
     glbSetOscParamByName(p, sin(th[1][3])*cos(th[1][4]), "Ue3");
     glbSetOscParamByName(p, sin(th[1][4]), "Ue4");
     glbSetOscParamByName(p, sin(th[2][4])*cos(th[1][4]), "Um4");
+    glbSetOscParamByName(p, sin(th[3][4])*cos(th[1][4])*cos(th[2][4]), "Ut4");
     glbSetOscParamByName(p, 4. * SQR(sin(2.*th[1][4]) * cos(th[2][4])), "s22thmue");
   }
   else if (n_flavors == 5)

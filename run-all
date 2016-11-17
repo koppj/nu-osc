@@ -1,5 +1,5 @@
 #!/bin/bash
-globes=$HOME/software/installed/globes-devel/bin/globes
+globes=$HOME/papers/sterile-nu/globes/bin/globes
 SUFFIX=""
 
 cd 0-code/
@@ -15,73 +15,148 @@ echo "******************************************"
 #                   Debugging and testing codes
 # ---------------------------------------------------------------------------
 
-# MINOS debugging / testing
-# -------------------------
+# ICARUS debugging / testing
+# --------------------------
+
+# 4-flavor fit
+export SP="-f 4 -a PARAM_SCAN --no-ih \
+           -t "TH13=0.156" -t "TH24=0.4" \
+           -p "s22thmue,-4.01,-1.01,30,LOGSCALE" \
+           -p "DM41,-2.0,2.0,40,LOGSCALE""
+#./nu $SP -e ICARUS-2012  >  ../9-devel/icarus-2012-test.dat
+#./nu $SP -e ICARUS-2014  >  ../9-devel/icarus-2014-test.dat
+
+# 2-flavor fit to reproduce the official ICARUS result
+export SP="-f 4 -a PARAM_SCAN --no-ih \
+           -t "TH13=0.0" -t "TH23=0" \
+           -p "TH12,-4.01,-1.01,30,LOGSCALE" \
+           -p "DM21,-2.0,2.0,40,LOGSCALE""
+#./nu $SP -e ICARUS-2014  >  ../9-devel/icarus-2014-test.dat
+unset SP
+
+
+# T2K debugging / testing
+# -----------------------
+
+#export SP="-a SPECTRUM -e T2K"
+#./nu $SP -t "TH12=0,TH23=0,TH13=0,DM21=0" \
+#  > ../9-devel/t2k-spectrum-no-osc.dat
+#./nu $SP -t "TH23=0.809407,TH13=0.206401,DM31=2.591e-3,DELTA_0=1.91" \
+#  > ../9-devel/t2k-spectrum-osc.dat
+#unset SP
+
+# 3-flavor fits
+#export SP="-f 3 -e T2K -a PARAM_SCAN -m "TH13,DELTA_0" \
+#           -s "DELTA_0,0,6.28,8" \
+#           -p "TH23,0.55,1.0,18" \
+#           -p "DM31,2e-3,3e-3,20""
+#./nu $SP > ../9-devel/t2k-3f-th23dm31.dat &
+#
+#export SP="-f 3 -e T2K -a PARAM_SCAN -m "TH23,DELTA_0" \
+#           -s "DELTA_0,0,6.28,8" \
+#           -p "TH13,0,0.1,10" \
+#           -p "DM31,2e-3,3e-3,20""
+#./nu $SP > ../9-devel/t2k-3f-th13dm31.dat &
+#
+#export SP="-f 3 -e T2K -a PARAM_SCAN -m "TH23,DM31" \
+#           -p "TH13,0,0.3,10" \
+#           -p "DELTA_0,0,6.28,8""
+#./nu $SP > ../9-devel/t2k-3f-th13delta.dat &
+#
+#export SP="-f 3 -e T2K -a PARAM_SCAN -m "DM31,DELTA_0" \
+#           -s "DELTA_0,0,6.28,16" \
+#           -s "DM31,2e-3,3e-3,10" \
+#           -p "TH23,0.55,1.0,18" \
+#           -p "TH13,0,0.3,20""
+#./nu $SP > ../9-devel/t2k-3f-th23th13.dat &
+#unset SP
+
+# 4-flavor fits
+OUT_FILE=th24dm41-t2k$SUFFIX.dat ./compile-and-run -l \
+    -f 4 -e T2K -a PARAM_SCAN \
+    -m "TH23,DM31" \
+    -t "TH23=0.925,DM31=0.00245" \
+    -p "TH24,0,0.36,9" \
+    -p "DM41,-4,3,28,LOGSCALE" &
+
+
+# MINOS debugging / testing (based on official data release)
+# ----------------------------------------------------------
+
+# 3+1 fit
+#OUT_FILE=th24dm41-minos$SUFFIX.dat ./compile-and-run -l \
+#    -f 4 -e MINOS_2016 -a PARAM_SCAN \
+#    -t "TH23=0.925,DM31=0.00245" \
+#    -m "TH23,DM31,TH34" \
+#    -p "TH24,0,0.35,35" \
+#    -p "DM41,-4,3,56,LOGSCALE"
+
+
+# MINOS debugging / testing (old GLoBES-based code)
+# -------------------------------------------------
+
+export GLB_PATH="glb/minos-2016"
 
 # Event spectra (standard oscillations)
-export GLB_PATH="glb/minos-nc"
-export OSC_PARAMS="0,0,0.7854,0,0,2.32e-3"
-#export OSC_PARAMS="0,0,0.0,0,0,2.43e-3"
+export OSC_PARAMS="0.587,0.149,0.695,0,7.54e-5,2.445e-3"
 #$globes -p $OSC_PARAMS -r0 -s -S -m -e 1 minos-nc.glb > ../1-spectra/minos-nc-near$SUFFIX.dat &
 #$globes -p $OSC_PARAMS -r0 -s -S -m -e 0 minos-nc.glb > ../1-spectra/minos-nc-far$SUFFIX.dat &
 #$globes -p $OSC_PARAMS -r0 -s -S -m -e 1 minos-cc.glb > ../1-spectra/minos-cc-near$SUFFIX.dat &
 #$globes -p $OSC_PARAMS -r0 -s -S -m -e 0 minos-cc.glb > ../1-spectra/minos-cc-far$SUFFIX.dat &
+#$globes -N -r0 -s -S -m -e 0 minos-cc.glb > ../1-spectra/minos-cc-far-noosc$SUFFIX.dat &
 unset OSC_PARAMS
 
-# NC event rates w/o efficiencies (used for computing efficiencies)
-export OSC_PARAMS="0,0,0.0,0,0,2.43e-3"
-#$globes -p $OSC_PARAMS -c3 -s -S -m minos-cc-far.glb > ../1-spectra/minos-cc-far-NCnoeff.dat &
-unset OSC_PARAMS
-
-# Event spectra with active-sterile oscillations)
-#./nu -a SPECTRUM -t "DM21=0,TH12=0,TH13=0,DM31=2.32e-3,DM41=12.6,TH24=0.2" -e MINOS_NC > \
-#  ../1-spectra/minos-th24$SUFFIX.dat
+# Event spectra (3+1)
+export SP="-a SPECTRUM -e MINOS_NC_2016 \
+           -t TH12=0.587,TH13=0.149,TH23=0.695,DELTA_0=0,DM21=7.54e-5,DM31=2.445e-3 \
+           -t TH24=0.17,DM41=1.0"
+#./nu $SP > ../9-devel/minos-spectrum.dat
+unset SP
 
 # Standard model fit of atmospheric parameters (MINOS CC only)
-#./nu -e MINOS_CC -a PARAM_SCAN -t "TH13=0." -p "TH23,0.55,1.05,20" -p "DM31,0.0015,0.0035,40" \
-#      > ../2-smparams/th23dm31-minos$SUFFIX.dat
+#./nu -e MINOS_CC_2016 -a PARAM_SCAN -t "TH13=0.,TH12=0.,DM21=0." \
+#     -p "TH23,0.55,1.05,20" -p "DM31,0.0015,0.0035,40" \
+#     > ../2-smparams/th23dm31-minos$SUFFIX.dat # &
+#./nu -e MINOS_NC_2016 -a PARAM_SCAN -t "TH13=0." \
+#     -p "TH23,0.55,1.05,20" -p "DM31,0.0015,0.0035,40" \
+#     > ../2-smparams/th23dm31-minos-ccnc$SUFFIX.dat &
 
-# Fits of sterile neutrino models to MINOS data (to compare to plots from 1001.0336)
-#export SUFFIX=-dm41-5-noNDosc
-#./nu -f 4 -e MINOS_NC_noNDosc -a PARAM_SCAN \
-#    -t "TH12=0.0,DM21=0.0,TH13=0.0,DM41=5" -m "DM31" \
-#    -p "TH23,0.5236,1.0472,10" \
-#    -p "TH34,0,1.2217,10" \
-#    -p "TH24,0,0.20944,6" > ../3-3p1/th23th34th24-minos-th13-0$SUFFIX.dat &
-#./nu -f 4 -e MINOS_NC_noNDosc -a PARAM_SCAN \
-#    -t "TH12=0.0,DM21=0.0,DELTA_0=4.71239,TH13=0.2094395,DM41=5" -m "DM31" \
-#    -p "TH23,0.5236,1.0472,10" \
-#    -p "TH34,0,1.2217,10" \
-#    -p "TH24,0,0.20944,6" > ../3-3p1/th23th34th24-minos-th13-12deg$SUFFIX.dat &
-#./nu -f 4 -e MINOS_2010 -a PARAM_SCAN \
-#    -t "TH12=0.0,DM21=0.0,TH13=0.0,DM41=0.5" -m "DM31" \
-#    -p "TH23,0.5236,1.0472,10" \
-#    -p "TH34,0,1.2217,10" \
-#    -p "TH24,0,0.20944,6" > ../3-3p1/th23th34th24-minos2010-th13-0$SUFFIX.dat &
-#./nu -f 4 -e MINOS_2010 -a PARAM_SCAN \
-#    -t "TH12=0.0,DM21=0.0,DELTA_0=4.71239,TH13=0.2094395,DM41=0.5" -m "DM31" \
-#    -p "TH23,0.5236,1.0472,10" \
-#    -p "TH34,0,1.2217,10" \
-#    -p "TH24,0,0.20944,6" > ../3-3p1/th23th34th24-minos2010-th13-12deg$SUFFIX.dat &
+# 3+1 fit
+#OUT_FILE=th24dm41-minos$SUFFIX.dat ./compile-and-run -l \
+#    -f 4 -e MINOS_NC_2016 -a PARAM_SCAN \
+#    -t "TH23=0.925,DM31=0.00245" \
+#    -m "TH23,DM31,TH34" \
+#    -p "TH24,0,0.35,35" \
+#    -p "DM41,-4,3,56,LOGSCALE"
 
 
-# Atmospherics debugging / testing
-# --------------------------------
-#./nu -a PARAM_SCAN -e ATM_COMP -p "Um4,0,0.5,20" -p "Um5,0,0.5,20" \
-#     -m "TH23,TH34,TH35,DM31" > ../6-atm/Um4Um5$SUFFIX.dat &
+# ---------------------------------------------------------------------------
+#       Runs for talk at IceCube collaboration meeting September 2016
+# ---------------------------------------------------------------------------
 
-
-# MiniBooNE debugging / testing
-# -----------------------------
-
-# Two-flavor fits
-export SP="-f 4 -a PARAM_SCAN --no-ih \
-           -t "TH13=0.0,DM31=0.0,TH23=0.0" \
-           -p "DM21,-2.0,2.0,80,LOGSCALE" \
-           -p "TH12,-4.01,-0.1,40,LOGSCALE""
-#./nu -e MBall200   $SP > ../3-3p1/mb200-2f$SUFFIX.dat &
-#./nu -e MBall475   $SP > ../3-3p1/mb475-2f$SUFFIX.dat &
+export SP="-f 4 -a PARAM_SCAN \
+           -m "DELTA_0" -s "DELTA_0,0.,6.283185,4" \
+           -p "DM41,-1.8,1.8,36,LOGSCALE" \
+           -p "s22thmue,-4.01,-0.01,20,LOGSCALE" \
+           -p "Um4,-2.1,-0.1,20,LOGSCALE""
+#OUT_FILE="dm41thmeUm4-icarus-2014$SUFFIX.dat"  ./compile-and-run -l -e ICARUS-2014 $SP
+#OUT_FILE="dm41thmeUm4-opera-2013$SUFFIX.dat"   ./compile-and-run -l -e OPERA       $SP
 unset SP
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -114,18 +189,21 @@ export S="dm41thmeUm4"
 #./nu -e NOMAD      $SP > ../3-3p1/$S-nomad$SUFFIX.dat &
 #./nu -e E776       $SP > ../3-3p1/$S-e776$SUFFIX.dat &
 export NU_SIZE=8
+#OUT_FILE=$S-e776$SUFFIX.dat ./compile-and-run $SP -e E776 -c DM31 
 #OUT_FILE=$S-e776-reactors$SUFFIX.dat SBLDEFS="CHOOZ PV DC DB RENO" \
 #  ./compile-and-run $SP -e E776 -e SBL -c DM31 
-    # Use constraint from MBL reactors to avoid too large BG oscillations
+    # Use constraint from LBL reactors to avoid too large BG oscillations
+#OUT_FILE=$S-lblreactors$SUFFIX.dat SBLDEFS="CHOOZ PV DC DB RENO" \
+#  ./compile-and-run $SP -e SBL -c DM31 
 unset NU_SIZE
 
 # --- MiniBooNE ---
-export SP="-e MBall200 -f 4 -a PARAM_SCAN --no-ih \
+export SP="-e MBall200 -f 4 -a PARAM_SCAN \
            -p "DM41,-1.8,1.8,36,LOGSCALE" \
            -p "s22thmue,-4.01,-0.01,40,LOGSCALE" \
            -p "Um4,-2.1,-0.1,20,LOGSCALE""
 export S="dm41thmeUm4-mb200"
-#export SP="-e MBall200 -f 4 -a PARAM_SCAN --no-ih \
+#export SP="-e MBall200 -f 4 -a PARAM_SCAN \
 #           -p "DM41,-1.8,1.8,36,LOGSCALE" \
 #           -p "TH14,-2,-0.1,19,LOGSCALE" \
 #           -p "TH24,-2,-0.1,19,LOGSCALE""
@@ -150,7 +228,7 @@ unset SP
 unset S
 
 # Simplified or specialized fits to individual experiments
-#OUT_FILE="dm41th14th24-icarus$SUFFIX.dat"  qsub nu-batch  -v -f 4 -a PARAM_SCAN -e ICARUS \
+#OUT_FILE="dm41th14th24-icarus$SUFFIX.dat"  qsub nu-batch  -v -f 4 -a PARAM_SCAN -e ICARUS-2012 \
 #     -m "DELTA_0" -s "DELTA_0,0.,6.283185,4" \
 #     -p "DM41,-1.8,1.8,72,LOGSCALE" \
 #     -p "TH14,-4,-0.2,39,LOGSCALE" \
@@ -183,18 +261,17 @@ unset S
 
 
 # --- Combined fits ---
-#FIXME Marginalize th23,dm31?
 # - NOTE: Changing the order of the scan (th14, th24, dm41 instead of dm41, th14, th23
 #   could reduce the number of times the solar probabilities have to be re-evaluated
-### - NOTE: Fix *IH* and *delta_CP ~ 1.3* since this gives the most conservative results
-###   for ICARUS
-export SP="-v -f 4 -a PARAM_SCAN --no-nh \
+### - NOTE: Fix *delta_CP ~ 1.3* since this gives the most conservative results
+###   for ICARUS (???)
+export SP="-v -f 4 -a PARAM_SCAN \
            -p "DM41,-1.4,1.4,56,LOGSCALE" \
            -p "s22thmue,-4.01,-0.01,40,LOGSCALE" \
            -p "Um4,-2.1,-0.1,20,LOGSCALE" \
            -t "DELTA_0=1.3" "
 export SP2="-s "DELTA_0,0,4.7,3" -s "DELTA_1,0,4.7,3" -m "DELTA_0,DELTA_1""
-export NU_SIZE=32
+export NU_SIZE=64
 #OUT_FILE=dm41th14th24-lsnd-mbapp$SUFFIX.dat   MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
 #  ./compile-and-run  $SP  -e MBall200 -e LSND
 
@@ -211,7 +288,7 @@ export NU_SIZE=32
 #OUT_FILE=dm41th14th24-disapp$SUFFIX.dat       MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
 #  ./compile-and-run  $SP $SP2  -m "TH12" -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200
 #OUT_FILE=dm41th14th24-app$SUFFIX.dat          MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
-#  ./compile-and-run  $SP  -e ICARUS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND
+#  ./compile-and-run  $SP $SP2 -e ICARUS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND
 unset NU_SIZE
 
 #./nu -e KARMEN -e NOMAD -e MBall200 -e LSND \
@@ -259,6 +336,8 @@ export SP="-f 4 --no-ih -a PARAM_SCAN \
                     -p "TH14,0,0.6,20" "
 #OUT_FILE=dm41th13th14-sblreactors$SUFFIX.dat SBLDEFS="SBL BUGEY_SP" \
 #  ./compile-and-run $SP -e SBL
+#OUT_FILE=dm41th13th14-sbllblreactors$SUFFIX.dat SBLDEFS="SBL BUGEY_SP CHOOZ PV DC DB RENO" \
+#  ./compile-and-run $SP -e SBL
 #OUT_FILE=dm41th13th14-lblreactors$SUFFIX.dat SBLDEFS="CHOOZ PV DC DB RENO" \
 #  ./compile-and-run $SP -e SBL -c DM31
 #OUT_FILE=dm41th13th14-gal$SUFFIX.dat SBLDEFS="GAL" \
@@ -266,7 +345,12 @@ export SP="-f 4 --no-ih -a PARAM_SCAN \
 #OUT_FILE=dm41th13th14-c12$SUFFIX.dat SBLDEFS="" \
 #  ./compile-and-run $SP -e C12
 
-export NU_SIZE=8
+# A test - for Neutrino 2014
+#OUT_FILE=dm41th13th14-bugeysp$SUFFIX.dat SBLDEFS="BUGEY_SP" \
+#  ./compile-and-run $SP -e SBL
+
+export NU_SIZE=32
+export SP="$SP -s "DELTA_0,0,4.7,3" -s "DELTA_1,0,4.7,3" -m "DELTA_0,DELTA_1""
 #OUT_FILE=dm41th13th14-solar-kaml$SUFFIX.dat SBLDEFS="KAML" \
 #  ./compile-and-run $SP -e SBL -e SOLAR -m "TH12,TH24,TH34"
 #OUT_FILE=dm41th13th14-disapp-e$SUFFIX.dat SBLDEFS="SBL CHOOZ PV DC DB RENO BUGEY_SP GAL KAML" \
@@ -283,13 +367,16 @@ export SP="-f 4 -a PARAM_SCAN \
            -p "DM41,-1.4,1.4,56,LOGSCALE" \
            -p "TH23,0.3,1.25,19" \
            -p "TH24,0.0001,0.6,20" "
+export SP2="-s "DELTA_0,0,4.7,3" -s "DELTA_1,0,4.7,3" -m "DELTA_0,DELTA_1""
 #OUT_FILE=dm41th23th24-cdhs$SUFFIX.dat    ./compile-and-run -e CDHS     $SP
 #OUT_FILE=dm41th23th24-atm$SUFFIX.dat     ./compile-and-run -e ATM      $SP
 export NU_SIZE=50
-export SP="$SP -s "DELTA_0,0,4.7,3" -s "DELTA_1,0,4.7,3" -m "DELTA_0,DELTA_1""
-#OUT_FILE=dm41th23th24-minos$SUFFIX.dat   ./compile-and-run -e MINOS_NC $SP
+#OUT_FILE=dm41th23th24-minos$SUFFIX.dat   ./compile-and-run -e MINOS_NC $SP $SP2
 #OUT_FILE=dm41th23th24-noevid$SUFFIX.dat   MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
-#                 ./compile-and-run $SP -e CDHS -e ATM_COMP -e MINOS_NC -e MBall200
+#                 ./compile-and-run $SP $SP2 -e CDHS -e ATM_COMP -e MINOS_NC -e MBall200
+                              # Note: Solar neutrinos were found to be not competitive here
+                              # and are therefore omitted (this also saves us the th12
+                              # marginalization)
 unset NU_SIZE
 
 export SP="-f 4 -a PARAM_SCAN \
@@ -299,9 +386,12 @@ export SP="-f 4 -a PARAM_SCAN \
            -p "TH24,0.0001,0.6,20" "
 #OUT_FILE=dm41th23th24-mb200dis$SUFFIX.dat MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
 #                 ./compile-and-run -e MBall200  $SP
-export NU_SIZE=10
+export NU_SIZE=32
+#OUT_FILE=dm41th23th24-solar$SUFFIX.dat  ./compile-and-run -e SOLAR -m "TH12,TH14,TH34"  $SP $SP2
 #OUT_FILE=dm41th23th24-evid$SUFFIX.dat     MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
-#                 ./compile-and-run $SP -e SBL -e LSND -e MBall200  -m "TH14"
+#                 ./compile-and-run $SP -e SBL -e LSND -e MBall200 -m "TH14"
+unset NU_SIZE
+unset SP2
 unset SP
 
 
@@ -319,45 +409,80 @@ export SP="-v -f 4 -a PARAM_SCAN \
 #OUT_FILE=th24th34dm41-cdhs$SUFFIX.dat   ./compile-and-run -e CDHS                    $SP
 #OUT_FILE=th24th34dm41-atm$SUFFIX.dat    ./compile-and-run -e ATM_COMP -m "TH23,DM31" $SP
 export NU_SIZE=32
-#OUT_FILE=th24th34dm41-mb-cdhs-atm$SUFFIX.dat MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
-#         ./compile-and-run $SP -e MBall200 -e CDHS -e ATM_COMP -m "TH23,DM31"
-#OUT_FILE=th24th34dm41-mb-cdhs-atm-reactors$SUFFIX.dat \
+#OUT_FILE=th24th34dm41-mb-cdhs-reactors$SUFFIX.dat \
 #         MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC"  SBLDEFS="CHOOZ PV DC DB RENO" \
-#         ./compile-and-run $SP -e MBall200 -e CDHS -e ATM_COMP -e SBL -m "TH14,TH23,DM31"
+#         ./compile-and-run $SP -e MBall200 -e CDHS -e SBL -m "TH14" -t "TH13=0.154085"
 export SP="$SP -s "DELTA_0,0,4.7,3" \
                -s "DELTA_1,0,4.7,3" \
-               -m "DELTA_0,DELTA_1" -m "TH23,DM31" "
+               -m "DELTA_0,DELTA_1,TH23,DM31" "
 ######               -s "DM31,1e-3,3e-3,2" \
 ######               -s "TH23,0.4,0.8,2" \
-export NU_SIZE=64
+export NU_SIZE=128
 #OUT_FILE=th24th34dm41-minos$SUFFIX.dat  ./compile-and-run -e MINOS_NC $SP
 #OUT_FILE=th24th34dm41-noevid$SUFFIX.dat MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
 #         ./compile-and-run $SP -e CDHS -e ATM_COMP -e MINOS_NC -e MBall200
+   # FIXME Include solar if possible!
 
 export SP="-v -f 4 -a PARAM_SCAN \
-         -p "TH24,0.0001,0.35,20" \
-         -p "TH34,0.0001,1.5,1" \
-         -p "DM41,-1.5,1.5,60,LOGSCALE" "
-#OUT_FILE=th24th34dm41-mb200dis$SUFFIX.dat MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
-#         ./compile-and-run $SP -e MBall200
-#OUT_FILE=th24th34dm41-evid$SUFFIX.dat MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
-#         ./compile-and-run $SP -e MBall200 -e SBL -e LSND -m "TH14"
-
-
-# Plots at fixed Delta m^2
-export SP="-v -f 4 -a PARAM_SCAN \
-         -p "TH24,0.0001,0.35,20" \
+         -p "TH24,0.0001,1.5,20" \
          -p "TH34,0.0001,1.5,20" \
-         -p "DM41,-1,-1,0,LOGSCALE" \
-         -p "DELTA_0,0,4.7,6" \
-         -p "DELTA_1,0,4.7,6" \
-         --atm-decouple-e -t "TH12=0.,TH13=0.,TH14=0." \
-         -m "TH23,DM31" "
+         -p "DM41,-1.5,1.5,1,LOGSCALE" \
+         -s "DELTA_0,0,4.7,3" \
+         -s "DELTA_1,0,4.7,3" \
+         -m "DELTA_0,DELTA_1" "
 export NU_SIZE=32
-#OUT_FILE=th24th34dm41-minos-0.1eV2-test$SUFFIX.dat  ./compile-and-run -e MINOS_NC $SP
-
-unset SP
+#OUT_FILE=th24th34dm41-solar$SUFFIX.dat   ./compile-and-run $SP -e SOLAR -m "TH12,TH14"
 unset NU_SIZE
+
+
+# MINOS plots at fixed dm^2
+# (Note: Only MINOS is sensitive to the phases here -> scanning one phase is enough)
+export SP="-v -f 4 -a PARAM_SCAN \
+         -p "TH24,0.0001,0.35,120" \
+         -p "TH34,0.0001,1.5,120" \
+         -s "DELTA_1,0,4.7,3" \
+         -m "DELTA_1,TH23,DM31" "
+export NU_SIZE=100
+#OUT_FILE=th24th34dm41-minos-12eV2$SUFFIX.dat  ./compile-and-run $SP -e MINOS_NC \
+#         -p "DM41,1.07981,1.07981,0,LOGSCALE"
+#OUT_FILE=th24th34dm41-minos-1eV2$SUFFIX.dat  ./compile-and-run $SP -e MINOS_NC \
+#         -p "DM41,0,0,0,LOGSCALE"
+#OUT_FILE=th24th34dm41-minos-0.4eV2$SUFFIX.dat  ./compile-and-run $SP -e MINOS_NC \
+#         -p "DM41,-0.39794,-0.39794,0,LOGSCALE"
+#OUT_FILE=th24th34dm41-minos-0.1eV2$SUFFIX.dat  ./compile-and-run $SP -e MINOS_NC \
+#         -p "DM41,-1,-1,0,LOGSCALE"
+unset NU_SIZE
+
+
+# Plots including scan over phases
+# (Note: Only MINOS is sensitive to the phases here -> scanning one phase is enough)
+export SP="-v -f 4 -a PARAM_SCAN \
+         -p "TH24,0,0,0" \
+         -p "Ut4,0.0001,1.0,40" \
+         -p "DM41,-1.5,1.5,30,LOGSCALE" \
+         -p "DELTA_0,0,0,0" \
+         -p "DELTA_1,0,6.28319,8" \
+         --atm-decouple-e --theta-positive -m "TH24" -t "TH12=0.,TH13=0.,TH14=0." "
+#OUT_FILE=th24th34dm41-atm-phases$SUFFIX.dat    ./compile-and-run -e ATM_COMP -m "TH23,DM31" $SP
+export NU_SIZE=128
+#OUT_FILE=th24th34dm41-mb-cdhs-atm-phases$SUFFIX.dat  MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
+#  ./compile-and-run $SP -e MBall200 -e CDHS -e ATM_COMP
+#OUT_FILE=th24th34dm41-noevid-phases$SUFFIX.dat MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
+#         ./compile-and-run -m "TH23,DM31" $SP -e CDHS -e ATM_COMP -e MINOS_NC -e MBall200
+#OUT_FILE=th24th34dm41-minos-phases$SUFFIX.dat  ./compile-and-run \
+#            -e MINOS_NC -m "TH23,DM31"  $SP
+
+############export SP="-v -f 4 -a PARAM_SCAN \
+############         -p "TH24,0,0,0" \
+############         -p "Ut4,0.0001,1.0,40" \
+############         -p "DM41,-1.5,1.5,30,LOGSCALE" \
+############         -p "DELTA_0,0,0,0" \
+############         -p "DELTA_1,0,6.28319,8" \
+############         --atm-decouple-e --theta-positive -m "TH24" -t "TH12=0.,TH13=0.,TH14=0." "
+#############OUT_FILE=th24th34dm41-minos-phases-test$SUFFIX.dat  ./compile-and-run \
+#############            -e MINOS_NC $SP
+unset NU_SIZE
+unset SP
 
 
 # Constraints on the standard oscillation parameters in sterile neutrino models
@@ -423,11 +548,10 @@ unset SCAN_PARAMS
 #                       5-flavor fits
 # ---------------------------------------------------------------------------
 
-
 # dm41--dm51 plots
 # ----------------
 
-#FIXME Add phases!
+# Complete fit to all implemented experiments
 export SP="-v -f 5 -a PARAM_SCAN   -t "DELTA_0=1.3" \
          -p "DM41,-1,1,40,LOGSCALE"         -p "DM51,-1,1,40,LOGSCALE" \
          -s "TH14,-1.5,-0.3,2,LOGSCALE"     -s "TH15,-1.5,-0.3,2,LOGSCALE" \
@@ -435,15 +559,43 @@ export SP="-v -f 5 -a PARAM_SCAN   -t "DELTA_0=1.3" \
          -s "TH34,-1.5,-0.3,2,LOGSCALE"     -s "TH35,-1.5,-0.3,2,LOGSCALE" \
          -m "TH14,TH24,TH15,TH25,TH34,TH35,TH23,DM31,TH12,DELTA_0,DELTA_1,DELTA_2" "
 export F=3p2
-# Complete fit to all implemented experiments
+#export F=1p3p1
 export NU_SIZE=100
-#OUT_FILE=$F-dm41dm51-all$SUFFIX.dat ./compile-and-run $SP \
+#OUT_FILE=dm41dm51-all-$F$SUFFIX.dat ./compile-and-run $SP \
 #  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC \
 #  -e ICARUS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND
-#OUT_FILE=$F-dm41dm51-disapp$SUFFIX.dat MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
+#OUT_FILE=dm41dm51-disapp-$F$SUFFIX.dat MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
 #  ./compile-and-run $SP -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200
-#OUT_FILE=$F-dm41dm51-app$SUFFIX.dat    MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
+
+export SP="-v -f 5 -a PARAM_SCAN \
+         -p "DM41,-1,1,40,LOGSCALE"         -p "DM51,-1,1,40,LOGSCALE" \
+         -s "TH14,-1.5,-0.3,2,LOGSCALE"     -s "TH15,-1.5,-0.3,2,LOGSCALE" \
+         -s "TH24,-1.5,-0.3,3,LOGSCALE"     -s "TH25,-1.5,-0.3,3,LOGSCALE" \
+         -s "DELTA_0,0,4.7,3"               -s "DELTA_1,0,4.7,3" \
+         -m "TH14,TH24,TH15,TH25,DELTA_0,DELTA_1" "
+#OUT_FILE=dm41dm51-app-$F$SUFFIX.dat    MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
 #  ./compile-and-run $SP -e ICARUS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND
+
+
+
+# Individual appearance experiments
+export SP="-v -f 5 -a PARAM_SCAN   -t "DELTA_0=1.3" \
+         -p "DM41,-1,1,40,LOGSCALE"         -p "DM51,-1,1,40,LOGSCALE" \
+         -s "TH14,-1.5,-0.3,2,LOGSCALE"     -s "TH15,-1.5,-0.3,2,LOGSCALE" \
+         -s "TH24,-1.5,-0.3,3,LOGSCALE"     -s "TH25,-1.5,-0.3,3,LOGSCALE" \
+         -m "TH14,TH24,TH15,TH25,DELTA_0,DELTA_1,DELTA_2" "
+export NU_SIZE=32
+#OUT_FILE=dm41dm51-lsnd-$F$SUFFIX.dat     ./compile-and-run $SP -e LSND   --no-nh
+#OUT_FILE=dm41dm51-karmen-$F$SUFFIX.dat   ./compile-and-run $SP -e KARMEN --no-nh
+#OUT_FILE=dm41dm51-nomad-$F$SUFFIX.dat    ./compile-and-run $SP -e NOMAD  --no-nh
+#OUT_FILE=dm41dm51-icarus-$F$SUFFIX.dat   ./compile-and-run $SP -e ICARUS --no-nh
+#OUT_FILE=dm41dm51-mb200-nu-app-full-$F$SUFFIX.dat    MBDEFS="NU_APP FULL_OSC" \
+#                                         ./compile-and-run $SP -e MBall200 --no-nh
+#OUT_FILE=dm41dm51-mb200-nubar-app-full-$F$SUFFIX.dat  MBDEFS="NUBAR_APP FULL_OSC" \
+#                                         ./compile-and-run $SP -e MBall200 --no-nh
+#OUT_FILE=dm41dm51-e776-reactors-$F$SUFFIX.dat  SBLDEFS="CHOOZ PV DC DB RENO" \
+#                                         ./compile-and-run $SP -e E776 -e SBL -c DM31 
+    # Use constraint from LBL reactors to avoid too large BG oscillations
 unset NU_SIZE
 unset SP
 unset F
@@ -452,18 +604,18 @@ unset F
 # Ue4Um4--Ue5Um5 plots
 # --------------------
 
-export SP="-v -f 5 -a PARAM_SCAN  -t "DM41=0.4,DM51=0.8" \
+export SP="-v -f 5 -a PARAM_SCAN  -t "DM41=0.5,DM51=0.9" \
          -t "DELTA_0=1.3,TH14=0.785,TH15=0.785,TH34=0.01,TH35=0.01" \
          -p "Ue4Um4,-3,-0.6,48,LOGSCALE"    -p "Ue5Um5,-3,-0.6,48,LOGSCALE" \
          -s "TH14,-1.5,-0.11,3,LOGSCALE"    -s "TH15,-1.5,-0.11,3,LOGSCALE" \
          -s "DELTA_0,0,4.7,6"               -s "DELTA_1,0,4.7,6" \
-         -m "TH14,TH15,TH34,TH35,DELTA_0,DELTA_1,DELTA_2" "
-export F="dm0.4-0.8"
-export NU_SIZE=50
+         -m "TH14,TH15,DELTA_0,DELTA_1,DELTA_2" "
+export F="dm0.5-0.9"
+export NU_SIZE=100
 # All experiments
 #OUT_FILE=Ue4Um4_Ue5Um5-$F-all$SUFFIX.dat  ./compile-and-run $SP -m "TH23,DM31,TH12" \
 #  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC \
-#  -e ICARUS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND  --best-fit
+#  -e ICARUS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND  -m "TH34,TH35" --best-fit
 
 # Appearance
 #OUT_FILE=Ue4Um4_Ue5Um5-$F-app$SUFFIX.dat \
@@ -473,10 +625,47 @@ export NU_SIZE=50
 # Disappearance
 #OUT_FILE=Ue4Um4_Ue5Um5-$F-disapp$SUFFIX.dat \
 #  MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" ./compile-and-run $SP  -m "TH23,DM31,TH12" \
-#  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200
+#  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200 -m "TH34,TH35"
 unset NU_SIZE
 unset F
 unset SP
+
+
+# Phase dependence
+export SP="-v -f 5 -a PARAM_SCAN -t "DM41=0.447,DM51=0.891" \
+         -p "DELTA_0,0,6.28319,16"          -p "DELTA_1,0,6.28319,16" \
+         -s "TH14,-1.5,-0.3,2,LOGSCALE"     -s "TH15,-1.5,-0.3,2,LOGSCALE" \
+         -s "TH24,-1.5,-0.3,3,LOGSCALE"     -s "TH25,-1.5,-0.3,3,LOGSCALE" \
+         -s "TH34,-1.5,-0.3,2,LOGSCALE"     -s "TH35,-1.5,-0.3,2,LOGSCALE" \
+         -m "TH14,TH24,TH15,TH25,TH34,TH35" "
+export NU_SIZE=40
+#OUT_FILE=delta0delta1-3p2-sbl$SUFFIX.dat SBLDEFS="SBL BUGEY_SP GAL" ./compile-and-run $SP \
+#  -e SBL -e C12 -e CDHS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND  --best-fit
+#OUT_FILE=delta0delta1-3p2-noatmminos$SUFFIX.dat ./compile-and-run $SP \
+#  -e SBL -e C12 -e CDHS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND  \
+#  -e ICARUS -e SOLAR  --best-fit
+#OUT_FILE=delta0delta1-3p2-all$SUFFIX.dat ./compile-and-run $SP \
+#  -e SBL -e C12 -e CDHS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND  \
+#  -e ICARUS -e SOLAR -e MINOS_NC -e ATM_COMP  --best-fit
+
+export SP="-v -f 5 -a PARAM_SCAN -t "DM41=0.447,DM51=0.891" \
+         -p "DELTA_1,0,6.28319,16"          -p "DELTA_2,0,6.28319,16" \
+         -s "TH14,-1.5,-0.3,2,LOGSCALE"     -s "TH15,-1.5,-0.3,2,LOGSCALE" \
+         -s "TH24,-1.5,-0.3,3,LOGSCALE"     -s "TH25,-1.5,-0.3,3,LOGSCALE" \
+         -s "TH34,-1.5,-0.3,2,LOGSCALE"     -s "TH35,-1.5,-0.3,2,LOGSCALE" \
+         -m "TH14,TH24,TH15,TH25,TH34,TH35" "
+export NU_SIZE=40
+#OUT_FILE=delta1delta2-3p2-sbl$SUFFIX.dat SBLDEFS="SBL BUGEY_SP GAL" ./compile-and-run $SP \
+#  -e SBL -e C12 -e CDHS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND  --best-fit
+#OUT_FILE=delta1delta2-3p2-noatmminos$SUFFIX.dat ./compile-and-run $SP \
+#  -e SBL -e C12 -e CDHS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND  \
+#  -e ICARUS -e SOLAR  --best-fit
+#OUT_FILE=delta1delta2-3p2-all$SUFFIX.dat ./compile-and-run $SP \
+#  -e SBL -e C12 -e CDHS -e KARMEN -e NOMAD -e E776 -e MBall200 -e LSND  \
+#  -e ICARUS -e SOLAR -e MINOS_NC -e ATM_COMP  --best-fit
+unset NU_SIZE
+unset SP
+
 
 
 # ---------------------------------------------------------------------------
@@ -490,29 +679,144 @@ unset SP
 # NOTE: We use non-zero starting values for active-sterile mixing angles since
 # otherwise, the minimizer might never find the right region of parameter space
 
-#export F="3p1"
-#export SP="-v -f 4 -a PARAM_SCAN \
-#           -t "TH14=0.01,TH24=0.01,DELTA_0=1.3" \
-#           -p "DM41,-1,1,20,LOGSCALE" \
-#           -m "DM41,TH14,TH24,TH34,TH23,DM31,TH13,TH12,DELTA_0,DELTA_1,DELTA_2" "
-export F="3p2"
-#export F="1p3p1"
-export SP="-v -f 5 -a PARAM_SCAN \
-         -t "TH14=0.01,TH24=0.01,TH15=0.01,TH25=0.01,DELTA_0=1.3" \
-         -p "DM41,-1,1,10,LOGSCALE"         -p "DM51,-1,1,10,LOGSCALE" \
-         -s "DELTA_0,0,4.7,3"               -s "DELTA_1,0,4.7,3" \
-         -m "DM41,DM51,TH14,TH24,TH15,TH25,TH34,TH35,TH23,DM31,TH12,DELTA_0,DELTA_1,DELTA_2" "
+export F="3p1"
+export SP="-v -f 4 -a PARAM_SCAN \
+           -t "TH14=0.01,TH24=0.01,DELTA_0=1.3" \
+           -p "DM41,-1,1,20,LOGSCALE" \
+           -m "DM41,TH14,TH24,DELTA_0,DELTA_1,DELTA_2" "
+export SP2="-m "TH34,TH23,DM31,TH12" "
+
+#export F="3p2"
+##export F="1p3p1"
+#export SP="-v -f 5 -a PARAM_SCAN \
+#         -t "TH14=0.01,TH24=0.01,TH15=0.01,TH25=0.01,DELTA_0=1.3" \
+#         -p "DM41,-1,1,10,LOGSCALE"         -p "DM51,-1,1,10,LOGSCALE" \
+#         -s "DELTA_0,0,4.7,3"               -s "DELTA_1,0,4.7,3" \
+#         -m "DM41,DM51,TH14,TH24,TH15,TH25,DELTA_0,DELTA_1,DELTA_2" "
+#export SP2="-m "TH34,TH35,TH23,DM31,TH12" "
+
 export NU_SIZE=20
 #OUT_FILE="pg-$F-all$SUFFIX.dat"    MBDEFS="NU_APP NUBAR_APP COMBINED_APP NU_DISAPP NUBAR_DISAPP FULL_OSC" \
-#  ./compile-and-run  $SP  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200 \
+#  ./compile-and-run  $SP  $SP2  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200 \
 #                          -e ICARUS -e KARMEN -e NOMAD -e E776 -e LSND
-#OUT_FILE="pg-$F-app$SUFFIX.dat"    MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
-#  ./compile-and-run  $SP  -e MBall200 -e ICARUS -e KARMEN -e NOMAD -e E776 -e LSND
 #OUT_FILE="pg-$F-disapp$SUFFIX.dat" MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
-#  ./compile-and-run  $SP  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200
+#  ./compile-and-run  $SP  $SP2  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200
+#OUT_FILE="pg-$F-app$SUFFIX.dat"    MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
+#  ./compile-and-run  $SP        -e MBall200 -e ICARUS -e KARMEN -e NOMAD -e E776 -e LSND
+
+#OUT_FILE="pg-nombapp-$F-all$SUFFIX.dat"    MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
+#  ./compile-and-run  $SP  $SP2  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200 \
+#                          -e ICARUS -e KARMEN -e NOMAD -e E776 -e LSND
+#OUT_FILE="pg-nombapp-$F-disapp$SUFFIX.dat" MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
+#  ./compile-and-run  $SP  $SP2  -e SBL -e C12 -e CDHS -e ATM_COMP -e SOLAR -e MINOS_NC -e MBall200
+#OUT_FILE="pg-nombapp-$F-app$SUFFIX.dat"    MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
+#  ./compile-and-run  $SP        -e ICARUS -e KARMEN -e NOMAD -e E776 -e LSND
 unset F
 unset SP
 unset NU_SIZE
+
+
+# chi^2 for individual experiments at BFP
+# ---------------------------------------
+
+# 3+1 Global BF as of 2013-03-08
+#export SP="-v -f 4 -a PARAM_SCAN -p "DM21,7.6e-05,7.6e-05,0" --no-nh \
+#           -t "TH12=0.595898,TH13=0.154085,TH23=0.760349,DELTA_0=-9.92547" \
+#           -t "DM21=7.6e-05,DM31=-0.0022342,DM41=0.925377,TH14=0.15505" \
+#           -t "TH24=0.176002,TH34=0.196718,DELTA_1=-1.2512,DELTA_2=0.179995" "
+#export F="gbf"
+
+# 3+2 Global BF as of 2013-03-08
+#export SP="-v -f 5 -a PARAM_SCAN -p "DM21,7.6e-05,7.6e-05,0" --no-nh \
+#           -t "TH12=0.593181,TH13=0.154085,TH23=0.772835,DELTA_0=-3.31588" \
+#           -t "DM21=7.6e-05,DM31=-0.00221302,DM41=0.872518,DM51=0.469161" \
+#           -t "TH14=0.145541,TH15=0.127928,TH24=0.135006,TH25=-0.147626" \
+#           -t "TH34=0.019367,TH35=-0.0283413,DELTA_1=1.5762,DELTA_2=-2.01901" "
+#export F="gbf"
+
+# 1+3+1 Global BF as of 2013-03-09
+#export SP="-v -f 5 -a PARAM_SCAN -p "DM21,7.6e-05,7.6e-05,0" --no-nh \
+#           -t "TH12=0.592559,TH13=0.154085,TH23=0.790386,DELTA_0=-2.657" \
+#           -t "DM21=7.6e-05,DM31=-0.00220524,DM41=-0.874018,DM51=0.47014" \
+#           -t "TH14=0.149418,TH15=0.134225,TH24=0.1414,TH25=0.169049" \
+#           -t "TH34=0.0259228,TH35=0.0299922,DELTA_1=1.61786,DELTA_2=1.43534" "
+#export F="gbf"
+
+
+## 3+2 Individual best fits
+##export SP="-v -f 5 -a PARAM_SCAN \
+##         -t "TH14=0.01,TH24=0.01,TH15=0.01,TH25=0.01,DELTA_0=1.3" \
+##         -p "DM41,-1,1,10,LOGSCALE"         -p "DM51,-1,1,10,LOGSCALE" \
+##         -s "DELTA_0,0,4.7,3"               -s "DELTA_1,0,4.7,3" \
+##         -m "DM41,DM51,TH14,TH24,TH15,TH25,DELTA_0,DELTA_1" "
+##export F="ibf"
+##export NU_SIZE=10
+
+
+# 3+1 Appearance BF as of 2013-03-08
+#export SP="-v -f 4 -a PARAM_SCAN -p "DM21,7.6e-05,7.6e-05,0" --no-ih \
+#          -t "TH12=0.601264,TH13=0.154085,TH23=0.785398,DELTA_0=7.5807" \
+#          -t "DM21=7.6e-05,DM31=0.0024,DM41=0.416084,TH14=0.0945393" \
+#          -t "TH24=2.50002,DELTA_1=-6.33215,DELTA_2=6.99353" "
+#export F="abf"
+
+# 3+2 Appearance BF as of 2013-03-08
+#export SP="-v -f 5 -a PARAM_SCAN -p "DM21,7.6e-05,7.6e-05,0" --no-ih \
+#           -t "TH12=0.601264,TH13=0.154085,TH23=0.785398,DELTA_0=1.73623" \
+#           -t "DM21=7.6e-05,DM31=0.0024,DM41=1.23726,DM51=0.573875" \
+#           -t "TH14=0.355847,TH15=0.0912437,TH24=0.0624929,TH25=0.785398" \
+#           -t "DELTA_1=-0.0652215,DELTA_2=-2.94745" "
+#export F="abf"
+
+# 1+3+1 Appearance BF as of 2013-03-09
+#export SP="-v -f 5 -a PARAM_SCAN -p "DM21,7.6e-05,7.6e-05,0" --no-ih \
+#           -t "TH12=0.601264,TH13=0.154085,TH23=0.785398,DELTA_0=2.58482" \
+#           -t "DM21=7.6e-05,DM31=0.0024,DM41=-1.75801,DM51=0.49615" \
+#           -t "TH14=0.242295,TH15=0.0743694,TH24=0.0476796,TH25=0.785398" \
+#           -t "DELTA_1=0.861767,DELTA_2=-1.88816" "
+#export F="abf"
+
+
+# Appearance experiments
+#OUT_FILE=$F-lsnd$SUFFIX.dat    ./compile-and-run $SP -e LSND
+#OUT_FILE=$F-karmen$SUFFIX.dat  ./compile-and-run $SP -e KARMEN
+#OUT_FILE=$F-nomad$SUFFIX.dat   ./compile-and-run $SP -e NOMAD
+#OUT_FILE=$F-icarus$SUFFIX.dat  ./compile-and-run $SP -e ICARUS
+#OUT_FILE=$F-mb200-nu-app-full$SUFFIX.dat        MBDEFS="NU_APP FULL_OSC" \
+#                               ./compile-and-run $SP -e MBall200
+#OUT_FILE=$F-mb200-nubar-app-full$SUFFIX.dat     MBDEFS="NUBAR_APP FULL_OSC" \
+#                               ./compile-and-run $SP -e MBall200
+#OUT_FILE=$F-mb200-app-full$SUFFIX.dat           MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
+#                               ./compile-and-run $SP -e MBall200
+#OUT_FILE=$F-e776$SUFFIX.dat    ./compile-and-run $SP -e E776
+#OUT_FILE=$F-app$SUFFIX.dat                      MBDEFS="NU_APP NUBAR_APP COMBINED_APP FULL_OSC" \
+#  ./compile-and-run $SP -e MBall200 -e LSND -e KARMEN -e NOMAD -e ICARUS -e E776
+
+# Disappearance experiments + combinations
+#OUT_FILE=$F-mb200-nu-disapp-full$SUFFIX.dat     MBDEFS="NU_DISAPP FULL_OSC" \
+#                               ./compile-and-run $SP -e MBall200
+#OUT_FILE=$F-mb200-nubar-disapp-full$SUFFIX.dat  MBDEFS="NUBAR_DISAPP FULL_OSC" \
+#                               ./compile-and-run $SP -e MBall200
+#OUT_FILE=$F-mb200-disapp-full$SUFFIX.dat        MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
+#                               ./compile-and-run $SP -e MBall200
+#OUT_FILE=$F-cdhs$SUFFIX.dat    ./compile-and-run $SP -e CDHS
+#OUT_FILE=$F-c12$SUFFIX.dat     ./compile-and-run $SP -e C12
+#OUT_FILE=$F-solar$SUFFIX.dat   ./compile-and-run $SP -e SOLAR
+#OUT_FILE=$F-atm$SUFFIX.dat     ./compile-and-run $SP -e ATM
+#OUT_FILE=$F-minos$SUFFIX.dat   ./compile-and-run $SP -e MINOS_NC
+#OUT_FILE=$F-gal$SUFFIX.dat         SBLDEFS="GAL" \
+#                               ./compile-and-run $SP -e SBL
+#OUT_FILE=$F-sbl-rectors$SUFFIX.dat SBLDEFS="SBL BUGEY_SP" \
+#                               ./compile-and-run $SP -e SBL
+#OUT_FILE=$F-lbl-rectors$SUFFIX.dat SBLDEFS="CHOOZ PV DC DB RENO KAML" \
+#                               ./compile-and-run $SP -e SBL
+#OUT_FILE=$F-sbl$SUFFIX.dat     ./compile-and-run $SP -e SBL
+#OUT_FILE=$F-disapp$SUFFIX.dat MBDEFS="NU_DISAPP NUBAR_DISAPP FULL_OSC" \
+#  ./compile-and-run $SP -e MBall200 -e CDHS -e C12 -e SOLAR -e ATM -e MINOS_NC -e SBL
+unset F
+unset SP
+unset NU_SIZE
+
 
 unset SCAN_PARAMS
 

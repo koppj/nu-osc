@@ -1,0 +1,7 @@
+#!/bin/bash
+# Wrapper script for nc that ensures that libraries and PDF sets are found
+LHAPDF=$HOME/local/software/lhapdf-5.9.1/ \
+LHAPATH=$HOME/local/software/genie-2.10.6/data/evgen/pdfs/ \
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/local/software/lhapdf-5.9.1/lib/.libs/ \
+./nc $@
+

@@ -99,6 +99,9 @@ namespace ns_reactor
 int atm_decouple_e = 0; // Whether to decouple electron neutrinos by hand
                         // and instead include sterile neutrino matter effects
 
+// Require mixing angles > 0?
+int theta_positive = 0;
+
 // Compute best fit point at end of parameter scan?
 int compute_bf = 0;
 
@@ -135,20 +138,22 @@ static char argp_option_doc[] = "[options]";
 #define OPT_NO_NH          1001
 #define OPT_ATM_DECOUPLE_E 1002
 #define OPT_BF             1003
+#define OPT_THETA_POSITIVE 1004
 static struct argp_option cmdline_options[] = {
   {"flavors",    'f',"NUMBER",0,"Number of flavors to use. Can be 3, 4, or 5)" },
-  {"action",     'a',"ACTION",0,"Which parameters to scan (allowed values defined in const.c)" },
+  {"action",     'a',"ACTION",0,"What to do PARAM_SCAN, etc. (see const.c for more)" },
   {"experiments",'e',"EXPS",  0,"Which experiments to include in the fit" },
   {"parameter",  'p',"PARAMS",0,"Parameters to scan: <param_name>,<min>,<max>,<steps>,[<flags>]"},
   {"prescan",    's',"PARAMS",0,"Parameters for prescan in degfinder: "
                                 "<param_name>,<min>,<max>,<steps>,[<flags>]"},
-  {"minimize",   'm',"PARAMS",0,"Parameters to marginalize: <param_name>[,<param_name[, ...]]"},
+  {"minimize",   'm',"PARAMS",0,"Parameters to marginalize: <param_name>[,<param_name>[, ...]]"},
   {"true_params",'t',"PARAMS",0,"True oscillation parameters: \"NAME=VALUE, ...\""},
   {"cons",       'c',"PARAMS",0,"Parameters with external priors (CHECK DOCUMENTATION!)"},
   {"no-ih",       OPT_NO_IH, NULL, 0,"Omit inverted hierarchy in fit"},
   {"no-nh",       OPT_NO_NH, NULL, 0,"Omit normal hierarchy in fit"},
-  {"atm-decouple-e", OPT_ATM_DECOUPLE_E, NULL, 0,"Decouple electron neutrino in ATM code"},
+  {"atm-decouple-e", OPT_ATM_DECOUPLE_E, NULL, 0,"Decouple electron neutrinos in ATM code"},
   {"best-fit",    OPT_BF,NULL,0,"Compute best fit point at the end of parameter scan"},
+  {"theta-positive", OPT_THETA_POSITIVE, NULL, 0,"Require all mixing angles to be > 0"},
   {"verbose",    'v',NULL,    0,"Show debug output (use multiple times for more)"},
   { 0 }
 };
@@ -487,6 +492,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     case OPT_BF:
       compute_bf = 1;
       break;
+
+    case OPT_THETA_POSITIVE:
+      theta_positive = 1;
+      break;
  
     // -------------------------------------------------
     default:
@@ -528,8 +537,13 @@ int load_exps(const int n_exps, char **exps)
     // actually loaded to avoid conflicts)
     setenv("GLB_PATH", "glb/nova:glb/t2k:glb/bbeam:glb/dchooz:glb/wbb_wc:"
                        "glb/wbb_lar:glb/nufact:glb/mb-2012:"
-                       "glb/kamland:glb/lsnd:glb/e776:glb/c12:glb/icarus", 1);
+                       "glb/kamland:glb/lsnd:glb/e776:glb/c12:"
+                       "glb/icarus-2012:glb/icarus-2014:glb/opera", 1);
     glb_setup_path();
+
+    // --------------------------------------------------------------
+    // Wide band beams
+    // --------------------------------------------------------------
 
     // LBNE-like wide band beams (1 detector)
     if (strcasecmp(exps[i], "WBB_WC_60") == 0)
@@ -653,6 +667,11 @@ int load_exps(const int n_exps, char **exps)
       EXP_BEAM_FAR  = 1;
     }
 
+
+    // --------------------------------------------------------------
+    // Reactor experiments
+    // --------------------------------------------------------------
+
     // Double Chooz (near + far)
 //    else if (strcasecmp(exps[i], "DCHOOZ") == 0)
 //    {
@@ -666,26 +685,31 @@ int load_exps(const int n_exps, char **exps)
 //    }
 
     // KamLAND
-//    else if (strcasecmp(exps[i], "KAMLAND") == 0)
-//    {
-//      // Baseline and thermal power for the 16 most important KamLAND reactors
-//      const double distance[KAMLAND_N_REACT] =  { 160.0,  179.0,  191.0,  214.0,  139.0,
-//                                                   87.7,   145.0,  349.0,  345.0,  295.0,
-//                                                  401.0,  561.0,  755.0,  430.0,  783.0,
-//                                                  830.0 };
-//      const double power[KAMLAND_N_REACT] = { 24.317, 13.692, 10.200, 10.600, 4.5,
-//                                               1.6,    4.927,  14.2,   13.172, 3.293,
-//                                               3.8,    5.96,   10.146, 6.465,  3.3,
-//                                               5.32 };
-//      for(int i=0; i < KAMLAND_N_REACT; i++)
-//      {
-//        glbDefineAEDLVariable("setpower",  power[i]);
-//        glbDefineAEDLVariable("setlength", distance[i]);
-//        glbInitExperiment("kamland.glb",  &glb_experiment_list[0], &glb_num_of_exps);
-//        if (i != 0)
-//          glbSetChiFunction(glb_num_of_exps-1, GLB_ALL, GLB_ON, "chiZero", NULL);     
-//      }
-//    }
+    else if (strcasecmp(exps[i], "KAMLAND_Pedro") == 0)
+    {
+      // Baseline and thermal power for the 16 most important KamLAND reactors
+      const double distance[KAMLAND_N_REACT] =  { 160.0,  179.0,  191.0,  214.0,  139.0,
+                                                   87.7,   145.0,  349.0,  345.0,  295.0,
+                                                  401.0,  561.0,  755.0,  430.0,  783.0,
+                                                  830.0 };
+      const double power[KAMLAND_N_REACT] = { 24.317, 13.692, 10.200, 10.600, 4.5,
+                                               1.6,    4.927,  14.2,   13.172, 3.293,
+                                               3.8,    5.96,   10.146, 6.465,  3.3,
+                                               5.32 };
+      for(int i=0; i < KAMLAND_N_REACT; i++)
+      {
+        glbDefineAEDLVariable("setpower",  power[i]);
+        glbDefineAEDLVariable("setlength", distance[i]);
+        glbInitExperiment("kamland.glb",  &glb_experiment_list[0], &glb_num_of_exps);
+        if (i != 0)
+          glbSetChiFunction(glb_num_of_exps-1, GLB_ALL, GLB_ON, "chiZero", NULL);     
+      }
+    }
+
+
+    // --------------------------------------------------------------
+    // Neutrino factory
+    // --------------------------------------------------------------
 
     // IDS-NF neutrino factory
     else if (strcasecmp(exps[i], "NUFACT") == 0)
@@ -704,10 +728,42 @@ int load_exps(const int n_exps, char **exps)
       L_opt[1] = 0;
     }
 
+
+    // --------------------------------------------------------------
+    // MINOS
+    // --------------------------------------------------------------
+
+    // MINOS NC analysis (http://arxiv.org/abs/1607.01176)
+//    else if (strcasecmp(exps[i], "MINOS_NC_2016") == 0)
+//    {
+//      MINOS_2016_init();
+//      setenv("GLB_PATH", "glb/minos-2016", 1);
+//      glb_setup_path();
+//      glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+//      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+//      L_opt[1] = L_opt[3] = 0;
+//      
+//      for (int i=glb_num_of_exps-3; i < glb_num_of_exps; i+=2)  // Loop over ND for CC, NC
+//      {
+//        glb_experiment *e = glb_experiment_list[i];
+//        e->probability_user_data  = new int(MINOS_ND_PROBABILITY);
+//      }
+//    }
+//
+//    // MINOS CC \nu_\mu analysis (based on http://arxiv.org/abs/1607.01176)
+//    else if (strcasecmp(exps[i], "MINOS_CC_2016") == 0)
+//    {
+//      setenv("GLB_PATH", "glb/minos-2016", 1);
+//      glb_setup_path();
+//      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
+//      L_opt[1] = 0;
+//    }
+
+
     // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
-    else if (strcasecmp(exps[i], "MINOS_NC_noDecayPipe") == 0)
+    else if (strcasecmp(exps[i], "MINOS_NC_2011_noDecayPipe") == 0)
     {
-      setenv("GLB_PATH", "glb/minos-nc", 1);
+      setenv("GLB_PATH", "glb/minos-2011", 1);
       glb_setup_path();
       glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
@@ -715,9 +771,9 @@ int load_exps(const int n_exps, char **exps)
     }
 
     // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
-    else if (strcasecmp(exps[i], "MINOS_NC") == 0)
+    else if (strcasecmp(exps[i], "MINOS_NC_2011") == 0)
     {
-      setenv("GLB_PATH", "glb/minos-nc", 1);
+      setenv("GLB_PATH", "glb/minos-2011", 1);
       glb_setup_path();
       glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
@@ -736,9 +792,9 @@ int load_exps(const int n_exps, char **exps)
 
     // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
     // without oscillations in near detector
-    else if (strcasecmp(exps[i], "MINOS_NC_noNDosc") == 0)
+    else if (strcasecmp(exps[i], "MINOS_NC_2011_noNDosc") == 0)
     {
-      setenv("GLB_PATH", "glb/minos-nc", 1);
+      setenv("GLB_PATH", "glb/minos-2011", 1);
       glb_setup_path();
       glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
@@ -758,9 +814,9 @@ int load_exps(const int n_exps, char **exps)
     }
 
     // MINOS CC \nu_\mu analysis (http://arxiv.org/abs/1103.0340)
-    else if (strcasecmp(exps[i], "MINOS_CC") == 0)
+    else if (strcasecmp(exps[i], "MINOS_CC_2011") == 0)
     {
-      setenv("GLB_PATH", "glb/minos-nc", 1);
+      setenv("GLB_PATH", "glb/minos-2011", 1);
       glb_setup_path();
       glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
       L_opt[1] = 0;
@@ -769,7 +825,7 @@ int load_exps(const int n_exps, char **exps)
     // 2010 MINOS NC+CC analysis (http://arxiv.org/abs/1001.0336 and Neutrino 2010)
     else if (strcasecmp(exps[i], "MINOS_2010") == 0)
     {
-      setenv("GLB_PATH", "glb/minos-nc/1001.0336", 1);
+      setenv("GLB_PATH", "glb/minos-2011/1001.0336", 1);
       glb_setup_path();
       glbInitExperiment("MINOS-NC-far.glb",  &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("MINOS-NC-near.glb", &glb_experiment_list[0], &glb_num_of_exps);
@@ -782,6 +838,19 @@ int load_exps(const int n_exps, char **exps)
       setenv("GLB_PATH", "glb/minerva-test", 1);
       glb_setup_path();
       glbInitExperiment("minerva-test.glb",  &glb_experiment_list[0], &glb_num_of_exps);
+    }
+
+
+    // --------------------------------------------------------------
+    // Other beam experiments
+    // --------------------------------------------------------------
+
+    // T2K
+    else if (strcasecmp(exps[i], "T2K") == 0)
+    {
+//      glbInitExperiment("t2k-nd280.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      glbInitExperiment("t2k-nd-generic.glb", &glb_experiment_list[0], &glb_num_of_exps);
+      glbInitExperiment("t2k-fd.glb", &glb_experiment_list[0], &glb_num_of_exps);
     }
 
     // E776 \nu_e appearance search
@@ -814,10 +883,22 @@ int load_exps(const int n_exps, char **exps)
       c12_combi_loaded = 1;
     }
 
-    // ICARUS
-    else if (strcasecmp(exps[i], "ICARUS") == 0)
+    // ICARUS (2012 analysis)
+    else if (strcasecmp(exps[i], "ICARUS-2012") == 0)
     {
-      init_icarus();
+      init_icarus_2012();
+    }
+
+    // ICARUS (2014 analysis)
+    else if (strcasecmp(exps[i], "ICARUS-2014") == 0)
+    {
+      init_icarus_2014();
+    }
+
+    // Pedro's OPERA 2013 analysis
+    else if (strcasecmp(exps[i], "OPERA") == 0)
+    {
+      init_OPERA();
     }
 
     // Pedro's MiniBooNE simulation
@@ -956,9 +1037,9 @@ int main(int argc, char *argv[])
   true_theta23 = M_PI/4;
   true_deltacp = 3.0*M_PI/2.0;
   true_sdm = 7.6e-5;
-  true_ldm = 2.4e-3;
+  true_ldm = 2.47e-3;
 
-  time_t start_time;
+  time_t start_time, end_time;
   time(&start_time);
   printf("# GLoBES neutrino oscillation simulation\n");
   printf("# --------------------------------------\n");
@@ -970,6 +1051,9 @@ int main(int argc, char *argv[])
     printf("%s ", argv[i]);
   printf("\n");
   printf("#\n");
+
+  // Switch off GSL error handling
+  gsl_set_error_handler_off();
 
   // Parse command line arguments
   struct argp argp = { cmdline_options, parse_opt, argp_option_doc, argp_doc };
@@ -1057,7 +1141,7 @@ int main(int argc, char *argv[])
     int default_rotation_order[][2] = { {3,4}, {2,4}, {1,4}, {2,3}, {1,3}, {1,2} };
     int default_phase_order[] = { -1,  1, -1, -1,  0,   2};
     snu_init_probability_engine(n_flavors, default_rotation_order, default_phase_order);
-    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+4, &snu_probability_matrix,
+    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+5, &snu_probability_matrix,
       &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
   }
   else if (n_flavors == 5)
@@ -1078,24 +1162,31 @@ int main(int argc, char *argv[])
   // number of oscillation parameters has been fixed
   int minos_nc = MINOS_NC;
   int minos_cc = MINOS_CC;
-  glbDefineChiFunction(&chiT2K,          16, "chiT2K",           NULL);
   glbDefineChiFunction(&chiNOvA,         18, "chiNOvA",          NULL);
   glbDefineChiFunction(&chiWBB_WCfast,   10, "chiWBB_WCfast",    &wbb_params);
   glbDefineChiFunction(&chiWBB_LAr,      10, "chiWBB_LAr",       &wbb_params);
   glbDefineChiFunction(&chiDCNorm,        5, "chiDCNorm",        NULL);
   glbDefineChiFunction(&chiKamLAND,       1, "chiKamLAND",       NULL);
 
-  glbDefineChiFunction(&chiMINOS,         5, "chiMINOS-NC",      &minos_nc);
-  glbDefineChiFunction(&chiMINOS,         5, "chiMINOS-CC",      &minos_cc);
-  glbDefineChiFunction(&chiMINOS,         0, "chiMINOS-nosys-NC",&minos_nc);
-  glbDefineChiFunction(&chiMINOS,         0, "chiMINOS-nosys-CC",&minos_cc);
+  glbDefineChiFunction(&chiMINOS_2016,    5, "chiMINOS-NC-2016", &minos_nc);
+  glbDefineChiFunction(&chiMINOS_2016,    5, "chiMINOS-CC-2016", &minos_cc);
+  glbDefineChiFunction(&chiMINOS_2016,    0, "chiMINOS-nosys-NC-2016",&minos_nc);
+  glbDefineChiFunction(&chiMINOS_2016,    0, "chiMINOS-nosys-CC-2016",&minos_cc);
+
+  glbDefineChiFunction(&chiMINOS_2011,    5, "chiMINOS-NC-2011", &minos_nc);
+  glbDefineChiFunction(&chiMINOS_2011,    5, "chiMINOS-CC-2011", &minos_cc);
+  glbDefineChiFunction(&chiMINOS_2011,    0, "chiMINOS-nosys-NC-2011",&minos_nc);
+  glbDefineChiFunction(&chiMINOS_2011,    0, "chiMINOS-nosys-CC-2011",&minos_cc);
 
   glbDefineChiFunction(&chiMINOS_2010,    5, "chiMINOS-NC-2010", &minos_nc);
   glbDefineChiFunction(&chiMINOS_2010,    5, "chiMINOS-CC-2010", &minos_cc);
   glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-NC-2010",&minos_nc);
   glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-CC-2010",&minos_cc);
 
-//  glbDefineChiFunction(&chiLSNDspectrum,  2, "chiLSNDspectrum",  NULL);
+  glbDefineChiFunction(&chiT2K,           7, "chiT2K",       NULL);
+  glbDefineChiFunction(&chiT2K,           0, "chiT2K-nosys", NULL);
+
+  glbDefineChiFunction(&chiLSNDspectrum,  2, "chiLSNDspectrum",  NULL);
 //  chiMB_init(); // for 2010 version of MiniBooNE code
 //  glbDefineChiFunction(&chiMBanti_nu2010, 0, "chiMBanti_nu2010", NULL);
   glbDefineChiFunction(&chi_E776,         4, "chi_E776",         NULL);
@@ -1349,14 +1440,54 @@ int main(int argc, char *argv[])
     return -5;
   ext_init(ext_flags);              // Initialize external codes 
 
+
   // TODO: Remove
 //  glbSetOscillationParameters(true_values);
-//  for (double E=1.; E <=20; E+=0.1)
 //  {
 //    double P[MAX_FLAVORS][MAX_FLAVORS];
-//    int flags = MINOS_ND_PROBABILITY;
-//    snu_filtered_probability_matrix_cd(P, E*1.e9, 0.7*KM, 0.0, 0.0, +1, &flags);
-//    printf(" %g   %10.7g  %10.7g\n", E, P[1][1], P[1][4]);
+//    int flags = 0;
+//    double L;
+//    L = 0.1*KM;
+//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
+//    L = 0.2*KM;
+//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
+//    L = 0.5*KM;
+//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
+//    L = 1.0*KM;
+//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
+//    L = 2.0*KM;
+//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
+//    L = 5.0*KM;
+//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
+//  }
+//  {
+//    double P[MAX_FLAVORS][MAX_FLAVORS];
+//    int flags = 0;
+//    double L;
+//    L = 1*KM;
+//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
+//    L = 10*KM;
+//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
+//    L = 100*KM;
+//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
+//    L = 200*KM;
+//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
+//    L = 500*KM;
+//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
+//    L = 1000*KM;
+//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
+//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
 //  }
 //  exit(0);
 
@@ -1393,6 +1524,8 @@ int main(int argc, char *argv[])
 //      break;
   }
 
+  time(&end_time);
+  printf("# Run ended on %s\n", asctime(localtime(&end_time)));
  
   // Destroy parameter and projection vector(s) 
   glbFreeParams(true_values);

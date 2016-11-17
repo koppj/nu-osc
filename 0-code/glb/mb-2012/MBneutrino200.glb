@@ -96,7 +96,8 @@ rule(#rule_nu_e)<
   @sys_on_function  = "chiMB"
   @sys_on_errors    = {}
 //  @sys_on_errors    = {1E0,1E0}
-  @sys_off_function = "chiNoSysSpectrum"
+//  @sys_off_function = "chiNoSysSpectrum"
+  @sys_off_function  = "chiMB"
   @sys_off_errors   = {}
 >
 

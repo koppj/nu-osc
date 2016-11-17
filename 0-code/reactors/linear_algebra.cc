@@ -22,9 +22,9 @@ inline double norm(double x)
 bool eigenvectors(const int size, void *B_in, void *N_out, void *L_out)
 {
    double A[size][size];
-   double (&B)[size][size] = *(double (*)[size][size]) B_in;
-   double (&N)[size][size] = *(double (*)[size][size]) N_out;
-   double (&L)[size] = *(double (*)[size]) L_out;
+   double (*B)[size] = (double (*)[size]) B_in;
+   double (*N)[size] = (double (*)[size]) N_out;
+   double *L = (double *) L_out;
 
    double nrmx = 0., notd = 0., subtract;
    register double tmp, tmq;
@@ -154,8 +154,8 @@ bool eigenvectors(const int size, void *B_in, void *N_out, void *L_out)
 bool invert(const int size, void *B_in, void *C_out)
 {
    double N[size][size], L[size];
-   double (&B)[size][size] = *(double (*)[size][size]) B_in;
-   double (&C)[size][size] = *(double (*)[size][size]) C_out;
+   double (*B)[size] = (double (*)[size]) B_in;
+   double (*C)[size] = (double (*)[size]) C_out;
 
    if(eigenvectors(size, B, N, L))
      return true;
@@ -204,8 +204,8 @@ bool singsolve(const int size, void *B_in, void *L_out)
 {
    double A[size][size+1];
    const int size1 = size + 1;
-   double (&B)[size][size1] = *(double (*)[size][size1]) B_in;
-   double (&L)[size] = *(double (*)[size]) L_out;
+   double (*B)[size1] = (double (*)[size1]) B_in;
+   double *L = (double *) L_out;
    int sort[size];
 
    double nrmx = 0.;

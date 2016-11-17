@@ -20,13 +20,12 @@ using namespace std;
 #include "atm/LibWrap/out.interface.hh"
 #include "solar/LibWrap/out.interface.hh"
 
-#define USE_ATM              // Call Michele's atmospherics code
+//FIXME #define USE_ATM              // Call Michele's atmospherics code
 #define USE_SOLAR            // Call Michele's solar code
 
 // Global variables
 extern gsl_matrix_complex *U;
 extern int n_flavors;
-extern const int debug_level;
 
 // Minimum/maximum values of dm21^2 for the solar neutrino code
 extern double true_sdm;
@@ -44,6 +43,9 @@ namespace ns_reactor
 // Parameters for Michele's atmospheric neutrino analysis
 extern int atm_decouple_e; // Whether to decouple electron neutrinos by hand
                            // and instead include sterile neutrino matter effects
+
+// Require mixing angles > 0?
+extern int theta_positive;
 
 // ATTENTION: Since the 2012 update of Thomas' reactor code, I'm not
 // sure if this flag is still used consistently. Therefore, DO NOT
@@ -106,7 +108,6 @@ int rotate_R(const int f1, const int f2, const double angle, const double phase,
 }
 
 
-
 /***************************************************************************
  * Convert mixing matrix to Michele's parameterization for solar neutrinos *
  * (function adapted from Michele's test-rnfchisq.cc)                      *
@@ -148,14 +149,14 @@ int solar_parameters(gsl_matrix_complex *U, Angles *a)
 
   // 12-phase
   complex<double> t = 0.0;
-  for (int i=4; i < n_flavors; i++)
+  for (int i=3; i < n_flavors; i++)
     t += _T[i][0] * conj(_T[i][1]);
   a->dlt12 = arg(t);
   rephase_R(0, -a->dlt12, T);
 
   t = 0.0;
-  for (int i=4; i < n_flavors; i++)
-    t += _T[i][0] * conj(_T[0][1]);
+  for (int i=3; i < n_flavors; i++)
+    t += _T[i][0] * conj(_T[i][1]);
   if (fabs(imag(t)) > 1e-10)
   {
     fprintf(stderr, "solar_parameters: Extraction of dlt12 phase failed");
@@ -166,7 +167,7 @@ int solar_parameters(gsl_matrix_complex *U, Angles *a)
   a->eta_e = norm(_T[0][0]);
 
   a->ste_D = a->ste_N = 0.0;
-  for (int i=4; i < n_flavors; i++)
+  for (int i=3; i < n_flavors; i++)
   {
     a->ste_D += norm(_T[i][1]) - norm(_T[i][0]);
     a->ste_N += 2. * real(_T[i][0] * conj(_T[i][1]));
@@ -178,7 +179,7 @@ int solar_parameters(gsl_matrix_complex *U, Angles *a)
   {
     double t = norm(_T[0][j]);
     a->cst_e += SQR(t);
-    for (int i=4; i < n_flavors; i++)
+    for (int i=3; i < n_flavors; i++)
       a->cst_a -= t * norm(_T[i][j]);
   }
 
@@ -289,27 +290,57 @@ int ext_init(int ext_flags)
     printf("# Initializing solar neutrino code ...\n");
     solar_dm21_min = true_sdm;
     solar_dm21_max = true_sdm;
+
     enum {
-      EXP_Chlorine = 1 << 0,
-      EXP_Gallium  = 1 << 1,
-      EXP_SuperK   = 1 << 2,
-      EXP_SNO_pure = 1 << 3,
-      EXP_SNO_salt = 1 << 4,
-      EXP_SNO_henc = 1 << 5,
-      EXP_SNO_full = 1 << 6,
-      EXP_BX_lower = 1 << 7,
-      EXP_BX_upper = 1 << 8
+      EXP_Chlorine  = 1 <<  0,
+      EXP_Gallium   = 1 <<  1,
+      EXP_SK1_nadir = 1 <<  2,
+      EXP_SK1_spect = 1 <<  3,
+      EXP_SK2_spect = 1 <<  4,
+      EXP_SK3_spect = 1 <<  5,
+      EXP_SK4_spect = 1 <<  6,
+      EXP_SNO1_pure = 1 <<  7,
+      EXP_SNO2_salt = 1 <<  8,
+      EXP_SNO3_henc = 1 <<  9,
+      EXP_SNO_leta  = 1 << 10,
+      EXP_SNO_full  = 1 << 11,
+      EXP_BX_lower  = 1 << 12,
+      EXP_BX_upper  = 1 << 13
     };
 
-    const uint solar_exp_mask = EXP_Chlorine | EXP_Gallium  | EXP_SuperK |
+    const uint solar_exp_mask = EXP_Chlorine | EXP_Gallium | EXP_SK1_nadir |
+                                EXP_SK2_spect | EXP_SK3_spect | EXP_SK4_spect |
                                 EXP_BX_upper | EXP_BX_lower |
-                                EXP_SNO_pure | EXP_SNO_salt | EXP_SNO_henc;
-//    sun_init(1, &solar_exp_mask); // This is for the slower, non-adiabatic solar code
-    sun_init(solar_exp_mask); // This is for the new, adiabatic solar code
+                                EXP_SNO1_pure | EXP_SNO2_salt | EXP_SNO3_henc;
+    sun_init(solar_exp_mask);
+
+    // This was for the fall 2012 version of the solar code
+//    enum {
+//      EXP_Chlorine = 1 << 0,
+//      EXP_Gallium  = 1 << 1,
+//      EXP_SuperK   = 1 << 2,
+//      EXP_SNO_pure = 1 << 3,
+//      EXP_SNO_salt = 1 << 4,
+//      EXP_SNO_henc = 1 << 5,
+//      EXP_SNO_full = 1 << 6,
+//      EXP_BX_lower = 1 << 7,
+//      EXP_BX_upper = 1 << 8
+//    };
+//    const uint solar_exp_mask = EXP_Chlorine | EXP_Gallium  | EXP_SuperK |
+//                                EXP_BX_upper | EXP_BX_lower |
+//                                EXP_SNO_pure | EXP_SNO_salt | EXP_SNO_henc;
+//    sun_init(solar_exp_mask);
+
 #else
     printf("ext_init: Compiled without solar support.\n");
     exit(-1);
 #endif
+  }
+
+  if (ext_flags & EXT_MINOS2016)      // MINOS 2016
+  {
+    printf("# Initializing MINOS 2016 code ...\n");
+    MINOS_2016_init();
   }
 
   return 0;
@@ -385,6 +416,36 @@ double my_prior(const glb_params in, void* user_data)
 #endif
   }
 
+  // If the user wants only positive mixing angles, add large penalty
+  // in case of negative ones
+  if (theta_positive)
+  {
+    if (n_flavors >= 3 &&
+       (glbGetOscParamByName(params, "TH12") < 0 ||
+        glbGetOscParamByName(params, "TH13") < 0 ||
+        glbGetOscParamByName(params, "TH23") < 0))
+    {
+      pv += 1e15;
+      goto my_prior_end;
+    }
+    if (n_flavors >= 4 &&
+       (glbGetOscParamByName(params, "TH14") < 0 ||
+        glbGetOscParamByName(params, "TH24") < 0 ||
+        glbGetOscParamByName(params, "TH34") < 0))
+    {
+      pv += 2e15;
+      goto my_prior_end;
+    }
+    if (n_flavors >= 5 &&
+       (glbGetOscParamByName(params, "TH15") < 0 ||
+        glbGetOscParamByName(params, "TH25") < 0 ||
+        glbGetOscParamByName(params, "TH35") < 0 ||
+        glbGetOscParamByName(params, "TH45") < 0))
+    {
+      pv += 3e15;
+      goto my_prior_end;
+    }
+  }
 
   // Add chi^2 from external codes
   // -----------------------------
@@ -415,19 +476,27 @@ double my_prior(const glb_params in, void* user_data)
         goto my_prior_end;
       }
     }
-    if (n_flavors >= 4)
+    if ((ext_flags & EXT_REACTORS)  &&  n_flavors >= 4)
     {
       double dm41 = fabs(glbGetOscParamByName(params, "DM41"));
+    #ifdef Ip3pI // See Thomas' email from 2013-03-08
+      if (dm41 < POW10(ATM_MIN)+1e-10 || dm41 > 0.5*POW10(STE_MAX)-1e-10)
+    #else
       if (dm41 < POW10(ATM_MIN)+1e-10 || dm41 > POW10(STE_MAX)-1e-10)
+    #endif
       {
         pv += 7e11;
         goto my_prior_end;
       }
     }
-    if (n_flavors >= 5)
+    if ((ext_flags & EXT_REACTORS)  &&  n_flavors >= 5)
     {
       double dm51 = fabs(glbGetOscParamByName(params, "DM51"));
+    #ifdef Ip3pI
+      if (dm51 < POW10(ATM_MIN)+1e-10 || dm51 > 0.5*POW10(STE_MAX)-1e-10)
+    #else
       if (dm51 < POW10(ATM_MIN)+1e-10 || dm51 > POW10(STE_MAX)-1e-10)
+    #endif
       {
         pv += 8e11;
         goto my_prior_end;
@@ -484,6 +553,8 @@ double my_prior(const glb_params in, void* user_data)
       pv += chi2cdhs(sbl_params);
     if (ext_flags & EXT_ATM_TABLE)
       pv += chi2atm(sbl_params);
+    if (ext_flags & EXT_MINOS2016)
+      pv += MINOS_2016_prior(in);
 
 
     // SBL reactor experiments + gallium experiments
@@ -544,7 +615,7 @@ double my_prior(const glb_params in, void* user_data)
 //        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
 //                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 //                        glbGetOscParamByName(params, "DM31"));
-//      else if (glbGetNumOfOscParams() == 92+4) // 4 flavors
+//      else if (glbGetNumOfOscParams() == 92+5) // 4 flavors
 //        pv += atm_chisq(glbGetOscParamByName(params, "TH23"),
 //                        glbGetOscParamByName(params, "TH24"),
 //                        0.0,
@@ -628,7 +699,7 @@ double my_prior(const glb_params in, void* user_data)
         // probabilities only once TODO: Find a better solution here
         if (glb_num_of_exps == 0  ||  glbGetSysOnOffState(0,0)==GLB_ON  ||  isnan(last_a.the12))
         {
-          if (debug_level > 1)
+          if (debug_level > 2)
           {
             printf("# Recomputing solar probabilities ...\n");
             printf("# Old params: %g %g %g %g %g %g %g\n", last_a.the12, last_a.dlt12,
@@ -637,9 +708,9 @@ double my_prior(const glb_params in, void* user_data)
                    a.eta_e, a.ste_D, a.ste_N, a.cst_e, a.cst_a);
           }
           sun_probs(a, solar_dm21_min, solar_dm21_max);
+          memcpy(&last_a, &a, sizeof(a));
         }
 
-        memcpy(&last_a, &a, sizeof(a));
 //        sun_chisq(dm21, &chi2_solar); // This is for the slower, non-adiabatic solar code
         chi2_solar = sun_chisq(dm21); // This is for the new, adiabatic solar code
         last_dm21 = dm21;

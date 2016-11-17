@@ -1,0 +1,87 @@
+%!GLoBES
+
+include "minos-cc-far.glb"
+
+#DETECTOR#
+
+
+// Beam data
+// ---------
+//
+// Note on normalization:
+//   Mary Bishai's flux files are in neutrino/GeV/pot/m^2 at 735 km.
+//   Cross sections are in 10^-42 m^2
+//   Detector masses are in kt (1 kt = 6.02e32 nucleons)
+// --> Normalization: (735 km^2) * 6.02e32 * 1e-42 = 3.252e-4.
+//     Small deviations come from tuning to MINOS
+nuflux(#NUMI_nu_near)<
+//FIXME  @flux_file = "fluxes/flugg_le010z185i_run1_735km_0kmoa_flux.txt"
+  @flux_file = "fluxes/fluka05_le010z185i_near_flux_new.txt"
+  @time      = 1
+  @power     = 10.56e20  // pot
+//  @norm      = 2.8e-4
+  @norm      = 0.65e-24
+>
+
+
+// Detector properties
+// -------------------
+$target_mass = 0.0286    // kt fiducial, see e.g.
+                         // minos-docdb.fnal.gov/0060/006010/001/BoehmThesis_2sided.pdf
+
+$profiletype = 3
+$densitytab  = {0.0}     // g/cm^3
+//$lengthtab   = {1.04}    // km
+$lengthtab   = {0.7}     // km
+BLcorrection = 0.7^2 / 1.04^2 // Correction factor for efficiencies; became necessary
+                              // after the average ND baseline has been changed (Jan 2013, JK)
+
+// Energy resolution for NC events
+include "smear_nc_cc_analysis-near.dat"
+
+
+// Oscillation channels
+// --------------------
+
+%eff_near = {
+//  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+//  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+//  1, 1, 1
+//FIXME
+2.02668, 2.49371, 2.41132, 2.09727, 1.91997, 1.94344, 1.89242,
+1.82451, 1.71594, 1.61166, 1.50803, 1.41627, 1.30099, 1.2183,
+1.14912, 1.15682, 1.19095, 1.21155, 1.26803, 1.35216, 1.41786,
+1.58147, 1.61947, 1.56266, 1.71743, 1.66233, 1.37833, 1.62419,
+1.57598, 1.93288, 2.01536, 1.78996, 1.80239, 1.28375, 1.27806,
+1.82789, 1.78469, 3.23653, 2.86409, 4.56493, 3.87751, 3.35569, 3.43595
+}
+
+channel(#ch_CC_nu_near)<      // CC signal
+  @channel = #NUMI_nu_near : + :      m :      m : #XCC : #ERES_CC
+  
+>
+channel(#ch_CC_nubar_near)<   // Wrong sign muons in the beam
+  @channel = #NUMI_nu_near : - :      m :      m : #XCC : #ERES_CC
+  
+>
+channel(#ch_NC_BG_near)<      // NC BG in CC sample - we neglect oscillations into \nu_s here
+  @channel = #NUMI_nu_near : + : NOSC_m : NOSC_m : #XNC : #ERES_NC_CC_ANALYSIS_NEAR
+  
+>
+
+
+// Rules (efficiencies from 1607.01176, p.3)
+// -----------------------------------------
+
+ND_EFF1 = 0.539 * BLcorrection
+rule(#rule_CC_near)<
+  @signal           = ND_EFF1@#ch_CC_nu_near : ND_EFF1@#ch_CC_nubar_near
+  @background       = 9.35e-8@#ch_NC_BG_near
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = {}
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = {}
+>
+
+
+

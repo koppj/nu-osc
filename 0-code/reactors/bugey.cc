@@ -8,7 +8,7 @@ namespace ns_reactor
 
 // definitions of parameter range for Dmq
 #define LDM2MIN -1.5
-#define LDM2MAX  1.5 
+#define LDM2MAX  STE_MAX
 
 #define DM2ANZ 101
 #define DM_STEP ( (LDM2MAX - LDM2MIN) / (DM2ANZ - 2.) )  // including dmq = 0
@@ -18,7 +18,11 @@ inline double dm2k(int k){
     return 0.;
 
   if(k >= DM2ANZ)
-    error("[dm2k]: k out of range\n");
+  {
+    char s[100];
+    sprintf(s, "[Bugey dm2k]: k=%d out of range\n", k);
+    error(s);
+  }
 
   return pow(10, LDM2MIN + (k-1) * DM_STEP);
 }

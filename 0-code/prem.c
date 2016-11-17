@@ -14,9 +14,6 @@
 
 #define PREM_RES 10 /* km */
 
-/* Global variables */
-extern const int debug_level;
-
 /* Local variables */
 static double prem_data[(int)(REARTH/PREM_RES)+2][2];
 
@@ -121,6 +118,8 @@ double GetAvgPREMDensity(double Ltot, double Lstart, double Lend)
 
   gsl_integration_qag(&f, Lstart, Lend, eps_abs, eps_rel, max_intervals,
       GSL_INTEG_GAUSS21, ws, &quad_result, &quad_error);
+
+  // FIXME There is a memory leak here - call gsl_free_integration_workspace!
 
   return quad_result / (Lend - Lstart);
 }
