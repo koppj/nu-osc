@@ -10,6 +10,9 @@ $HistoryLength = 5;
 << LogTicks`;
 << MyGrid`;
 
+(* Abbrevitations of Mathematica functions *)
+RegExp = RegularExpression;
+
 (* Commands for plot legends *)
 LegendLine[Style_] := Graphics[{Style,Line[{{-1,0},{1,0}}]},AspectRatio->0.6,ImageSize->30];
 

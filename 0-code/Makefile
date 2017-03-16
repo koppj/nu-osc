@@ -54,15 +54,13 @@ UNAME_S := $(shell uname -s)
 # Set platform-specific variables
 ifeq ($(UNAME_S),Linux)
   ifeq ($(ENVIRONMENT),mogon)
-    export GCC = icc
-    export GPP = icpc
+    export GCC = gcc
+    export GPP = g++
     export prefix = ${HOME}/sterile-nu/globes
     INCFLAGS = $(shell $(globesconf) --include) \
 	       -I$(shell $(rootconfig) --incdir) \
-	       -I${HOME}/sterile-nu/globes-3.2.15/source/ \
-	       -I/usr/include/c++/4.4.4/ \
-	       -I/usr/include/c++/4.4.4/x86_64-redhat-linux/
-    export CFLAGS   = -std=c99 -Wall -g -O2 -D_BSD_SOURCE -fgnu89-inline \
+	       -I${HOME}/sterile-nu/globes-3.2.15/source/
+    export CFLAGS   = -Wall -std=c99 -g -O2 -D_BSD_SOURCE -fgnu89-inline \
                       -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
     export CXXFLAGS = -Wall -g -O2 -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
   else
@@ -111,8 +109,8 @@ LDFLAGS = $(GLB_LDFLAGS) \
 	  -L./$(solar_dir)/LibMath -L./$(solar_dir)/LibPhys \
 	  -L./$(solar_dir)/LibWrap -L./$(solar_dir)/LibProb \
 	  -latmwrapper -latmphysics -latmmathres \
-      	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun #-static
-          #-lmontecubes
+      	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun \
+          -lmontecubes
 
 BIN     = nu
 OBJ     = nu.o const.o sys.o snu.o degfinder.o sensitivities.o prem.o \

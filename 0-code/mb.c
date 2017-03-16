@@ -22,14 +22,15 @@
 // Path for external data files. Note: #include's need to be adjusted separately
 #define MB_DATA_PATH "./glb/mb-2012/mb-data/"
 
-
-#define NU_APP
-#define NU_DISAPP
-#define NUBAR_APP
-#define NUBAR_DISAPP
-#define COMBINED_APP
-#define FULL_OSC
+// TAG_DEFS - This signals ./compile-and-run where to insert new #define's
 //#error MiniBooNE channels
+#define NU_APP               // TAG_DEF - this signals ./compile-and-run
+#define NU_DISAPP            // TAG_DEF   which #define's to replace
+#define NUBAR_APP            // TAG_DEF
+#define NUBAR_DISAPP         // TAG_DEF
+#define COMBINED_APP         // TAG_DEF
+#define FULL_OSC             // TAG_DEF
+//#define RESCALING            // TAG_DEF
 
 #define GOF_CHI2             // subtract mu contribution to APP chi2?
 

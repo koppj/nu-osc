@@ -22,6 +22,9 @@ END_C_DECLS
 #include "nu.h"
 #include "sbl/definitions.h"
 #include "reactors/definitions.h"
+#ifdef NU_USE_MONTECUBES
+  #include <montecubes/montecubes.h>
+#endif
 
 #ifdef NU_MPI
   #include <mpi.h>
@@ -1071,7 +1074,9 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Please use -e option to specifiy the experiments to simulate.\n");
     return -2;
   }
-  if (action!=NU_ACTION_PARAM_SCAN && action!=NU_ACTION_EXPOSURE_SCAN  &&  n_scan_params > 0)
+  if (action != NU_ACTION_PARAM_SCAN  &&
+      action != NU_ACTION_MCMC  &&
+      action != NU_ACTION_EXPOSURE_SCAN  &&  n_scan_params > 0)
   {
     fprintf(stderr, "Warning: -p is used only when -a PARAM_SCAN is given.\n");
     fprintf(stderr, "Will ignore all -p options\n");
@@ -1205,6 +1210,9 @@ int main(int argc, char *argv[])
 
   // User-defined prior function to include external input 
   glbRegisterPriorFunction(&my_prior, NULL, NULL, &ext_flags);
+#ifdef NU_USE_MONTECUBES
+  mcb_setPriorFunction(my_prior, &ext_flags);
+#endif
 
 
   // Initialize parameter and projection vector(s) 
@@ -1245,7 +1253,7 @@ int main(int argc, char *argv[])
     else if (strcmp(constrained_params[i], "TH23") == 0)
       prior_th23    = 0.09 * true_theta23;
     else if (strcmp(constrained_params[i], "DM31") == 0)
-      prior_ldm     = 0.05 * true_ldm;
+      prior_ldm     = 0.09e-3; //FIXME 0.05 * true_ldm;
   }
   for (int i=0; i < glbGetNumOfOscParams(); i++)
     glbSetOscParams(input_errors, 0.0, i);
@@ -1345,6 +1353,7 @@ int main(int argc, char *argv[])
     printf("#   KARMEN\n");
   if (ext_flags & EXT_LSND)
     printf("#   LSND\n");
+
   if (ext_flags & EXT_REACTORS)
   {
     printf("#   \\nu_e disappearance searches: \n");
@@ -1364,7 +1373,10 @@ int main(int argc, char *argv[])
       printf("#     Double Chooz\n");
     #endif
     #ifdef USE_DB
-      printf("#     Daya Bay\n");
+      printf("#     Daya Bay (sterile neutrino code)\n");
+    #endif
+    #ifdef USE_DB_3F
+      printf("#     Daya Bay (3-flavor code)\n");
     #endif
     #ifdef USE_RENO
       printf("#     RENO\n");
@@ -1376,14 +1388,17 @@ int main(int argc, char *argv[])
       printf("#     Gallium\n");
     #endif
   }
+
   if (ext_flags & EXT_NOMAD)
     printf("#   NOMAD\n");
   if (ext_flags & EXT_CDHS)
     printf("#   CDHS\n");
   if (ext_flags & EXT_ATM_TABLE)
-    printf("#   Atmospheric neutrinos (tabulated chi^2)\n");
+    printf("#   SuperK Atmospheric neutrinos (tabulated chi^2)\n");
   if (ext_flags & EXT_ATM_COMP)
-    printf("#   Atmospheric neutrinos (Michele's simulation)\n");
+    printf("#   SueprK Atmospheric neutrinos (Michele's simulation)\n");
+  if (ext_flags & EXT_DEEPCORE)
+    printf("#   IceCube Deep Core (Michele's simulation)\n");
   if (ext_flags & EXT_SOLAR)
     printf("#   Solar neutrinos (Michele's simulation)\n");
   printf("#\n");
@@ -1507,6 +1522,13 @@ int main(int argc, char *argv[])
       param_scan("", n_scan_params, scan_params, scan_p_min, scan_p_max, scan_p_steps,
                  scan_p_flags, n_min_params, min_params, n_prescan_params, prescan_params,
                  prescan_p_min, prescan_p_max, prescan_p_steps, prescan_p_flags);
+      break;
+
+    // Markov Chain Monte Carlo
+    case NU_ACTION_MCMC:
+      printf("# Markov Chain Monte Carlo\n");
+      printf("#\n");
+      mcmc("", n_scan_params, scan_params, scan_p_min, scan_p_max, scan_p_flags);
       break;
 
     // Scan over parameters and over exposure

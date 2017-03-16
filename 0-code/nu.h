@@ -12,6 +12,11 @@
 #include "const.h"
 #include "snu.h"
 
+// Select/deselect parts of the code
+#define USE_ATM              // Michele's atmospherics code
+#define USE_SOLAR            // Michele's solar code
+#define NU_USE_MONTECUBES    // MonteCUBES support
+
 // Macros
 #define SQR(x)      ((x)*(x))                        // x^2
 #define SQR_ABS(x)  (SQR(creal(x)) + SQR(cimag(x)))  // |x|^2
@@ -70,23 +75,25 @@ typedef struct
 #define NU_S    NU_S1
 
 /* Different plot types */
-enum { NU_ACTION_SPECTRUM, NU_ACTION_PARAM_SCAN, NU_ACTION_EXPOSURE_SCAN/*,
+enum { NU_ACTION_SPECTRUM, NU_ACTION_PARAM_SCAN, NU_ACTION_MCMC, NU_ACTION_EXPOSURE_SCAN/*,
        NU_ACTION_CHECK_BF*/ };
 
 /* External analysis routines */
-enum { EXT_MB         = 0x0001,
-       EXT_MB_300     = 0x0002,
-       EXT_MBANTI     = 0x0004,
-       EXT_MBANTI_200 = 0x0008,
-       EXT_KARMEN     = 0x0010,
-       EXT_LSND       = 0x0020,
-       EXT_REACTORS   = 0x0040,
-       EXT_NOMAD      = 0x0080,
-       EXT_CDHS       = 0x0100,
-       EXT_ATM_TABLE  = 0x0200,
-       EXT_ATM_COMP   = 0x0400,
-       EXT_SOLAR      = 0x0800,
-       EXT_MINOS2016  = 0x1000};
+enum { EXT_MB         = 0x000001,
+       EXT_MB_300     = 0x000002,
+       EXT_MBANTI     = 0x000004,
+       EXT_MBANTI_200 = 0x000008,
+       EXT_KARMEN     = 0x000010,
+       EXT_LSND       = 0x000020,
+       EXT_REACTORS   = 0x000040,
+       EXT_NOMAD      = 0x000080,
+       EXT_CDHS       = 0x000100,
+       EXT_ATM_TABLE  = 0x000200,
+       EXT_ATM_COMP   = 0x000400,
+       EXT_DEEPCORE   = 0x000800,
+       EXT_SOLAR      = 0x001000,
+       EXT_MINOS2016  = 0x002000
+};
 
 /* Experiment and rule numbers */
 extern int EXP_BEAM_NEAR;
@@ -247,6 +254,9 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
        int p_steps[], unsigned long p_flags[], int n_min_params, char *min_params[],
        int prescan_n_p, char *prescan_params[], double prescan_p_min[],
        double prescan_p_max[], int prescan_p_steps[], unsigned long prescan_p_flags[]);
+int mcmc(const char *key_string, int n_p, char *params[],
+       double p_min[], double p_max[], unsigned long p_flags[]);
+
 
 /* prem.c */
 int LoadPREMProfile(const char *prem_file);

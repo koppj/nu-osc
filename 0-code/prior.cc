@@ -20,9 +20,6 @@ using namespace std;
 #include "atm/LibWrap/out.interface.hh"
 #include "solar/LibWrap/out.interface.hh"
 
-//FIXME #define USE_ATM              // Call Michele's atmospherics code
-#define USE_SOLAR            // Call Michele's solar code
-
 // Global variables
 extern gsl_matrix_complex *U;
 extern int n_flavors;
@@ -31,7 +28,6 @@ extern int n_flavors;
 extern double true_sdm;
 double solar_dm21_min = NAN;
 double solar_dm21_max = NAN;
-
 
 // Provide some global variables for Thomas' code
 namespace ns_reactor
@@ -220,49 +216,69 @@ int ext_init(int ext_flags)
     initNomad();                     // Nomad
   }
 
+
   if (ext_flags & EXT_REACTORS)
   {
+    bool sbl_exps[ns_reactor::N_EXP];  // Which experiments to use in Thomas' \nu_e codes
+    for (int i=0; i < ns_reactor::N_EXP; i++)
+      sbl_exps[i] = false;
     ns_reactor::init_fluxes();
     ns_reactor::rate.init();
+
     #ifdef USE_SBL
       printf("# Initializing SBL reactor code ...\n");
       ns_reactor::init_sbl_reactors(old_new_main); // Bugey 4, Rovno, Krasnoyarsk, ILL, Goesgen
-    #endif
-    #ifdef USE_BUGEY_SP
-      printf("# Initializing Bugey code ...\n");
-      ns_reactor::bugey_init(old_new_main);        // Bugey
+      sbl_exps[ns_reactor::SBL] = true;
     #endif
     #ifdef USE_CHOOZ
       printf("# Initializing Chooz code ...\n");
       ns_reactor::chooz_init(old_new_main);        // Chooz
+      sbl_exps[ns_reactor::CHOOZ] = true;
     #endif
     #ifdef USE_PV
       printf("# Initializing Palo Verde code ...\n");
       ns_reactor::PV_init();                       // Palo Verde
-    #endif
-    #ifdef USE_DC
-      printf("# Initializing Double Chooz code ...\n");
-      ns_reactor::dc_init(old_new_main);           // Double Chooz
-    #endif
-    #ifdef USE_DB
-      printf("# Initializing Daya Bay code ...\n");
-      ns_reactor::DB_init();                       // Daya Bay
-    #endif
-    #ifdef USE_RENO
-      printf("# Initializing RENO code ...\n");
-      ns_reactor::RENO_init();                     // RENO
-    #endif
-    #ifdef USE_GAL
-      printf("# Initializing Gallium code ...\n");
-      ns_reactor::gallium_init();                  // Gallium radioactive source experiments
+      sbl_exps[ns_reactor::PV] = true;
     #endif
     #ifdef USE_KAML
       printf("# Initializing KamLAND code ...\n");
       ns_reactor::init_kaml();                     // KamLAND
+      sbl_exps[ns_reactor::KAML] = true;
+    #endif
+    #ifdef USE_DC
+      printf("# Initializing Double Chooz code ...\n");
+      ns_reactor::dc_init(old_new_main);           // Double Chooz
+      sbl_exps[ns_reactor::DC] = true;
+    #endif
+    #ifdef USE_DB
+      printf("# Initializing Daya Bay sterile neutrino code ...\n");
+      ns_reactor::DB_init();                       // Daya Bay
+      sbl_exps[ns_reactor::DB] = true;
+    #endif
+    #ifdef USE_DB_3F
+      printf("# Initializing Daya Bay 3-flavor code ...\n");
+      ns_reactor::DB_init();                       // Daya Bay
+      sbl_exps[ns_reactor::DB] = true;
+    #endif
+    #ifdef USE_RENO
+      printf("# Initializing RENO code ...\n");
+      ns_reactor::RENO_init();                     // RENO
+      sbl_exps[ns_reactor::RENO] = true;
+    #endif
+    #ifdef USE_BUGEY_SP
+      printf("# Initializing Bugey code ...\n");
+      ns_reactor::bugey_init(old_new_main);        // Bugey
+      sbl_exps[ns_reactor::BUG_SP] = true;
+    #endif
+    #ifdef USE_GAL
+      printf("# Initializing Gallium code ...\n");
+      ns_reactor::gallium_init();                  // Gallium radioactive source experiments
+      sbl_exps[ns_reactor::GAL] = true;
     #endif
 
     printf("# Setting up pull matrices for SBL codes ...\n");
     ns_reactor::fit.invert_S();
+    ns_reactor::fit.set_experiments(sbl_exps);
     ns_reactor::fit.pull_status[ns_reactor::FLUX_NORM]
       = ns_reactor::FIXED; // See Thomas' email from 2012-05-23 for explanation
   }
@@ -273,11 +289,24 @@ int ext_init(int ext_flags)
     initCDHS();
   }
 
-  if (ext_flags & EXT_ATM_COMP)      // Michele's atmospherics code
+  if (ext_flags & EXT_ATM_COMP  ||  ext_flags & EXT_DEEPCORE) // Michele's atmospherics code
   {
 #ifdef USE_ATM
-    printf("# Initializing atmospheric neutrino code ...\n");
-    atm_init(0x01);
+    if (ext_flags & EXT_ATM_COMP  &&  ext_flags & EXT_DEEPCORE)
+    {
+      printf("# Initializing Michele's DeepCore + SuperK code ...\n");
+      atm_init(0x03);
+    }
+    else if (ext_flags & EXT_ATM_COMP)
+    {
+      printf("# Initializing Michele's SuperK code ...\n");
+      atm_init(0x01);
+    }
+    else if (ext_flags & EXT_DEEPCORE)
+    {
+      printf("# Initializing Michele's DeepCore code ...\n");
+      atm_init(0x02);
+    }
 #else
     printf("ext_init: Compiled without atmospherics support.\n");
     exit(-1);
@@ -296,22 +325,23 @@ int ext_init(int ext_flags)
       EXP_Gallium   = 1 <<  1,
       EXP_SK1_nadir = 1 <<  2,
       EXP_SK1_spect = 1 <<  3,
-      EXP_SK2_spect = 1 <<  4,
-      EXP_SK3_spect = 1 <<  5,
-      EXP_SK4_spect = 1 <<  6,
-      EXP_SNO1_pure = 1 <<  7,
-      EXP_SNO2_salt = 1 <<  8,
-      EXP_SNO3_henc = 1 <<  9,
-      EXP_SNO_leta  = 1 << 10,
+      EXP_SK1_whole = 1 <<  4,
+      EXP_SK2_spect = 1 <<  5,
+      EXP_SK3_spect = 1 <<  6,
+      EXP_SK4_spect = 1 <<  7,
+      EXP_SNO1_pure = 1 <<  8,
+      EXP_SNO2_salt = 1 <<  9,
+      EXP_SNO3_henc = 1 << 10,
       EXP_SNO_full  = 1 << 11,
-      EXP_BX_lower  = 1 << 12,
-      EXP_BX_upper  = 1 << 13
+      EXP_BX1_lower = 1 << 12,
+      EXP_BX1_upper = 1 << 13,
+      EXP_BX2_infra = 1 << 14
     };
 
     const uint solar_exp_mask = EXP_Chlorine | EXP_Gallium | EXP_SK1_nadir |
                                 EXP_SK2_spect | EXP_SK3_spect | EXP_SK4_spect |
-                                EXP_BX_upper | EXP_BX_lower |
-                                EXP_SNO1_pure | EXP_SNO2_salt | EXP_SNO3_henc;
+                                EXP_SNO1_pure | EXP_SNO2_salt | EXP_SNO3_henc |
+                                EXP_BX1_lower | EXP_BX1_upper | EXP_BX2_infra;
     sun_init(solar_exp_mask);
 
     // This was for the fall 2012 version of the solar code
@@ -476,7 +506,7 @@ double my_prior(const glb_params in, void* user_data)
         goto my_prior_end;
       }
     }
-    if ((ext_flags & EXT_REACTORS)  &&  n_flavors >= 4)
+    if (n_flavors >= 4)
     {
       double dm41 = fabs(glbGetOscParamByName(params, "DM41"));
     #ifdef Ip3pI // See Thomas' email from 2013-03-08
@@ -489,7 +519,7 @@ double my_prior(const glb_params in, void* user_data)
         goto my_prior_end;
       }
     }
-    if ((ext_flags & EXT_REACTORS)  &&  n_flavors >= 5)
+    if (n_flavors >= 5)
     {
       double dm51 = fabs(glbGetOscParamByName(params, "DM51"));
     #ifdef Ip3pI
@@ -595,6 +625,8 @@ double my_prior(const glb_params in, void* user_data)
       if (memcmp(&last_reactor_params, &reactor_params, sizeof(reactor_params)) != 0)
       {     // Recompute reactor chi^2 only if the relevant parameters have changed
         last_reactor_params = reactor_params;
+//        ns_reactor::fit.pull_status[ns_reactor::FLUX_NORM] = ns_reactor::FIXED; //FIXME
+//        ns_reactor::fit.set_experiments(sbl_exps);//FIXME?
         last_chi2_reactor = ns_reactor::fit.chisq(reactor_params);
         pv += last_chi2_reactor;
       }
@@ -638,9 +670,9 @@ double my_prior(const glb_params in, void* user_data)
 //    } // ext_flags & EXT_ATM_COMP
 
 
-    // Atmospheric neutrinos -- 2012 code (v54)
-    // ----------------------------------------
-    if (ext_flags & EXT_ATM_COMP)
+    // Atmospheric neutrinos -- 2012 code (v54) and 2017 code (v70)
+    // ------------------------------------------------------------
+    if (ext_flags & EXT_ATM_COMP  ||  ext_flags & EXT_DEEPCORE)
     {
 #ifdef USE_ATM
       complx (*_U)[n_flavors] =
@@ -671,7 +703,7 @@ double my_prior(const glb_params in, void* user_data)
     printf("my_prior: Compiled without atmospherics support.\n");
     exit(-2);
 #endif
-    } // ext_flags & EXT_ATM_COMP
+    } // ext_flags & EXT_ATM_COMP  ||  ext_flags & EXT_DEEPCORE
 
 
     // Interface to Michele's solar neutrino code
@@ -732,7 +764,6 @@ double my_prior(const glb_params in, void* user_data)
 #endif
     }
   } // if (ext_flags)
-
 
   // Add oscillation parameter priors
   // --------------------------------

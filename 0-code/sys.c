@@ -1119,7 +1119,7 @@ double chiLSNDspectrum(int exp, int rule, int n_params, double *x, double *error
 }
 
 
-///***************************************************************************
+// ***************************************************************************
 // * Calculate chi^2 for T2K, including the following systematical errors:   *
 // *   x[ 0]: Correlated beam flux normalization error                       *
 // *   x[ 1]: Energy scale error for mu-like events                          *
@@ -1260,6 +1260,116 @@ double chiT2K(int exp, int rule, int n_params, double *x, double *errors,
     {
       fit_rate = signal_e_F[i] + bg_e_F[i];
       chi2    += poisson_likelihood(data_e_F[i], fit_rate);
+    }
+  }
+
+  return chi2;
+}
+
+
+// ***************************************************************************
+// * Calculate chi^2 for T2K, including the following systematical errors:   *
+// *   x[ 0]: Correlated beam flux normalization error                       *
+// *   x[ 1]: Energy scale error for mu-like events                          *
+// *   x[ 2]: Energy scale error for e-like events                           *
+// *   x[ 3]: Spectral tilt for mu-like events                               *
+// *   x[ 4]: Spectral tilt for e-like events                                *
+// *   x[ 5]: Normalization mu-like events                                   *
+// *   x[ 6]: Normalization e-like events                                    *
+// * The energy scale errors are included even in SYS_OFF simulations to     *
+// * help resolving degeneracies between systematics params and osc. params  *
+// ***************************************************************************/
+double chiT2K_FDonly(int exp, int rule, int n_params, double *x, double *errors,
+                     void *user_data)
+{
+  // T2K far detector data from Run 1-4
+  // from Lorena Escudero's thesis, http://www.t2k.org/docs/thesis/070, fig 5.15 (left)
+  static const double data_mu[] = {
+    0, 0, 0, 0, 0,  3, 3, 8, 6, 4,
+    4, 2, 3, 1, 4,  1, 1, 4, 4, 2,
+    2, 1, 4, 5, 2,  2, 3, 1, 0, 5,
+    3, 0, 3, 0, 1,  0, 1, 1, 0, 0,
+    1, 1, 0, 2, 1,  0, 1, 2, 0, 1,
+    0, 0, 0, 1, 0,  3, 0, 1, 1, 2, 
+    3, 1, 3, 2,
+    3, 4,  1, 1,
+    1
+  };
+  static const double data_e[] = {
+    0, 0, 1, 0, 0,  0, 0, 2, 2, 2,
+    3, 3, 3, 0, 1,  4, 2, 2, 1, 1,
+    0, 0, 1, 0, 0
+  };
+
+  int n_bins = glbGetNumberOfBins(exp);
+  double emin, emax;
+  int ew_low, ew_high;
+  double fit_rate;
+  double chi2 = 0.0;
+
+  glbGetEminEmax(exp, &emin, &emax);
+
+  // Systematics ON
+  // --------------
+  if (n_params > 0)
+  {
+    double *bin_centers = glbGetBinCentersListPtr(exp);
+    double E_center = 0.5 * (emax + emin);
+    double signal_mu[n_bins], signal_e[n_bins];
+    double bg_mu[n_bins], bg_e[n_bins];
+    glbShiftEnergyScale(x[1], glbGetSignalFitRatePtr(exp, RULE_T2K_NUMU),
+                        signal_mu, n_bins, emin, emax);
+    glbShiftEnergyScale(x[1], glbGetBGFitRatePtr(exp, RULE_T2K_NUMU),
+                        bg_mu, n_bins, emin, emax);
+    glbShiftEnergyScale(x[2], glbGetSignalFitRatePtr(exp, RULE_T2K_NUE),
+                        signal_e, n_bins, emin, emax);
+    glbShiftEnergyScale(x[2], glbGetBGFitRatePtr(exp, RULE_T2K_NUE),
+                        bg_e, n_bins, emin, emax);
+
+    // Compare FD data to prediction
+    glbGetEnergyWindowBins(exp, RULE_T2K_NUMU, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      fit_rate = (1 + x[0] + x[5]) * ( signal_mu[i] + bg_mu[i]
+                 + x[3] * (bin_centers[i] - E_center) * (signal_mu[i] + bg_mu[i]) );
+      chi2    += poisson_likelihood(data_mu[i], fit_rate);
+    }
+
+    glbGetEnergyWindowBins(exp, RULE_T2K_NUE, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      fit_rate = (1 + x[0] + x[6]) * (signal_e[i] + bg_e[i]
+                 + x[4] * (bin_centers[i] - E_center) * (signal_e[i] + bg_e[i]) );
+      chi2    += poisson_likelihood(data_e[i], fit_rate);
+    }
+
+    // Systematics priors
+    for (int i=0; i < n_params; i++)
+      chi2 += square(x[i] / errors[i]);
+  }
+
+  // Systematics OFF
+  // ---------------
+  else
+  {
+    double *signal_mu = glbGetSignalFitRatePtr(exp, RULE_T2K_NUMU);
+    double *bg_mu     = glbGetBGFitRatePtr(exp, RULE_T2K_NUMU);
+    double *signal_e  = glbGetSignalFitRatePtr(exp, RULE_T2K_NUE);
+    double *bg_e      = glbGetBGFitRatePtr(exp, RULE_T2K_NUE);
+
+    // Compare FD data to ND-corrected prediction
+    glbGetEnergyWindowBins(exp, RULE_T2K_NUMU, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      fit_rate = signal_mu[i] + bg_mu[i];
+      chi2    += poisson_likelihood(data_mu[i], fit_rate);
+    }
+
+    glbGetEnergyWindowBins(exp, RULE_T2K_NUE, &ew_low, &ew_high);
+    for (int i=ew_low; i <= ew_high; i++)
+    {
+      fit_rate = signal_e[i] + bg_e[i];
+      chi2    += poisson_likelihood(data_e[i], fit_rate);
     }
   }
 

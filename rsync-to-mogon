@@ -2,5 +2,5 @@
 
 # Copy main working directory
 rsync --delete -avz $HOME/papers/sterile-nu/sim/ mogon:~/sterile-nu/sim/ \
-      --exclude .git/ --exclude *genie/* --exclude *Inputs*
+      --exclude .git/ --exclude *genie/* --exclude *Input*
 
