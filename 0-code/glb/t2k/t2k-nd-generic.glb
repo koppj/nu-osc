@@ -1,0 +1,123 @@
+%!GLoBES
+// See README file for citation and version information
+
+$version="3.1.10" // Minimal GLoBES version required for this file
+
+// Beam fluxes
+nuflux(#jparc_nu_mu)<
+  @flux_file = "t2k-spectrum-SK.dat"
+  @time      = 1        // dummy
+  @power     = 6.57e20  // protons on target
+  @norm      = 1.31e-20 // Determined by matching onto predicted T2K no osc. spectrum
+>
+
+
+// Detector properties
+// -------------------
+$target_mass = 0.114     // kt (fiducial mass)
+
+$profiletype = 3
+$densitytab  = {0}       // g/cm^3
+$lengthtab   = {0.28}    // km
+
+// Binning
+$emin        = 0.0       // GeV
+$emax        = 7.0       // GeV
+$binsize     = {         // Escudero p.117
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.25, 0.25, 0.25, 0.25,
+                 0.5,  0.5,  0.5,  0.5,
+                 1.0
+               }
+
+$sampling_min      = 0.0
+$sampling_max      = 7.0
+$sampling_stepsize = {         // Escudero p.117
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.25, 0.25, 0.25, 0.25,
+                 0.5,  0.5,  0.5,  0.5,
+                 1.0
+               }
+  
+// Low-pass filter
+$filter_state = 1
+$filter_value = 0.05  // FIXME is this appropriate?
+
+
+// Energy resolution
+include "smear-cc-nu-qe.dat"
+include "smear-cc-nu-nqe.dat"
+include "smear-cc-nubar-qe.dat"
+include "smear-cc-nubar-nqe.dat"
+include "smear-nc.dat"
+
+// Cross sections
+cross(#CC)<
+  @cross_file = "XCC.dat"
+>
+
+cross(#NC)<
+  @cross_file = "XNC.dat"
+>
+
+cross(#QE)<
+  @cross_file = "XQE.dat"
+>
+
+cross(#NQE)<
+  @cross_file = "XNQE.dat"
+>
+
+
+// Channel definitions
+// -------------------
+
+// Muon disappearance
+channel(#ch_mu_mu)<
+  @channel = #jparc_nu_mu : + : mu  : mu  : #CC : #ERES_NU_QE
+>
+
+channel(#ch_mubar_mubar)<
+  @channel = #jparc_nu_mu : - : mu  : mu  : #CC : #ERES_NUBAR_QE
+>
+
+// Channels without oscillations to determine normalization
+channel(#ch_mu_mu_NOSC)<
+  @channel = #jparc_nu_mu : + : NOSC_mu  : NOSC_mu : #CC : #ERES_NU_QE
+>
+
+channel(#ch_mubar_mubar_NOSC)<
+  @channel = #jparc_nu_mu : - : NOSC_mu  : NOSC_mu  : #CC : #ERES_NUBAR_QE
+>
+
+
+// Rules
+rule(#muons)<
+  @signal           = 1.0@#ch_mu_mu : 1.0@#ch_mubar_mubar
+  @background       = 0.0@#ch_mu_mu_NOSC
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = { }
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = { }
+  @energy_window    = 0.15 : 7.0
+>
+rule(#muons_NOSC)<
+  @signal           = 1.0@#ch_mu_mu_NOSC : 1.0@#ch_mubar_mubar_NOSC
+  @background       = 0.0@#ch_mu_mu_NOSC
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = { }
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = { }
+  @energy_window    = 0.15 : 7.0
+>
+

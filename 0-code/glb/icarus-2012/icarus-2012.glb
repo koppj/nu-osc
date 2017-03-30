@@ -1,0 +1,102 @@
+%!GLoBES
+
+$version="3.0.0"
+
+/*****************************************************************
+ * Author: PAN Machado 
+ * Date: Oct 2012
+ *
+ * AEDL file for ICARUS 1209.0122
+ *
+ *****************************************************************/
+
+/* ####### flux ####### */
+
+nuflux(#ICARUS_SPECTRUM)<
+        @flux_file = "glb_ICARUS_spectrum.dat"
+        @time      =  1	/* POT */
+        @power     =  1 	/* dummy */
+        @norm      =  1
+>
+
+/* ######## Baseline setting ######## */
+
+$profiletype = 3
+$densitytab  = { 2.5 }  /* FIXME - is this ok? */
+$lengthtab   = { 730  } /* km */
+
+
+/* ####### Detector settings ####### */
+
+$target_mass = 1  /* tons (fiducial mass) */
+
+
+/* ####### Energy window ####### */
+
+$emin        = 1	/* GeV */
+$emax        = 30	/* GeV */
+$bins	     = 1
+
+$sampling_points = 30 /*  */
+
+/* ######## Technical information ######## */
+
+/* For globes probability engine */
+$filter_state = 1		/* check it */
+$filter_value = 2E-1		/* check it */
+
+/* For my probability engine */
+//$filter_state = 1
+//$filter_value = 30
+
+/* ####### Energy resolution ####### */
+
+energy(#RESDUMMY)<
+        @type = 1
+        @sigma_e = {0, 0.01, 0}
+>
+
+/* ####### Cross sections ####### */
+
+cross(#FLAT)<
+	@cross_file = "XFlat.dat"
+>
+
+
+/* ####### Channel definitions ####### */
+
+/* SIGNALS */
+channel(#mu_e)<
+        @channel   =    #ICARUS_SPECTRUM:      +  :      mu  :      e : #FLAT : #RESDUMMY
+>
+
+channel(#mu_mu)<
+        @channel   =    #ICARUS_SPECTRUM:      +  :      NOSC_mu  :      NOSC_mu : #FLAT : #RESDUMMY
+>
+
+/* ####### Setting the rules ####### */
+
+rule(#NU_E_App)<
+        @signal     = 1@#mu_e
+        @background = 1@#mu_mu  /* this is for normalization purpose */
+
+        @sys_on_function  = "chi_ICARUS_2012"
+	@sys_on_errors = {} 
+        @sys_off_function = "chi_ICARUS_2012"
+        @energy_window = 10.0 : 30.0
+>
+
+/*********************************************************************
+
+			GENERAL COMMENTS
+
+# SPECTRUM:
+# PAN Machado
+# 2012-oct
+# I took the spectrum from the reference
+# Bonesini, Guglielmi, Physics Reports 433 (2006) 65–126
+# (see figure 5)
+# UNITS: neutrinos/bins/4E8 POT (but this does not matter, they fit the probability)
+# Filenames: glb_ICARUS_spectrum.dat
+
+*********************************************************************/

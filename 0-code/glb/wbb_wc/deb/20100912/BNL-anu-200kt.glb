@@ -1,0 +1,179 @@
+%!GLoBES
+/* Copyright 2005 Patrick Huber
+ *
+ * If you modify this file you have to rename it.
+ *
+ * Last modified May 26 2005
+ */
+
+$version="1.8.1"
+
+/* 	 Beam data 	 */
+
+nuflux(#bnl)<
+	@flux_file="BNLminus.dat"
+	@time = 5
+	@power = 0.7*1.7
+	@norm = 5.19*2.6054*10^12
+>
+
+$target_mass = 	        200.0
+
+
+$emin = 	        0.5
+$emax = 	        12.0
+$binsize= {0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125,0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125,0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125,0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 2, 2}
+
+
+$sampling_min =    		0.5
+$sampling_max =         	12.0
+$sampling_stepsize= {0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125,0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125,0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125,0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 2, 2}
+
+/* 	 Baseline 	 */
+
+$profiletype = 		1 
+$baseline = 		1300.0
+
+
+/* 	 Technical information 	 */
+
+$filter_state = 0 
+$filter_value = 1000000 
+
+/*       Energy Resolution       */
+
+
+
+energy(#asignal)<>
+energy(#anc)<>
+energy(#abeam)<>
+energy(#api0)<>
+energy(#adis)<>
+energy(#ampip)<>
+
+include "0524abeam.dat" 
+include "0524asignal.dat"
+include "0524anc.dat"
+include "0524api0.dat"
+include "0524adis.dat"
+include "0524ampip.dat" 
+ 
+energy(#asignalc)<>
+energy(#ancc)<>
+energy(#abeamc)<>
+energy(#api0c)<>
+
+include "0524abeamc.dat" 
+include "0524asignalc.dat"
+include "0524ancc.dat"
+include "0524api0c.dat" 
+
+energy(#adisc)<>
+energy(#ampipc)<> 
+
+include "0524adisc.dat"
+include "0524ampipc.dat" 
+ 
+
+/* 	 Cross sections 	 */
+
+cross(#NC)<
+	@cross_file = "XPI0_BNL.dat"
+>
+
+cross(#PI)<
+	@cross_file = "XNC_BNL.dat"
+>
+
+cross(#QE)<
+	@cross_file = "XQE.dat"
+>
+
+cross(#CC)<
+	@cross_file = "XCC.dat"
+>
+
+
+
+/* 	 Channels 	 */
+
+
+channel(#anc_bg)<
+	@channel = 	#bnl:	-:	m:	NOSC_m:	#NC:    #anc
+>
+
+channel(#api_bg)<
+	@channel = 	#bnl:	-:	m:	NOSC_m:	#PI:    #api0
+>
+
+channel(#anu_e_beam)<
+	@channel = 	#bnl:	-:	e:	e:	#CC:    #abeam
+>
+
+channel(#anu_e_signal)<
+	@channel = 	#bnl:	-:	m:	e:	#QE:    #asignal	
+>
+
+channel(#canc_bg)<
+	@channel = 	#bnl:	+:	m:	NOSC_m:	#NC:    #ancc
+>
+
+channel(#capi_bg)<
+	@channel = 	#bnl:	+:	m:	NOSC_m:	#PI:    #api0c
+>
+
+channel(#canu_e_beam)<
+	@channel = 	#bnl:	+:	e:	e:	#CC:    #abeamc
+>
+
+channel(#canu_e_signal)<
+	@channel = 	#bnl:	+:	m:	e:	#CC:    #asignalc	
+>
+
+channel(#anu_mu_signal)<
+	@channel = 	#bnl:	-:	m:	m:	#QE:    #adis	
+>
+
+channel(#anu_mu_bg)<
+	@channel = 	#bnl:	-:	m:	m:	#QE:    #ampip	
+>
+
+
+channel(#canu_mu_signal)<
+	@channel = 	#bnl:	+:	m:	m:	#CC:    #adisc	
+>
+
+channel(#canu_mu_bg)<
+	@channel = 	#bnl:	+:	m:	m:	#CC:    #ampipc	
+>
+
+
+/* 	 Rules 		  */
+
+rule(#anu_e_appearance)<
+ 	@signal = 0.88*0.11868@#anu_e_signal
+	@signalerror = 0.05 : 0.0001
+	
+	@background = 0.01138*0.0462@#anc_bg : 0.0185*0.0081@#api_bg :0.88*0.04@#anu_e_beam : 0.8*0.262*0.008@#canc_bg : 13.5*0.0185*0.0016@#capi_bg :0.88*0.036@#canu_e_beam : 0.9*0.047@#canu_e_signal  
+	@backgrounderror = 0.05 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+>
+
+rule(#anu_mu_dis)<
+ 	@signal = 0.985*0.91*0.118@#anu_mu_signal
+	@signalerror = 0.05 : 0.0001
+	
+	@background =  0.61*0.3*0.084@#anu_mu_bg : 0.9*0.047@#canu_mu_signal : 0.8*0.216*0.06@#canu_mu_bg
+	@backgrounderror = 0.05 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+>
+
+
+
+/**********************END**********************/

@@ -1,0 +1,24 @@
+%!GLoBES
+/* See README file for copyright information and version history */
+
+/* Baseline */
+$profiletype =          1 
+$baseline =             1300
+
+/* Beam data */
+include "wbb_flux_120_test1.inc"
+
+/* Fiducial target mass [kt] */
+$target_mass = 	     17.6
+
+/* Cross sections */
+include "cross_sections.inc"
+
+/* Detector definition (pd, wc, la), channels, rules */
+//include "performance_la.inc"
+include "channels_la_numudis_eff.inc"
+include "rules_la_numudis_eff.inc"
+
+
+
+

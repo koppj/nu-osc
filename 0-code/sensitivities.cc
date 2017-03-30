@@ -502,7 +502,7 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
       n_deg = MAX_DEG;
       degfinder(test_values, prescan_n_p, prescan_param_indices, prescan_p_min, prescan_p_max,
                 prescan_p_steps, prescan_proj, proj, &n_deg, deg_pos, deg_chi2,
-                default_degfinder_flags, prescan_p_flags);
+                default_degfinder_flags, prescan_p_flags, NULL);
     }
     else
       n_deg = 0;
@@ -579,7 +579,7 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
       glbCopyParams(global_bf_NH, test_values);
       degfinder(test_values, 0, NULL, NULL, NULL, NULL,
                 prescan_proj, proj, &n_deg, deg_pos, deg_chi2,
-                default_degfinder_flags | DEG_NO_IH, prescan_p_flags);
+                default_degfinder_flags | DEG_NO_IH, prescan_p_flags, NULL);
       for (int i=0; i < n_deg; i++)
       {
         if (deg_chi2[i] < global_chi2min_NH)
@@ -602,7 +602,7 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
       glbCopyParams(global_bf_IH, test_values);
       degfinder(test_values, prescan_n_p, prescan_param_indices, prescan_p_min, prescan_p_max,
                 prescan_p_steps, prescan_proj, proj, &n_deg, deg_pos, deg_chi2,
-                default_degfinder_flags | DEG_NO_NH, prescan_p_flags);
+                default_degfinder_flags | DEG_NO_NH, prescan_p_flags, NULL);
       for (int i=0; i < n_deg; i++)
       {
         if (deg_chi2[i] < global_chi2min_IH)
@@ -644,19 +644,114 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
 }
 
 
+//// -------------------------------------------------------------------------
+//int mcmc(const char *key_string, int n_p, char *params[],
+//       double p_min[], double p_max[], unsigned long p_flags[])
+//// -------------------------------------------------------------------------
+//// Sample the parameter space using a Markov Chain Monte Carlo, as
+//// implemented in MonteCUBES.
+//// -------------------------------------------------------------------------
+//// Parameters:
+////   key_string: Prefix for output
+////   n_p: Number of parameters to vary
+////   params: Names of parameters to vary
+////   p_min, p_maxs: Min/max values for each parameter
+////   p_flags: Extra options for each parameter (e.g. DEG_LOGSCALE)
+//// -------------------------------------------------------------------------
+//{
+//#ifdef NU_USE_MONTECUBES
+//  // Check for invalid oscillation parameter names
+//  for (int i=0; i < n_p; i++)
+//  {
+//    if (glbFindParamByName(params[i]) < 0)
+//    {
+//      fprintf(stderr, "Invalid oscillation parameter: %s.\n", params[i]);
+//      return -1;
+//    }
+//    else if (glbFindParamByName(params[i]) == GLB_DM_21) // Set range for solar code
+//    {
+//      solar_dm21_min = MAX(1.e-6, MIN(p_min[i], solar_dm21_min));
+//      solar_dm21_max = MAX(p_max[i], solar_dm21_max);
+//    }
+//  }
+//
+//  glb_params mcb_steps     = glbAllocParams();
+//  glb_params mcb_conv_crit = glbAllocParams();
+//  glb_projection proj      = glbAllocProjection();
+//
+//  // MonteCUBES initialization
+//  mcb_setChainNo(4);                            // Number of MCMC chains
+//  mcb_setBurnNo(MCB_DYNAMIC_BURN);
+//  mcb_setLengthMax(1e7);                        // Max. length of each chain
+//  mcb_setLengthMin(5000);                       // Min. length of each chain
+//  mcb_setVerbosity(5);
+//  mcb_addStartPosition(true_values);
+//
+//  // Tell MonteCUBES to vary only the specified parameters
+//  for (int i=0; i < glbGetNumOfOscParams(); i++)
+//    glbSetProjectionFlag(proj, GLB_FIXED, i);
+//  for (int i=0; i < n_p; i++)
+//    glbSetProjectionFlagByName(proj, GLB_FREE, params[i]);
+//  glbSetDensityProjectionFlag(proj, GLB_FIXED, GLB_ALL);
+////  DecideOnDensityProjection(proj);
+//  glbSetProjection(proj);
+//
+//  // Define convergence criteria for MonteCUBES
+//  for (int i=0; i < glbGetNumOfOscParams(); i++)
+//    glbSetOscParams(mcb_conv_crit, 0.025, i);
+//  glbSetDensityParams(mcb_conv_crit, 1.0, GLB_ALL);
+//  mcb_setConvergenceCriteria(mcb_conv_crit);
+//
+//  // Define step sizes for MonteCUBES
+//  for (int i=0; i < glbGetNumOfOscParams(); i++)
+//  {
+//    char *p = glbGetParamName(i);
+//    if (strstr(p, "TH") != NULL)
+//      glbSetOscParams(mcb_steps, M_PI/30., i);
+//    else if (strstr(p, "DM") != NULL)
+//      glbSetOscParams(mcb_steps, 0.01*glbGetOscParams(true_values, i), i);
+//    else if (strstr(p, "ARG") != NULL  ||  strstr(p, "DELTA") != NULL)
+//      glbSetOscParams(mcb_steps, M_PI/5., i);
+//    else
+//      glbSetOscParams(mcb_steps, 0.001, i);
+//    delete p;
+//  }
+//  glbSetDensityParams(mcb_steps, 0.001, GLB_ALL);
+//  mcb_setStepSizes(mcb_steps);
+//
+//  // Run MonteCUBES
+//  mcb_MCMC("/temp/jkopp/sterile-nu/mcmc/mcb-test.dat", GLB_ALL, GLB_ALL);
+//
+//  // Cleanup
+//  if (proj)           { glbFreeProjection(proj);       proj          = NULL; }
+//  if (mcb_conv_crit)  { glbFreeParams(mcb_conv_crit);  mcb_conv_crit = NULL; }
+//  if (mcb_steps)      { glbFreeParams(mcb_steps);      mcb_steps     = NULL; }
+//  return 0;
+//#else
+//  return DBL_MAX;
+//#endif
+//}
+
+
 // -------------------------------------------------------------------------
-int mcmc(const char *key_string, int n_p, char *params[],
-       double p_min[], double p_max[], unsigned long p_flags[])
+int mcmc_deg(const char *output_file, int n_p, char *params[],
+       double p_min[], double p_max[], unsigned long p_flags[],
+       int prescan_n_p, char *prescan_params[], double prescan_p_min[],
+       double prescan_p_max[], int prescan_p_steps[], unsigned long prescan_p_flags[])
 // -------------------------------------------------------------------------
 // Sample the parameter space using a Markov Chain Monte Carlo, as
-// implemented in MonteCUBES.
+// implemented in MonteCUBES.  This function also includes a (frequentist)
+// prescan.
 // -------------------------------------------------------------------------
 // Parameters:
-//   key_string: Prefix for output
+//   output_file: Path and base name for output file
 //   n_p: Number of parameters to vary
 //   params: Names of parameters to vary
 //   p_min, p_maxs: Min/max values for each parameter
 //   p_flags: Extra options for each parameter (e.g. DEG_LOGSCALE)
+//   prescan_params: Parameters to vary in prescan
+//   prescan_p_min, prescan_p_maxs: Min/max values for each parameter in prescan
+//   prescan_p_flags: Extra options for parameters in prescan
 // -------------------------------------------------------------------------
 {
 #ifdef NU_USE_MONTECUBES
@@ -675,57 +770,65 @@ int mcmc(const char *key_string, int n_p, char *params[],
     }
   }
 
-  glb_params mcb_steps     = glbAllocParams();
-  glb_params mcb_conv_crit = glbAllocParams();
-  glb_projection proj      = glbAllocProjection();
+  for (int i=0; i < prescan_n_p; i++)
+  {
+    if (glbFindParamByName(prescan_params[i]) < 0)
+    {
+      fprintf(stderr, "Invalid oscillation parameter: %s.\n", prescan_params[i]);
+      return -2;
+    }
+    else if (glbFindParamByName(prescan_params[i]) == GLB_DM_21) // Set range for solar code
+    {
+      solar_dm21_min = MAX(1.e-6, MIN(prescan_p_min[i], solar_dm21_min));
+      solar_dm21_max = MAX(prescan_p_max[i], solar_dm21_max);
+    }
+  }
 
-  // MonteCUBES initialization
-  mcb_setChainNo(4);                            // Number of MCMC chains
-  mcb_setBurnNo(MCB_DYNAMIC_BURN);
-  mcb_setLengthMax(1e7);                        // Max. length of each chain
-  mcb_setLengthMin(5000);                       // Min. length of each chain
-  mcb_setVerbosity(5);
-  mcb_addStartPosition(true_values);
+  if (debug_level > 0)
+  {
+    printf("# \\Delta m_{21}^2 range (if used): %g eV^2 -- %g eV^2\n",
+           solar_dm21_min, solar_dm21_max);
+    printf("#\n");
+  }
 
-  // Tell MonteCUBES to vary only the specified parameters
+  // Prepare for prescan in degfinder 
+  int n_deg = MAX_DEG; 
+  double deg_chi2[MAX_DEG];
+  glb_params deg_pos[MAX_DEG];
+  for (int i=0; i < MAX_DEG; i++)
+    deg_pos[i] = glbAllocParams();
+  int prescan_param_indices[prescan_n_p];
+  for (int i=0; i < prescan_n_p; i++)
+    prescan_param_indices[i] = glbFindParamByName(prescan_params[i]);
+
+  // Define projection for pre-scan 
+  for (int i=0; i < glbGetNumOfOscParams(); i++)
+    glbSetProjectionFlag(prescan_proj, GLB_FIXED, i);
+  glbSetDensityProjectionFlag(prescan_proj, GLB_FIXED, GLB_ALL);
+
+  // Define projection for final fit 
   for (int i=0; i < glbGetNumOfOscParams(); i++)
     glbSetProjectionFlag(proj, GLB_FIXED, i);
   for (int i=0; i < n_p; i++)
     glbSetProjectionFlagByName(proj, GLB_FREE, params[i]);
   glbSetDensityProjectionFlag(proj, GLB_FIXED, GLB_ALL);
-//  DecideOnDensityProjection(proj);
-  glbSetProjection(proj);
 
-  // Define convergence criteria for MonteCUBES
-  for (int i=0; i < glbGetNumOfOscParams(); i++)
-    glbSetOscParams(mcb_conv_crit, 0.025, i);
-  glbSetDensityParams(mcb_conv_crit, 1.0, GLB_ALL);
-  mcb_setConvergenceCriteria(mcb_conv_crit);
+  // Compute true rates 
+  glbSetOscillationParameters(true_values);
+  glbCopyParams(true_values, central_values);
+  glbSetCentralValues(central_values);
+  glbSetInputErrors(input_errors);
+  glbSetRates();
 
-  // Define step sizes for MonteCUBES
-  for (int i=0; i < glbGetNumOfOscParams(); i++)
-  {
-    char *p = glbGetParamName(i);
-    if (strstr(p, "TH") != NULL)
-      glbSetOscParams(mcb_steps, M_PI/30., i);
-    else if (strstr(p, "DM") != NULL)
-      glbSetOscParams(mcb_steps, 0.01*glbGetOscParams(true_values, i), i);
-    else if (strstr(p, "ARG") != NULL  ||  strstr(p, "DELTA") != NULL)
-      glbSetOscParams(mcb_steps, M_PI/5., i);
-    else
-      glbSetOscParams(mcb_steps, 0.001, i);
-    delete p;
-  }
-  glbSetDensityParams(mcb_steps, 0.001, GLB_ALL);
-  mcb_setStepSizes(mcb_steps);
+  // Run degfinder + MCMC
+  degfinder(true_values, prescan_n_p, prescan_param_indices, prescan_p_min, prescan_p_max,
+                prescan_p_steps, prescan_proj, proj, &n_deg, deg_pos, deg_chi2,
+                DEG_MCMC | default_degfinder_flags, prescan_p_flags, output_file);
 
-  // Run MonteCUBES
-  mcb_MCMC("/temp/jkopp/sterile-nu/mcmc/mcb-test-2.dat", GLB_ALL, GLB_ALL);
+  for (int i=0; i < MAX_DEG; i++)
+    if (deg_pos[i] != NULL)
+      glbFreeParams(deg_pos[i]);
 
-  // Cleanup
-  if (proj)           { glbFreeProjection(proj);       proj          = NULL; }
-  if (mcb_conv_crit)  { glbFreeParams(mcb_conv_crit);  mcb_conv_crit = NULL; }
-  if (mcb_steps)      { glbFreeParams(mcb_steps);      mcb_steps     = NULL; }
   return 0;
 #else
   return DBL_MAX;

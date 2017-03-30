@@ -1,0 +1,6 @@
+#!/bin/bash
+
+grep 1.000000e+00 ttt
+sort -g -k2 ttt | head -1
+subtr_min ttt 2 1 > tt
+grep 1.000000e+00 tt

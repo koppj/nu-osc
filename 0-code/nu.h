@@ -1,7 +1,9 @@
 #ifndef __NU_H
 #define __NU_H
 
-#define NU_PSEUDO_MPI
+// Parallelization?
+#define NU_MPI
+//#define NU_PSEUDO_MPI
 
 #ifdef NU_MPI
   #include <mpi.h>
@@ -132,6 +134,7 @@ extern int EXP_REACTOR_FAR;
 #define DEG_NO_CORR    0x10   /* Switch off correlations                       */
 #define DEG_NO_DEG     0x20   /* Switch off all degeneracies                   */
 #define DEG_ONLY_STD_DEG 0x40   /* Switch off degeneracies in all but the std. osc. params */
+#define DEG_MCMC       0x80   /* Instead of ordinary minimization, run Markov Chain MC */
 
 #define DEG_LOGSCALE   0x01   /* Use logarithmic scale for a parameter         */
 #define DEG_PLUS_MINUS 0x02   /* Consider positive and negative values for a   */
@@ -164,15 +167,13 @@ extern "C" {
 #endif
 
 /* degfinder.c */
-double ChiNPWrapper(glb_params base_values, double th12, double th13, double th23,
-                    double delta, double dm21, double dm31, int hierarchy,
-                    glb_params fit_values);
+double ChiNPWrapper(glb_params base_values, int hierarchy, glb_params fit_values);
 int degfinder(const glb_params base_values, const int n_prescan_params,
       const int *prescan_params, const double *prescan_min,
       const double *prescan_max, const int *prescan_steps,
       const glb_projection prescan_proj, const glb_projection fit_proj,
       int *n_deg, glb_params *deg_pos, double *deg_chi2, const unsigned long flags,
-      const unsigned long *prescan_flags);
+      const unsigned long *prescan_flags, const char *output_file);
 
 /* sys.c */
 double chiNOvA(int exp, int rule, int n_params, double *x, double *errors,
@@ -254,9 +255,12 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
        int p_steps[], unsigned long p_flags[], int n_min_params, char *min_params[],
        int prescan_n_p, char *prescan_params[], double prescan_p_min[],
        double prescan_p_max[], int prescan_p_steps[], unsigned long prescan_p_flags[]);
-int mcmc(const char *key_string, int n_p, char *params[],
-       double p_min[], double p_max[], unsigned long p_flags[]);
-
+//int mcmc(const char *key_string, int n_p, char *params[],
+//       double p_min[], double p_max[], unsigned long p_flags[]);
+int mcmc_deg(const char *output_file, int n_p, char *params[],
+       double p_min[], double p_max[], unsigned long p_flags[],
+       int prescan_n_p, char *prescan_params[], double prescan_p_min[],
+       double prescan_p_max[], int prescan_p_steps[], unsigned long prescan_p_flags[]);
 
 /* prem.c */
 int LoadPREMProfile(const char *prem_file);

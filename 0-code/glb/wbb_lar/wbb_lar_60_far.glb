@@ -1,0 +1,9 @@
+%!GLoBES
+/* see wbb_lar_common.inc for copyright information and version history */
+
+/* Beam data */
+include "wbb_flux_60.inc"
+
+/* Detector definition, channels, rules */
+include "wbb_lar_common_far.inc"
+

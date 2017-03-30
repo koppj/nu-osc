@@ -154,19 +154,19 @@ unset SP
 
 # Double Chooz testing
 # --------------------
-OUT_FILE=th13dm31-dc$SUFFIX.dat SBLDEFS="DC" \
-  ./compile-and-run -l -f 3 --no-ih -a PARAM_SCAN -e SBL\
-                    -p "TH13,0.02,0.5,200" \
-                    -p "DM31,1e-3,4e-3,300"
-OUT_FILE=th13chi2-dc$SUFFIX.dat SBLDEFS="DC" \
-  ./compile-and-run -l -f 3 --no-ih -a PARAM_SCAN -e SBL \
-                    -m DM31 -c DM31 -t DM31=0.00241 \
-                    -p "TH13,0.02,0.5,1000"
-OUT_FILE=th14dm41-dc$SUFFIX.dat SBLDEFS="DC" \
-  ./compile-and-run -l -f 4 --no-ih -a PARAM_SCAN -e SBL\
-                    -m "TH13,DM31" \
-                    -p "TH14,0,0.8,20" \
-                    -p "DM41,-1.5,1.5,15,LOGSCALE"
+#OUT_FILE=th13dm31-dc$SUFFIX.dat SBLDEFS="DC" \
+#  ./compile-and-run -l -f 3 --no-ih -a PARAM_SCAN -e SBL\
+#                    -p "TH13,0.02,0.5,200" \
+#                    -p "DM31,1e-3,4e-3,300"
+#OUT_FILE=th13chi2-dc$SUFFIX.dat SBLDEFS="DC" \
+#  ./compile-and-run -l -f 3 --no-ih -a PARAM_SCAN -e SBL \
+#                    -m DM31 -c DM31 -t DM31=0.00241 \
+#                    -p "TH13,0.02,0.5,1000"
+#OUT_FILE=th14dm41-dc$SUFFIX.dat SBLDEFS="DC" \
+#  ./compile-and-run -l -f 4 --no-ih -a PARAM_SCAN -e SBL\
+#                    -m "TH13,DM31" \
+#                    -p "TH14,0,0.8,20" \
+#                    -p "DM41,-1.5,1.5,15,LOGSCALE"
 
 
 # ---------------------------------------------------------------------------
@@ -842,4 +842,50 @@ unset NU_SIZE
 
 
 unset SCAN_PARAMS
+
+
+# ---------------------------------------------------------------------------
+#                              MCMC Tests
+# ---------------------------------------------------------------------------
+
+#export SP="-v -f 5 -a MCMC \
+#         -t "TH14=0.01,TH24=0.01,TH15=0.01,TH25=0.01,DELTA_0=1.3" \
+#         -p "DM41,-1,1,10,LOGSCALE"         -p "DM51,-1,1,10,LOGSCALE" \
+#         -s "DELTA_0,0,4.7,3"               -s "DELTA_1,0,4.7,3" \
+#         -m "DM41,DM51,TH14,TH24,TH15,TH25,DELTA_0,DELTA_1,DELTA_2" "
+#export SP2="-m "TH34,TH35,TH23,DM31,TH12" "
+#
+#./nu  $SP $SP2  -e C12 -e SBL -e CDHS -e SOLAR -e MINOS_2016 -e MBall200 \
+#                -e ICARUS-2014 -e KARMEN -e NOMAD -e E776 -e LSND -e ATM_COMP
+#unset SP2
+#unset SP
+
+
+OUTPUT_PATH=/temp/jkopp/sterile-nu/mcmc/
+export SP="-f 4 --no-ih -a MCMC \
+                    -p "DM41,-1.4,1.4,56,LOGSCALE" \
+                    -p "TH13,0,0.3,10" \
+                    -p "TH14,0,0.6,20" "
+export NU_SIZE=4
+export OUT_FILE="mcmc-log"
+SBLDEFS="SBL BUGEY_SP" ./compile-and-run -M -l $SP -e SBL \
+                           -o $OUTPUT_PATH/dm41th13th14-sblreactors$SUFFIX.dat
+#OUT_FILE=dm41th13th14-sbllblreactors$SUFFIX.dat SBLDEFS="SBL BUGEY_SP CHOOZ PV DC DB RENO" \
+#  ./compile-and-run -l $SP -e SBL
+#OUT_FILE=dm41th13th14-lblreactors$SUFFIX.dat SBLDEFS="CHOOZ PV DC DB RENO" \
+#  ./compile-and-run -l $SP -e SBL -c DM31
+#OUT_FILE=dm41th13th14-gal$SUFFIX.dat SBLDEFS="GAL" \
+#  ./compile-and-run -l $SP -e SBL
+#OUT_FILE=dm41th13th14-c12$SUFFIX.dat SBLDEFS="" \
+#  ./compile-and-run -l $SP -e C12
+
+export SP="$SP -s "DELTA_0,0,4.7,3" -s "DELTA_1,0,4.7,3" -m "DELTA_0,DELTA_1""
+#OUT_FILE=dm41th13th14-solar-kaml$SUFFIX.dat SBLDEFS="KAML" \
+#  ./compile-and-run -l $SP -e SBL -e SOLAR -m "TH12,TH24,TH34"
+#OUT_FILE=dm41th13th14-disapp-e$SUFFIX.dat SBLDEFS="SBL CHOOZ PV DC DB RENO BUGEY_SP GAL KAML"
+#  ./compile-and-run -l $SP -e SBL -e SOLAR -e C12  -m "TH12,TH24,TH34"
+unset SP
+unset NU_SIZE
+unset OUT_FILE
+
 

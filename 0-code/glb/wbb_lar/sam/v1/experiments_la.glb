@@ -1,0 +1,28 @@
+%!GLoBES
+
+/* Baseline */
+$profiletype =          1 
+$baseline =             1300
+
+/* Beam data */
+include "nu_flux_120.inc"
+
+/* Detector definition, channels, rules */
+
+/* Fiducial target mass [kt] */
+$target_mass = 	     34.
+include "la_nu.inc"
+
+#NEXT#
+/* Baseline */
+$profiletype =          1 
+$baseline =             1300
+
+/* Beam data */
+include "anu_flux_120.inc"
+
+/* Detector definition, channels, rules */
+
+/* Fiducial target mass [kt] */
+$target_mass = 	    34.
+include "la_anu.inc"

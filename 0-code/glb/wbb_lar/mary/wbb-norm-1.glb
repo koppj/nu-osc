@@ -1,0 +1,314 @@
+%!GLoBES
+/* Copyright 2006 The GLoBES Team
+ *
+ * If you modify this file you have to rename it.
+ *
+ * If you are using this file for producing a scientific publication
+ * or a talk please cite the following references and check the supporting
+ * files for a similar comment.
+ * 
+ * This file describes a MASS kt Liquid Argon TPC detector in the BNL WBB band beam. 
+ *
+ * The analysis here completely neglected the impact of the second peak
+ * in the beam. It includes, however, all beam related backgrounds:
+ * NC, nu_e, bar_nu_e, nu_mu, bar_nu_mu
+ *
+ * Beware: the x-sections are different with respect to the WBB files 
+ * (20% different rates, just by that)
+ *
+ * I removed all NC background (I have no migration matrices and no pi0
+ * x-sections). Efficiency is no 80%. The energy resolution for QE is 5%
+ *
+ * This file uses the CC/QE seperation as 'JHFHKAll.glb'
+ * The fluxes are courtesy Mark Messier. 
+ *
+ * Last Modified: 05/18/06 S. Menary  <menary@yorku.ca>
+ * Last Modified: 04/24/06 P. Huber <phuber@physics.wisc.edu>
+ * Last Modified: 09/12/06 P. Huber <phuber@physics.wisc.edu>
+ */
+
+$version="1.8.1"
+
+/* 	 Beam data 	 */
+
+/* the factor of 0.12 contains accounts for the normalization with respect to BNL beam fluxes */
+
+flux(#plus34)<
+        @flux_file="BNL.dat"
+        @time = 1
+        @power = 1
+        @norm = 0.12*2.6054*10^12/1.7
+>
+
+
+flux(#minus34)<
+        @flux_file="BNLminus.dat"
+        @time = 1
+        @power = 1
+        @norm = 0.12*2.6054*10^12/1.7
+>
+
+
+
+
+$target_mass = 	1
+
+
+$emin = 	0.5
+$emax = 	20.0
+$bins = 150
+
+$sampling_min = 0.5 
+$sampling_max = 20.0 
+
+
+
+
+/* 	 Baseline 	 */
+
+$profiletype =	 	1 
+$baseline =		1300
+
+
+/* 	 Technical information 	 */
+
+$filter_state = 0 
+$filter_value = 1000000 
+
+/*       Energy Resolution       */
+
+energy(#ERES_CC_NC)<
+	@type = 1
+	@sigma_e = {0.0,0.20,0.0}
+>
+
+energy(#ERES_QE)<
+	@type = 1
+	@sigma_e = {0.0,0.05,0.0}
+>
+
+
+/* 	 Cross sections 	 */
+
+
+cross(#CC)<
+	@cross_file = "XCC.dat"
+>
+
+cross(#NC)<
+	@cross_file = "XNC.dat"
+>
+
+cross(#QE)<
+	@cross_file = "XQE.dat"
+>
+
+/* 	 Channels 	 */
+
+/* 0 */ 
+channel(#nu_mu_disappearance_CC)<
+	@channel = 	#plus34:	+:	m:	m:	#CC:    #ERES_CC_NC
+>
+
+/* 1 */
+channel(#nu_mu_disappearance_NC)<
+	@channel = 	#plus34:	+:	m:	m:	#NC:    #ERES_CC_NC
+>
+
+/* 2 */
+channel(#nu_e_beam)<
+	@channel = 	#plus34:	+:	e:	e:	#CC:    #ERES_CC_NC
+>
+
+/* 3 */
+channel(#nu_e_bar_beam)<
+	@channel = 	#plus34:	-:	e:	e:	#CC:    #ERES_CC_NC
+> 
+
+
+/* 2 */
+channel(#nu_e_beam_QE)<
+	@channel = 	#plus34:	+:	e:	e:	#QE:    #ERES_QE
+>
+
+/* 3 */
+channel(#nu_e_bar_beam_QE)<
+	@channel = 	#plus34:	-:	e:	e:	#QE:    #ERES_QE
+> 
+
+
+/* 4 */
+channel(#nu_e_appearance_QE)<
+	@channel = 	#plus34:	+:	m:	e:	#QE:    #ERES_QE
+>
+
+/* 5 */
+channel(#ANTI_nu_mu_bar_disappearance_CC)<
+	@channel = 	#minus34:	-:	m:	m:	#CC:    #ERES_CC_NC
+> 
+
+/* 6 */
+channel(#ANTI_nu_mu_bar_disappearance_NC)<
+	@channel = 	#minus34:	-:	m:	m:	#NC:    #ERES_CC_NC
+>
+
+/* 7 */
+channel(#ANTI_nu_e_bar_beam)<
+	@channel = 	#minus34:	-:	e:	e:	#CC:    #ERES_CC_NC
+>
+
+/* 8 */
+ channel(#ANTI_nu_e_beam)<
+	@channel = 	#minus34:	+:	e:	e:	#CC:    #ERES_CC_NC
+> 
+
+
+/* 7 */
+channel(#ANTI_nu_e_bar_beam_QE)<
+	@channel = 	#minus34:	-:	e:	e:	#QE:    #ERES_QE
+>
+
+/* 8 */
+ channel(#ANTI_nu_e_beam_QE)<
+	@channel = 	#minus34:	+:	e:	e:	#QE:    #ERES_QE
+> 
+
+
+/* 9 */
+channel(#ANTI_nu_e_bar_appearance_QE)<
+	@channel = 	#minus34:	-:	m:	e:	#QE:    #ERES_QE
+>
+
+/* 10 */
+channel(#nu_mu_disappearance_QE)<
+	@channel = 	#plus34:	+:	m:	m:	#QE:    #ERES_QE
+>
+
+/* 11 */
+channel(#ANTI_nu_mu_bar_disappearance_QE)<
+	@channel = 	#minus34:	-:	m:	m:	#QE:    #ERES_QE
+>
+
+/* 12 */
+channel(#nu_e_appearance_NC)<
+	@channel = 	#plus34:	+:	m:	e:	#NC:    #ERES_CC_NC
+>
+
+/* 14 */
+channel(#ANTI_nu_e_bar_appearance_NC)<
+	@channel = 	#minus34:	-:	m:	e:	#NC:    #ERES_CC_NC
+>
+
+/* 16 */
+channel(#nu_e_appearance_CC)<
+	@channel = 	#plus34:	+:	m:	e:	#CC:    #ERES_CC_NC
+>
+
+/* 17 */
+channel(#ANTI_nu_e_bar_appearance_CC)<
+	@channel = 	#minus34:	-:	m:	e:	#CC:    #ERES_CC_NC
+>
+
+
+/* 	 Rules 		 */
+
+
+rule(#rule4)<
+ 	@signal = 0.8@#nu_e_appearance_CC
+	@signalerror = 0.0001 : 0.0001
+	@background =  0.0003@#nu_mu_disappearance_CC  : 0.8@#nu_e_beam  
+	@backgrounderror = 0.1 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+
+> 
+
+
+rule(#rule6)<
+	@signal = 0.8@#nu_mu_disappearance_CC
+	@signalerror = 0.025 : 0.0001
+	@background = 0.005@#nu_mu_disappearance_NC
+	@backgrounderror = 0.2 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+
+>
+
+
+rule(#rule5)<
+	@signal = 0.8@#ANTI_nu_e_bar_appearance_CC
+	@signalerror = 0.001 : 0.0001
+	@background = 0.0003@#ANTI_nu_mu_bar_disappearance_CC  :  0.8@#ANTI_nu_e_bar_beam   :  0.8@#ANTI_nu_e_beam  
+	@backgrounderror = 0.1 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+
+>
+
+
+rule(#rule7)<
+	@signal = 0.8@#ANTI_nu_mu_bar_disappearance_CC
+	@signalerror = 0.025 : 0.0001
+	@background = 0.005@#ANTI_nu_mu_bar_disappearance_NC
+	@backgrounderror = 0.2 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+
+>
+
+/************ QE *************/
+
+
+
+rule(#rule4Q)<
+ 	@signal = 0.8@#nu_e_appearance_QE
+	@signalerror = 0.0001 : 0.0001
+	@background =  0.0003@#nu_mu_disappearance_QE  : 0.8@#nu_e_beam_QE  
+	@backgrounderror = 0.1 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+
+> 
+
+
+rule(#rule6Q)<
+	@signal = 0.8@#nu_mu_disappearance_QE
+	@signalerror = 0.025 : 0.0001
+	@background = 0.005@#nu_mu_disappearance_NC
+	@backgrounderror = 0.2 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+
+>
+
+
+rule(#rule5Q)<
+	@signal = 0.8@#ANTI_nu_e_bar_appearance_QE
+	@signalerror = 0.001 : 0.0001
+	@background = 0.0003@#ANTI_nu_mu_bar_disappearance_QE  :  0.8@#ANTI_nu_e_bar_beam_QE   :  0.8@#ANTI_nu_e_beam_QE  
+	@backgrounderror = 0.1 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+
+>
+
+
+rule(#rule7Q)<
+	@signal = 0.8@#ANTI_nu_mu_bar_disappearance_QE
+	@signalerror = 0.025 : 0.0001
+	@background = 0.005@#ANTI_nu_mu_bar_disappearance_NC
+	@backgrounderror = 0.2 : 0.0001
+	@backgroundcenter = 1.0 : 0.0
+	@errordim_sys_on = 0
+	@errordim_sys_off = 2
+
+>
+
+/**********************END**********************/

@@ -64,12 +64,13 @@ ifeq ($(UNAME_S),Linux)
                       -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
     export CXXFLAGS = -Wall -g -O2 -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
   else
-    export GCC = gcc
-    export GPP = g++
+    export GCC = mpicc # gcc
+    export GPP = mpic++ #g++
     export prefix = ${HOME}/papers/sterile-nu/globes
     INCFLAGS = $(shell $(globesconf) --include) \
 	       -I$(shell $(rootconfig) --incdir) \
-	       -I${HOME}/projects/globes/Distribution/source
+	       -I${HOME}/projects/globes/Distribution/source \
+	       -I/usr/include/openmpi/
     export CFLAGS   = -std=c99 -Wall -g -O2 -D_BSD_SOURCE -fgnu89-inline -ffast-math \
                       -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
     export CXXFLAGS = -Wall -g -O2 -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
@@ -110,7 +111,7 @@ LDFLAGS = $(GLB_LDFLAGS) \
 	  -L./$(solar_dir)/LibWrap -L./$(solar_dir)/LibProb \
 	  -latmwrapper -latmphysics -latmmathres \
       	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun \
-          -lmontecubes
+          -lmontecubes -lmpi
 
 BIN     = nu
 OBJ     = nu.o const.o sys.o snu.o degfinder.o sensitivities.o prem.o \

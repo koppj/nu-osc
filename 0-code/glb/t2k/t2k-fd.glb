@@ -1,0 +1,254 @@
+%!GLoBES
+// See README file for citation and version information
+
+$version="3.1.10" // Minimal GLoBES version required for this file
+
+// Beam fluxes
+nuflux(#jparc_nu_mu)<
+  @flux_file = "t2k-spectrum-SK.dat"
+  @time      = 1        // dummy
+  @power     = 6.57e20  // protons on target
+  @norm      = 1.31e-20 // Determined by matching onto predicted T2K no osc. spectrum
+>
+
+
+// Detector properties
+// -------------------
+$target_mass = 22.5      // kt (fiducial mass)
+
+$profiletype = 3
+$densitytab  = {2.6}     // g/cm^3, see Escudero thesis, p. 198
+$lengthtab   = {295.0}   // km
+
+// Binning
+$emin        = 0.0       // GeV
+$emax        = 7.0       // GeV
+$binsize     = {         // Escudero p.117
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.25, 0.25, 0.25, 0.25,
+                 0.5,  0.5,  0.5,  0.5,
+                 1.0
+               }
+
+$sampling_min      = 0.0
+$sampling_max      = 7.0
+$sampling_stepsize = {         // Escudero p.117
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.05, 0.05, 0.05, 0.05, 0.05,  0.05, 0.05, 0.05, 0.05, 0.05,  
+                 0.25, 0.25, 0.25, 0.25,
+                 0.5,  0.5,  0.5,  0.5,
+                 1.0
+               }
+  
+// Low-pass filter
+$filter_state = 1
+$filter_value = 0.05  // FIXME is this appropriate?
+
+
+// Energy resolution
+include "smear-cc-nu-qe.dat"
+include "smear-cc-nu-nqe.dat"
+include "smear-cc-nubar-qe.dat"
+include "smear-cc-nubar-nqe.dat"
+include "smear-nc.dat"
+
+// Cross sections
+cross(#CC)<
+  @cross_file = "XCC.dat"
+>
+
+cross(#NC)<
+  @cross_file = "XNC.dat"
+>
+
+cross(#QE)<
+  @cross_file = "XQE.dat"
+>
+
+cross(#NQE)<
+  @cross_file = "XNQE.dat"
+>
+
+
+// Efficiencies (computed in devel.nb)
+// -----------------------------------
+
+// For debugging purposes and to compute efficiencies in Mathematica
+//%bc            = bincenter()
+//%eff_E         = {0, 100}
+//%eff           = {1, 1}
+//%eff_nu_qe     = interpolation(%eff_E, %eff, 1, %bc)
+//%eff_nubar_qe  = interpolation(%eff_E, %eff, 1, %bc)
+//%eff_nu_nqe    = interpolation(%eff_E, %eff, 1, %bc)
+//%eff_nubar_nqe = interpolation(%eff_E, %eff, 1, %bc)
+
+%eff_nu_qe = {
+  0.72225, 0.163621, 0.065492, 0.0540137, 0.0964501, 
+  0.548039, 0.961913, 1.03003, 1.00593, 0.993281, 
+  0.982037, 0.969028, 1.00128, 0.997004, 1.02312, 
+  1.00649, 0.973226, 0.977543, 0.990906, 1.0163, 
+  0.951257, 0.998696, 1.01451, 1.12386, 1.10915, 
+  1.06863, 1.01171, 1.04468, 1.04233, 0.978517, 
+  0.951418, 0.920737, 0.975557, 0.995505, 0.899416, 
+  0.930675, 0.912527, 0.850563, 0.77674, 0.943195, 
+  0.979824, 0.96174, 0.940512, 0.974699, 0.935122, 
+  0.911228, 0.888786, 0.853968, 0.789154, 0.76732, 
+  0.716336, 0.736103, 0.755632, 0.774629, 0.792829, 
+  0.773191, 0.832722, 0.915447, 0.953624, 0.945785, 
+  0.882759, 0.829467, 0.987191, 0.902119, 0.841932, 
+  0.696762, 0.642647, 0.526877, 0.397824 }
+
+%eff_nubar_qe = {
+  4.83324, 1.09494, 0.333839, 0.0591385, 0.0978532, 
+  0.561319, 0.959896, 1.01139, 0.961829, 0.950286, 
+  0.914421, 0.902196, 0.910232, 0.907954, 0.92379, 
+  0.909082, 0.877395, 0.876485, 0.90654, 0.973937, 
+  1.04764, 1.03271, 1.08634, 1.21243, 1.20272, 
+  1.14464, 1.06317, 1.05573, 1.10647, 1.03254, 
+  1.03879, 1.05202, 1.14545, 1.09071, 1.04399, 
+  1.01937, 0.941409, 1.14592, 1.08259, 1.09154, 
+  1.13393, 1.113, 1.08843, 1.128, 1.08219, 
+  1.05454, 1.02857, 0.988277, 0.913269, 0.888001, 
+  0.857635, 0.881302, 0.904682, 0.927426, 0.949217, 
+  0.925705, 0.996979, 1.09602, 1.14173, 1.13234, 
+  1.05689, 0.993081, 1.16061, 1.06059, 0.989834, 
+  0.819162, 0.711741, 0.583525, 0.440596 }
+
+%eff_nu_nqe = {
+  0.236884, 0.0536644, 0.0167724, 0.0030229, 0.00566823, 
+  0.0377671, 0.0774592, 0.101245, 0.145564, 0.181324, 
+  0.278671, 0.285393, 0.307447, 0.312753, 0.311233, 
+  0.299401, 0.294777, 0.287108, 0.289351, 0.300643, 
+  0.305507, 0.329293, 0.31937, 0.310964, 0.31398, 
+  0.279824, 0.326898, 0.268555, 0.284803, 0.256292, 
+  0.247584, 0.181494, 0.18964, 0.190693, 0.231462, 
+  0.20743, 0.180346, 0.212378, 0.218135, 0.156823, 
+  0.162914, 0.159907, 0.156377, 0.162061, 0.155481, 
+  0.151508, 0.147777, 0.141988, 0.131211, 0.127581, 
+  0.134284, 0.137989, 0.14165, 0.145211, 0.148623, 
+  0.144942, 0.156101, 0.171609, 0.178766, 0.177296, 
+  0.165481, 0.155491, 0.169355, 0.154761, 0.144435, 
+  0.119531, 0.110248, 0.0903871, 0.0682476 }
+
+%eff_nubar_nqe = {
+  0.559371, 0.126722, 0.0396058, 0.00713818, 0.0133848, 
+  0.0927501, 0.444466, 0.508102, 0.464044, 0.450561, 
+  0.451339, 0.458892, 0.467071, 0.478567, 0.466564, 
+  0.454596, 0.395022, 0.427037, 0.43645, 0.459484, 
+  0.472535, 0.490243, 0.498979, 0.541496, 0.445214, 
+  0.507506, 0.431032, 0.422064, 0.350364, 0.401542, 
+  0.373679, 0.37625, 0.419973, 0.403439, 0.355874, 
+  0.333853, 0.36127, 0.441006, 0.387464, 0.377382, 
+  0.392038, 0.384803, 0.376309, 0.389988, 0.374152, 
+  0.364592, 0.355613, 0.341682, 0.315749, 0.307013, 
+  0.334305, 0.343531, 0.352644, 0.36151, 0.370004, 
+  0.360839, 0.388622, 0.427228, 0.445045, 0.441387, 
+  0.411973, 0.387102, 0.414016, 0.378338, 0.353096, 
+  0.292214, 0.253894, 0.208157, 0.157171 }
+
+
+// Channel definitions
+// -------------------
+
+// Muon disappearance
+channel(#ch_mu_mu_QE)<
+  @channel = #jparc_nu_mu : + : mu  : mu  : #QE : #ERES_NU_QE
+  @post_smearing_efficiencies = copy(%eff_nu_qe)
+>
+
+channel(#ch_mubar_mubar_QE)<
+  @channel = #jparc_nu_mu : - : mu  : mu  : #QE : #ERES_NUBAR_QE
+  @post_smearing_efficiencies = copy(%eff_nubar_qe)
+>
+
+channel(#ch_mu_mu_NQE)<
+  @channel = #jparc_nu_mu : + : mu  : mu  : #NQE : #ERES_NU_NQE
+  @post_smearing_efficiencies = copy(%eff_nu_nqe)
+>
+
+channel(#ch_mubar_mubar_NQE)<
+  @channel = #jparc_nu_mu : - : mu  : mu  : #NQE : #ERES_NUBAR_NQE
+  @post_smearing_efficiencies = copy(%eff_nubar_nqe)
+>
+
+// Electron appearance
+channel(#ch_mu_e_QE)<
+  @channel = #jparc_nu_mu : + : mu  : e   : #QE : #ERES_NU_QE
+  @post_smearing_efficiencies = copy(%eff_nu_qe)
+>
+
+channel(#ch_mubar_ebar_QE)<
+  @channel = #jparc_nu_mu : - : mu  : e   : #QE : #ERES_NUBAR_QE
+  @post_smearing_efficiencies = copy(%eff_nubar_qe)
+>
+
+channel(#ch_mu_e_NQE)<
+  @channel = #jparc_nu_mu : + : mu  : e   : #NQE : #ERES_NU_NQE
+  @post_smearing_efficiencies = copy(%eff_nu_nqe)
+>
+
+channel(#ch_mubar_ebar_NQE)<
+  @channel = #jparc_nu_mu : - : mu  : e   : #NQE : #ERES_NUBAR_NQE
+  @post_smearing_efficiencies = copy(%eff_nubar_nqe)
+>
+
+// Intrinsic \nu_e background
+channel(#ch_e_e_QE)<
+  @channel = #jparc_nu_mu : + : e   : e   : #QE : #ERES_NU_QE
+  @post_smearing_efficiencies = copy(%eff_nu_qe)
+>
+
+channel(#ch_ebar_ebar_QE)<
+  @channel = #jparc_nu_mu : - : e   : e   : #QE : #ERES_NUBAR_QE
+  @post_smearing_efficiencies = copy(%eff_nubar_qe)
+>
+
+channel(#ch_e_e_NQE)<
+  @channel = #jparc_nu_mu : + : e   : e   : #NQE : #ERES_NU_NQE
+  @post_smearing_efficiencies = copy(%eff_nu_nqe)
+>
+
+channel(#ch_ebar_ebar_NQE)<
+  @channel = #jparc_nu_mu : - : e   : e   : #NQE : #ERES_NUBAR_NQE
+  @post_smearing_efficiencies = copy(%eff_nubar_nqe)
+>
+
+// NC background
+channel(#ch_NC_mu)<
+  @channel = #jparc_nu_mu : + : NOSC_mu : NOSC_mu : #NC : #ERES_NC
+>
+
+
+// Rules
+// The additional ad-hoc efficiency factor 0.46 is obtained by computing
+// the spectrum without it and comparing the ratio of QE to non-QE events
+// to the number 17.5% given in https://arxiv.org/abs/1403.1532, p.5
+rule(#mu_like)<
+  @signal           = 1.0@#ch_mu_mu_QE : 1.0@#ch_mubar_mubar_QE : 0.46@#ch_mu_mu_NQE : 0.46@#ch_mubar_mubar_NQE
+  @background       = 0.0@#ch_mu_e_QE //FIXME
+  @sys_on_function  = "chiT2K"
+  @sys_on_errors    = { 0.2, 0.05, 0.05, 0.005, 0.005, 0.005, 0.005 } //FIXME
+  @sys_off_function = "chiT2K-nosys"
+  @sys_off_errors   = { }
+  @energy_window    = 0.15 : 7.0
+>
+
+rule(#e_like)<
+  @signal           = 1.0@#ch_mu_e_QE : 1.0@#ch_mubar_ebar_QE : 0.46@#ch_mu_e_NQE : 0.46@#ch_mubar_ebar_NQE
+  @background       = 1.0@#ch_e_e_QE  : 1.0@#ch_ebar_ebar_QE : 0.46@#ch_e_e_NQE  : 0.46@#ch_ebar_ebar_NQE : 0.01@#ch_NC_mu
+                                        //FIXME any others?
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = {}
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = {}
+  @energy_window    = 0.15 : 1.25
+>

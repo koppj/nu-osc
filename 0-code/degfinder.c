@@ -11,15 +11,18 @@
 #include <globes/globes.h>
 #include "nu.h"
 #include "snu.h"
+#ifdef NU_USE_MONTECUBES
+  #include <montecubes/montecubes.h>
+#endif
 
 
-/* ---------------------------------------------------------------------------- */
-double ChiNPWrapper(glb_params base_values, double th12, double th13, double th23,
-                    double delta, double dm21, double dm31, int hierarchy,
-                    glb_params fit_values)
-/* ---------------------------------------------------------------------------- */
-/* Perform minimization for a certain set of test values                        */
-/* ---------------------------------------------------------------------------- */
+// ----------------------------------------------------------------------------
+double ChiNPWrapper(glb_params base_values, int hierarchy, glb_params fit_values)
+// ----------------------------------------------------------------------------
+// Perform minimization for a certain set of test values (base_values) and
+// return the resulting fit values (fit_values). The user has to specify the
+// desired hierarchy (HIERARCHY_NORMAL or HIERARCHY_INVERTED).
+// ----------------------------------------------------------------------------
 {
   double result;
   glb_params tv     = glbAllocParams();      /* Test values             */
@@ -28,19 +31,6 @@ double ChiNPWrapper(glb_params base_values, double th12, double th13, double th2
   glbCopyParams(base_values, tv);
   glbGetCentralValues(cv);
   glbGetCentralValues(old_cv);
-
-  if (!isnan(th12))
-    glbSetOscParams(tv, th12, GLB_THETA_12);
-  if (!isnan(th13))
-    glbSetOscParams(tv, th13, GLB_THETA_13);
-  if (!isnan(th23))
-    glbSetOscParams(tv, th23, GLB_THETA_23);
-  if (!isnan(delta))
-    glbSetOscParams(tv, delta, GLB_DELTA_CP);
-  if (!isnan(dm21))
-    glbSetOscParams(tv, dm21, GLB_DM_21);
-  if (!isnan(dm31))
-    glbSetOscParams(tv, dm31, GLB_DM_31);
 
   // Note: Converting the dm31^2 for the normal hierarchy into a dm31^2 for the
   // inverted hierarchy that would give similar oscillation probabilities has bee
@@ -96,7 +86,7 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
       const double *prescan_max, const int *prescan_steps,
       const glb_projection prescan_proj, const glb_projection fit_proj,
       int *n_deg, glb_params *deg_pos, double *deg_chi2, const unsigned long flags,
-      const unsigned long *prescan_flags)
+      const unsigned long *prescan_flags, const char *output_file)
 /* ---------------------------------------------------------------------------- */
 /* Input parameters:                                                            */
 /*   base_values: The oscillation parameters                                    */
@@ -108,6 +98,8 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
 /*   flags: A combination of the DEG_XXX flags                                  */
 /*   prescan_flags: Options for each of the parameters that are scanned         */
 /*     (e.g. DEG_LOGSCALE, DEG_PLUS_MINUS, DEG_S22)                             */
+/*   output_file: path and base name for output files (in MCMC mode)            */
+/*     if NULL, file name will be chosen automatically                          */
 /* Output parameters:                                                           */
 /*   n_deg: Input:  Max. number of degenerate solutions to return               */
 /*          Output: Number of degenerate solutions found                        */
@@ -270,6 +262,8 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
   double chi2_table_IH[n_prescan_points];
   glb_params Fit_NH = glbAllocParams();
   glb_params Fit_IH = glbAllocParams();
+  glb_params mcb_conv_crit = glbAllocParams();
+  glb_params mcb_steps = glbAllocParams();
   glb_params param_table_NH[n_prescan_points];
   glb_params param_table_IH[n_prescan_points];
   for (int j=0; j < n_prescan_points; j++)
@@ -355,12 +349,12 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
     glbSwitchSystematics(GLB_ALL, GLB_ALL, GLB_OFF);
     if ( !(private_flags & DEG_NO_NH) )
     {
-      chi2_table_NH[j] = ChiNPWrapper(Fit_NH, NAN, NAN, NAN, NAN, NAN, NAN, HIERARCHY_NORMAL, Fit_NH);
+      chi2_table_NH[j] = ChiNPWrapper(Fit_NH, HIERARCHY_NORMAL, Fit_NH);
       glbCopyParams(Fit_NH, param_table_NH[j]);
     }
     if ( !(private_flags & DEG_NO_IH) )
     {
-      chi2_table_IH[j] = ChiNPWrapper(Fit_IH, NAN, NAN, NAN, NAN, NAN, NAN, HIERARCHY_INVERTED, Fit_IH);
+      chi2_table_IH[j] = ChiNPWrapper(Fit_IH, HIERARCHY_INVERTED, Fit_IH);
       glbCopyParams(Fit_IH, param_table_IH[j]);
     }
     for (int j=0; j < glb_num_of_exps; j++)
@@ -448,8 +442,10 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
         fprintf(stderr, "degfinder: Too many degeneracies fond (max. is %d).\n", max_deg);
         break;
       }
-      deg_chi2[*n_deg] = ChiNPWrapper(param_table_NH[j], NAN, NAN, NAN, NAN, NAN, NAN,
-                                      HIERARCHY_NORMAL, deg_pos[*n_deg]);
+      if (flags & DEG_MCMC)  // MCMC mode: remember degenerate solution
+        glbCopyParams(param_table_NH[j], deg_pos[*n_deg]);
+      else
+        deg_chi2[*n_deg] = ChiNPWrapper(param_table_NH[j], HIERARCHY_NORMAL, deg_pos[*n_deg]);
 
       if (debug_level > 1)
       {
@@ -487,8 +483,10 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
         fprintf(stderr, "degfinder: Too many degeneracies fond (max. is %d).\n", max_deg);
         break;
       }
-      deg_chi2[*n_deg] = ChiNPWrapper(param_table_IH[j], NAN, NAN, NAN, NAN, NAN, NAN,
-                                      HIERARCHY_INVERTED, deg_pos[*n_deg]);
+      if (flags & DEG_MCMC)
+        glbCopyParams(param_table_IH[j], deg_pos[*n_deg]);
+      else
+        deg_chi2[*n_deg] = ChiNPWrapper(param_table_IH[j], HIERARCHY_INVERTED, deg_pos[*n_deg]);
 
       if (debug_level > 1)
       {
@@ -503,6 +501,69 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
       (*n_deg)++;
     }
   } // for(j)
+
+
+  // MCMC mode: tell MonteCUBES about degeneracies, run MCMC
+  // -------------------------------------------------------
+  if (flags & DEG_MCMC)
+  {
+#ifdef NU_USE_MONTECUBES
+    mcb_setChainNo(4);                             // Number of MCMC chains
+    mcb_setBurnNo(MCB_DYNAMIC_BURN);
+    mcb_setLengthMax(1e7);                         // Max. length of each chain
+//FIXME    mcb_setLengthMin(5000);                        // Min. length of each chain
+    mcb_setLengthMin(50);                        // Min. length of each chain
+    mcb_setVerbosity(5);
+    mcb_addStartPosition(base_values);
+    int deg_pos_ind[*n_deg];
+    for (int i=0; i < *n_deg; i++)
+      deg_pos_ind[i] = i;
+    mcb_setDegeneracySteps(deg_pos, deg_pos_ind, *n_deg); // Tell MonteCUBES about degeneracies
+//    mcb_setVerbosity(100);//FIXME
+//    mcb_seedMersenne(777);//FIXME
+    for (int i=0; i < glbGetNumOfOscParams(); i++) // MonteCUBES convergence criteria
+//      glbSetOscParams(mcb_conv_crit, 0.025, i);//FIXME
+      glbSetOscParams(mcb_conv_crit, 2.0, i);//FIXME
+    glbSetDensityParams(mcb_conv_crit, 1.0, GLB_ALL);
+    mcb_setConvergenceCriteria(mcb_conv_crit);
+
+    for (int i=0; i < glbGetNumOfOscParams(); i++) // MonteCUBES step size
+    {
+      char *p = glbGetParamName(i);
+      if (strstr(p, "TH") != NULL)
+        glbSetOscParams(mcb_steps, M_PI/30., i);
+      else if (strstr(p, "DM") != NULL)
+        if (glbGetOscParams(base_values, i) < 1e-20)
+          glbSetOscParams(mcb_steps, 0.3, i);
+        else
+          glbSetOscParams(mcb_steps, 0.01*glbGetOscParams(base_values, i), i);
+      else if (strstr(p, "ARG") != NULL  ||  strstr(p, "DELTA") != NULL)
+        glbSetOscParams(mcb_steps, M_PI/5., i);
+      else
+        glbSetOscParams(mcb_steps, 0.001, i);
+      free(p);
+    }
+    glbSetDensityParams(mcb_steps, 0.001, GLB_ALL);
+    mcb_setStepSizes(mcb_steps);
+
+    char s[FILENAME_MAX];
+    if (!output_file)
+      snprintf(s, FILENAME_MAX, "nu-mcmc");
+    else
+    {
+      if (strlen(output_file) > FILENAME_MAX-1)
+        fprintf(stderr, "degfinder: name of output file too long.\n");
+      strncpy(s, output_file, FILENAME_MAX);
+      s[FILENAME_MAX-1] = '\0';
+    }
+
+    mcb_full_MCMC(s, GLB_ALL, GLB_ALL, MCB_FULL_MARGIN);
+//    mcb_MCMC("/temp/jkopp/sterile-nu/mcmc/mcb-test-oldmcmc.dat", GLB_ALL, GLB_ALL);
+#else
+    fprintf(stderr, "degfinder: MonteCUBES support not compiled.\n");
+#endif
+  }
+  
   
   /* Clean up */
   if (private_flags & DEG_NO_SYS)
@@ -518,6 +579,8 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
    if (param_table_IH[j] != NULL)
       glbFreeParams(param_table_IH[j]);
   }
+  glbFreeParams(mcb_steps);
+  glbFreeParams(mcb_conv_crit);
   glbFreeParams(Fit_NH);
   glbFreeParams(Fit_IH);
   glbFreeProjection(private_prescan_proj);

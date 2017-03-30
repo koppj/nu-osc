@@ -1,0 +1,78 @@
+---------------------------------------------------------------
+Version history and copyright information for WBB/WC simulation
+---------------------------------------------------------------
+
+Jul 23, 2010 - Joachim Kopp
+- Switched to new LBNE fluxes for 120 GeV beam
+
+Feb 3, 2010 - Joachim Kopp
+- Beam power is now a variable ("BEAM_POWER")
+
+Feb 2, 2010 - Joachim Kopp
+- Fiducial mass of far detector is now a variable ("MASS")
+- glb files modularized
+
+Nov 17, 2009 - Joachim Kopp
+- Declared all near detector channels as "NOSC" to improve speed
+
+Nov 13, 2009 - Joachim Kopp
+- Switched to new flux file
+- Adjusted luminosity to 2.3 MW for 120 GeV beam
+  (for 3 years (3 x 2e7 s), this corresponds to 72e20 pot)
+- Adjusted luminosity to 2.0 MW for 60 GeV beam
+  (for 3 years (3 x 2e7 s), this corresponds to 125e20 pot)
+- Implemented near/far systematics
+
+Mar 5, 2008 - Patrick Huber
+- adjusted to nuflux
+
+Feb 2007 - Mark Dierckxsens
+- New smearing functions from Milind
+  Assume they are the same for neutrinos and anti-neutrinos
+- Fine tweaking of efficiencies, changing baseline.
+- Error on background is 5%
+
+Jan 2007 - Mary Bishai
+- New normalizations, efficiencies for WCC from Chiaki Yanagisawa
+
+Jul 12, 2006
+-  matrices for energy resolution extended.  The new
+   ones are used here.
+
+Jun 16, 2006 - Christine Lewis
+- flux file changed
+
+Apr 22, 2006 - Christine Lewis
+- Baseline changed from 2540 (BNL->HS) to 1300km (FNAL->HS)
+
+May 26, 2005 - Patrick Huber
+- Original glb file
+
+
+---------------------------------------------------------------
+Note on the normalization factors
+---------------------------------------------------------------
+
+NOTE: Conversion from pot to time according to LBNE baseline design for CDR:
+   FNAL beam 7.3 x 10^20 POT per year (708kW, 1.98e7s per yr, 120GeV)
+(information from Lisa Whitehead, 13 Aug 2010)
+
+At 120 GeV: 2.3 MW are equivalent to
+  2.3e6 J/s / (1.6e-19 eV/J) / (120e9 eV/pot) * 1.98e7 s/yr * 3 yr
+    = 71e20 pot
+
+Event rate [Neutrinos/GeV] =
+   flux @ 1300 km [Neutrinos/GeV/pot/m^2] * 1300^2
+ * 10^-38 * 10^-4 m^2/cm^2 * cross section [10^-38 cm^2]
+ * Number of pot
+ * 6.02e32 nucleons/kt * Detector mass [kt]
+
+==> @norm = 1300^2  *  10^-38*10^-4  *  10^20  *  6.02e32
+          = 1300^2  *  6.02 * 10^10
+          = 1.017e17
+
+The normalization factor from the LBNE file is
+  5.19*7.504*10^12*1300*1300/120.0 / 5.202 = 1.054e17
+
+
+

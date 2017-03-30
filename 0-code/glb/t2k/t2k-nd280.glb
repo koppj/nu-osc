@@ -1,0 +1,139 @@
+%!GLoBES
+// See README file for citation and version information
+
+$version="3.1.10" // Minimal GLoBES version required for this file
+
+// Beam fluxes
+nuflux(#nd280_nu_mu)<
+  @flux_file = "t2k-muon-spectrum-nd280-genie.dat"
+  @time      = 1        // dummy
+  @power     = 6.57e20  // protons on target
+  @norm      = 6e-22    // Determined by matching onto predicted T2K no osc. spectrum
+>
+
+//nuflux(#nd280_nu_mu)<
+//  @flux_file = "t2k-spectrum-nd280.dat"
+//  @time      = 1        // dummy
+//  @power     = 6.57e20  // protons on target
+//  @norm      = 3e-29 // Determined by matching onto predicted T2K no osc. spectrum
+//>
+
+
+// Detector properties
+// -------------------
+$target_mass = 0.114    // kt (fiducial mass)
+
+$profiletype = 3
+$densitytab  = {0.0}     // g/cm^3, see Escudero thesis, p. 198
+$lengthtab   = {0.280}   // km
+
+// Binning
+$emin        = 0.0       // GeV
+$emax        = 5.0       // GeV
+$binsize     = {         // Escudero fig. 4.16
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125,
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125,
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125,
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125,
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125
+               }
+
+$sampling_min      = 0.0
+$sampling_max      = 5.0
+$sampling_stepsize = {   // Escudero fig. 4.16
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125,
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125,
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125,
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125,
+                 0.125, 0.125, 0.125, 0.125,   0.125, 0.125, 0.125, 0.125
+               }
+  
+// Low-pass filter
+$filter_state = 1
+$filter_value = 0.05   // FIXME is this appropriate?
+
+
+// Energy resolution
+//include "smear-nd280.dat"  // FIXME FIXME
+energy(#ERES_ND280)<
+  @type = 1
+  @sigma_e = {0, 0.01, 0}   // \sigma(E) = \alpha * E + \beta * sqrt{E} + \gamma
+>
+
+// Cross sections
+cross(#CC)<
+  @cross_file = "XCC.dat"
+>
+
+cross(#FLAT)<
+  @cross_file = "XFlat.dat"
+>
+
+
+// Efficiencies (computed in devel.nb)
+// -----------------------------------
+
+// For debugging purposes and to compute efficiencies in Mathematica
+//%bc            = bincenter()
+//%eff_E         = {0, 100}
+//%eff           = {1, 1}
+//%eff_mu        = interpolation(%eff_E, %eff, 1, %bc)
+
+%eff_mu = {
+  0, 0.279751, 0.585663, 0.929422, 1.13341, 
+  1.12019, 1.09724, 1.1379, 1.27118, 1.30263, 
+  1.40955, 1.46639, 1.54908, 1.52349, 1.53652, 
+  1.56106, 1.60375, 1.71539, 1.73776, 1.72501, 
+  1.70777, 1.73911, 1.87304, 1.72717, 1.73762, 
+  1.55798, 1.84651, 1.79551, 1.45269, 1.69024, 
+  1.42346, 1.62941, 1.43674, 1.67374, 1.62755, 
+  1.46151, 1.5894, 1.61435, 1.73367, 12.2245 }
+
+
+// Channel definitions
+// -------------------
+
+// Muon disappearance
+channel(#ch_mu_mu)<
+  @channel = #nd280_nu_mu : + : mu  : mu  : #FLAT : #ERES_ND280
+  @post_smearing_efficiencies = copy(%eff_mu)
+>
+
+channel(#ch_mubar_mubar)<
+  @channel = #nd280_nu_mu : - : mu  : mu  : #FLAT : #ERES_ND280
+  @post_smearing_efficiencies = copy(%eff_mu)
+>
+
+// Channels without oscillations to determine normalization
+channel(#ch_mu_mu_NOSC)<
+  @channel = #nd280_nu_mu : + : NOSC_mu : NOSC_mu : #FLAT : #ERES_ND280
+  @post_smearing_efficiencies = copy(%eff_mu)
+>
+
+channel(#ch_mubar_mubar_NOSC)<
+  @channel = #nd280_nu_mu : - : NOSC_mu : NOSC_mu : #FLAT : #ERES_ND280
+  @post_smearing_efficiencies = copy(%eff_mu)
+>
+
+
+// Rules
+rule(#muons)<
+  @signal           = 1.0@#ch_mu_mu : 1.0@#ch_mubar_mubar
+  @background       = 0.0@#ch_mu_mu
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = { }
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = { }
+  @energy_window    = 0.15 : 5.0
+>
+
+rule(#muons_NOSC)<
+  @signal           = 1.0@#ch_mu_mu_NOSC : 1.0@#ch_mubar_mubar_NOSC
+  @background       = 0.0@#ch_mu_mu_NOSC
+  @sys_on_function  = "chiZero"
+  @sys_on_errors    = { }
+  @sys_off_function = "chiZero"
+  @sys_off_errors   = { }
+  @energy_window    = 0.15 : 5.0
+>
+

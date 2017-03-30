@@ -32,11 +32,15 @@ trap on_exit HUP QUIT KILL ABRT SEGV INT TERM EXIT
 
 # Parse command line options
 RUN_LOCALLY=false
-while getopts ":l" opt; do
+RUN_MPI=false
+while getopts "lM" opt; do
   case $opt in
     l)
        RUN_LOCALLY=true
       ;;
+    M)
+       RUN_MPI=true
+     ;;
   esac
 done
 shift $((OPTIND-2))
@@ -93,7 +97,23 @@ if [[ -z $NU_SIZE ]]; then
 fi
 
 OF=$OUT_FILE
-if [[ -z $NU_RANK ]]; then
+
+# MPI parallelization
+if $RUN_MPI; then
+  if $RUN_LOCALLY; then
+    echo "# Running job $EXE locally in MPI mode, $NU_SIZE processes ..."
+    mpirun -np $NU_SIZE ./$EXE $@ | tee ../results/$OUT_FILE &
+  else
+    echo "# Submitting job $EXE in MPI file, output file $OUT_FILE ..."
+    bsub -q thepshort \
+         -n 1 \
+         -N \
+         -M 1000000 \
+         "mpirun -np $NU_SIZE ./$EXE $@ > ../results/$OUT_FILE"
+  fi
+
+# Manual parallelization
+elif [[ -z $NU_RANK ]]; then
   for (( I=0; $I < $NU_SIZE; I++ )); do
     export NU_RANK=$I
     export NU_SIZE

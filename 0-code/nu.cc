@@ -128,7 +128,7 @@ int debug_level = 0;              // Verbosity level
 long default_degfinder_flags = 0; // Default options for degeneracy finder 
 char nu_flags[4096]   = "";       // Miscellaneous options                 
 long ext_flags        = 0;        // Which external inputs should be used? 
-
+static char output_file[FILENAME_MAX]=""; // Path and base name of output file in MCMC mode
 
 // Definitions for argp
 const char *argp_program_version = "nu 0.1";
@@ -158,6 +158,7 @@ static struct argp_option cmdline_options[] = {
   {"best-fit",    OPT_BF,NULL,0,"Compute best fit point at the end of parameter scan"},
   {"theta-positive", OPT_THETA_POSITIVE, NULL, 0,"Require all mixing angles to be > 0"},
   {"verbose",    'v',NULL,    0,"Show debug output (use multiple times for more)"},
+  {"outfile",    'o',"FILENAME",0,"Path/base name of output files in MCMC mode"},
   { 0 }
 };
 
@@ -476,6 +477,18 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     case 'v':
     {
       debug_level++;
+      break;
+    }
+
+    case 'o':
+    {
+      if (strlen(arg) > FILENAME_MAX-1)
+      {
+        fprintf(stderr, "Name of output file too long.\n");
+        return -3;
+      }
+      strncpy(output_file, arg, FILENAME_MAX);
+      output_file[FILENAME_MAX-1] = '\0';
       break;
     }
 
@@ -1161,7 +1174,12 @@ int main(int argc, char *argv[])
   }
 
   for (int j=0; j < glbGetNumOfOscParams(); j++)
+  {
     glbSetParamName(snu_param_strings[j], j);
+#ifdef NU_USE_MONTECUBES
+    mcb_setVarName(j, snu_param_strings[j]);
+#endif
+  }
   
   // Initialize user-defined chi^2 functions (chiMB_init has to be called after the
   // number of oscillation parameters has been fixed
@@ -1210,10 +1228,6 @@ int main(int argc, char *argv[])
 
   // User-defined prior function to include external input 
   glbRegisterPriorFunction(&my_prior, NULL, NULL, &ext_flags);
-#ifdef NU_USE_MONTECUBES
-  mcb_setPriorFunction(my_prior, &ext_flags);
-#endif
-
 
   // Initialize parameter and projection vector(s) 
   true_values     = glbAllocParams();
@@ -1526,10 +1540,35 @@ int main(int argc, char *argv[])
 
     // Markov Chain Monte Carlo
     case NU_ACTION_MCMC:
+    {
       printf("# Markov Chain Monte Carlo\n");
       printf("#\n");
-      mcmc("", n_scan_params, scan_params, scan_p_min, scan_p_max, scan_p_flags);
+
+      // Sample over parameters indicated as "scan" parameters (-p) and as
+      // "minimization" parameters (-m) on the command line
+      int n_mcmc_params = n_scan_params + n_min_params;
+      char *mcmc_params[n_mcmc_params];
+      double mcmc_p_min[n_mcmc_params], mcmc_p_max[n_mcmc_params];
+      unsigned long mcmc_p_flags[n_mcmc_params];
+      for (int i=0; i < n_scan_params; i++)
+        mcmc_params[i] = scan_params[i];
+      for (int i=0; i < n_min_params; i++)
+      {
+        mcmc_params[n_scan_params+i] = min_params[i];
+        mcmc_p_min[n_scan_params+i] = 0.0;
+        mcmc_p_max[n_scan_params+i] = 0.0;
+        mcmc_p_flags[n_scan_params+i] = 0;
+      }
+      memcpy(mcmc_p_min, scan_p_min, sizeof(*mcmc_p_min) * n_scan_params);
+      memcpy(mcmc_p_max, scan_p_max, sizeof(*mcmc_p_max) * n_scan_params);
+      memcpy(mcmc_p_flags, scan_p_flags, sizeof(*mcmc_p_flags) * n_scan_params);
+
+      mcmc_deg(output_file, n_mcmc_params, mcmc_params, mcmc_p_min, mcmc_p_max,
+                 mcmc_p_flags, n_prescan_params, prescan_params,
+                 prescan_p_min, prescan_p_max, prescan_p_steps, prescan_p_flags);
+//      mcmc("", n_scan_params, scan_params, scan_p_min, scan_p_max, scan_p_flags);
       break;
+    }
 
     // Scan over parameters and over exposure
     case NU_ACTION_EXPOSURE_SCAN:
