@@ -865,7 +865,7 @@ int load_exps(const int n_exps, char **exps)
     else if (strcasecmp(exps[i], "T2K") == 0)
     {
 //      glbInitExperiment("t2k-nd280.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("t2k-nd-generic.glb", &glb_experiment_list[0], &glb_num_of_exps);
+//      glbInitExperiment("t2k-nd-generic.glb", &glb_experiment_list[0], &glb_num_of_exps);
       glbInitExperiment("t2k-fd.glb", &glb_experiment_list[0], &glb_num_of_exps);
     }
 
@@ -1110,7 +1110,7 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-    printf("# Initializing thread %d of %d\n.", mpi_rank+1, mpi_size);
+    printf("# Initializing thread %d of %d.\n", mpi_rank+1, mpi_size);
   #elif defined NU_PSEUDO_MPI
     /* Read environment variables NU_RANK and NU_SIZE that tell us which part
      * of the job this instance of the program should carry out */
@@ -1206,8 +1206,8 @@ int main(int argc, char *argv[])
   glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-NC-2010",&minos_nc);
   glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-CC-2010",&minos_cc);
 
-  glbDefineChiFunction(&chiT2K,           7, "chiT2K",       NULL);
-  glbDefineChiFunction(&chiT2K,           0, "chiT2K-nosys", NULL);
+  glbDefineChiFunction(&chiT2K_FDonly,    7, "chiT2K",       NULL);
+  glbDefineChiFunction(&chiT2K_FDonly,    0, "chiT2K-nosys", NULL);
 
   glbDefineChiFunction(&chiLSNDspectrum,  2, "chiLSNDspectrum",  NULL);
 //  chiMB_init(); // for 2010 version of MiniBooNE code
@@ -1225,9 +1225,6 @@ int main(int argc, char *argv[])
   // Load experiments 
   if (load_exps(n_exps, exps) < 0)
     return -2;
-
-  // User-defined prior function to include external input 
-  glbRegisterPriorFunction(&my_prior, NULL, NULL, &ext_flags);
 
   // Initialize parameter and projection vector(s) 
   true_values     = glbAllocParams();
@@ -1398,6 +1395,9 @@ int main(int argc, char *argv[])
     #ifdef USE_BUGEY_SP
       printf("#     Bugey spectrum\n");
     #endif
+    #ifdef USE_DANSS
+      printf("#     DANSS\n");
+    #endif
     #ifdef USE_GAL
       printf("#     Gallium\n");
     #endif
@@ -1531,12 +1531,28 @@ int main(int argc, char *argv[])
 
     // General parameter scan
     case NU_ACTION_PARAM_SCAN:
+    {
       printf("# General parameter scan\n");
       printf("#\n");
+
+      // User-defined prior function to include external input
+      prior_params pp;
+      pp.ext_flags = ext_flags;
+      pp.n_scan_params = n_scan_params;
+      for (int i=0; i < n_scan_params; i++)
+        pp.scan_params[i] = glbFindParamByName(scan_params[i]);
+      memcpy(pp.scan_p_flags, scan_p_flags, n_scan_params*sizeof(*scan_p_flags));
+      glbRegisterPriorFunction(&my_prior, NULL, NULL, &pp);
+
+      // Do the scan
       param_scan("", n_scan_params, scan_params, scan_p_min, scan_p_max, scan_p_steps,
                  scan_p_flags, n_min_params, min_params, n_prescan_params, prescan_params,
                  prescan_p_min, prescan_p_max, prescan_p_steps, prescan_p_flags);
+
+      // Reset prior function to default
+      glbRegisterPriorFunction(NULL, NULL, NULL, NULL);
       break;
+    }
 
     // Markov Chain Monte Carlo
     case NU_ACTION_MCMC:
@@ -1563,10 +1579,22 @@ int main(int argc, char *argv[])
       memcpy(mcmc_p_max, scan_p_max, sizeof(*mcmc_p_max) * n_scan_params);
       memcpy(mcmc_p_flags, scan_p_flags, sizeof(*mcmc_p_flags) * n_scan_params);
 
+      // User-defined prior function to include external input
+      prior_params pp;
+      pp.ext_flags = ext_flags;
+      pp.n_scan_params = n_mcmc_params;
+      for (int i=0; i < n_mcmc_params; i++)
+        pp.scan_params[i] = glbFindParamByName(mcmc_params[i]);
+      memcpy(pp.scan_p_flags, mcmc_p_flags, n_mcmc_params*sizeof(*mcmc_p_flags));
+      glbRegisterPriorFunction(&my_prior, NULL, NULL, &pp);
+
+      // Run Markov chains
       mcmc_deg(output_file, n_mcmc_params, mcmc_params, mcmc_p_min, mcmc_p_max,
                  mcmc_p_flags, n_prescan_params, prescan_params,
                  prescan_p_min, prescan_p_max, prescan_p_steps, prescan_p_flags);
-//      mcmc("", n_scan_params, scan_params, scan_p_min, scan_p_max, scan_p_flags);
+
+      // Reset prior function to default
+      glbRegisterPriorFunction(NULL, NULL, NULL, NULL);
       break;
     }
 

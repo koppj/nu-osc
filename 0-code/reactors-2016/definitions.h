@@ -17,6 +17,7 @@
 #define USE_DB
 #define USE_RENO
 #define USE_BUGEY_SP
+#define USE_DANSS
 #define USE_GAL
 
 #ifdef USE_ALL
@@ -28,6 +29,7 @@
 # define USE_DB
 # define USE_RENO
 # define USE_BUGEY_SP
+# define USE_DANSS
 # define USE_GAL
 #endif
 
@@ -39,7 +41,7 @@
 namespace ns_reactor
 {
 
-enum EXPERIMENTS {SBL, CHOOZ, PV, KAML, DC, DB, RENO, BUG_SP, GAL, N_EXP};
+enum EXPERIMENTS {SBL, CHOOZ, PV, KAML, DC, DB, RENO, BUG_SP, DANSS, GAL, N_EXP};
 
 enum SBL_Reactors {BUGEY4, ROVNO, BUGEY3_1, BUGEY3_2, BUGEY3_3, 
 		   GOSGEN_1, GOSGEN_2, GOSGEN_3, ILL, 
@@ -132,6 +134,14 @@ enum SBL_Reactors {BUGEY4, ROVNO, BUGEY3_1, BUGEY3_2, BUGEY3_3,
 # define NPULL_BUG_SP 0
 #endif
 
+#ifdef USE_DANSS
+# define NBIN_DANSS 30
+# define NPULL_DANSS 1
+#else
+# define NBIN_DANSS 0
+# define NPULL_DANSS 0
+#endif
+
 #ifdef USE_GAL
 # define NBIN_GAL 4
 # define NPULL_GAL 2
@@ -141,7 +151,7 @@ enum SBL_Reactors {BUGEY4, ROVNO, BUGEY3_1, BUGEY3_2, BUGEY3_3,
 #endif
 
 /* total bins in chisq */
-#define NBIN_CHISQ (NBIN_SBL + NBIN_CHOOZ + NBIN_PV + NBIN_KAML + NBIN_DC + NBIN_DB + NBIN_RENO + NBIN_BUG_SP + NBIN_GAL)
+#define NBIN_CHISQ (NBIN_SBL + NBIN_CHOOZ + NBIN_PV + NBIN_KAML + NBIN_DC + NBIN_DB + NBIN_RENO + NBIN_BUG_SP + NBIN_DANSS + NBIN_GAL)
 
 
 #define N_CO_UNC 3   // 2nd order polynomial for bin-to-bin uncorrelated flux error
@@ -159,7 +169,7 @@ enum Pulls {
 
 
 /* total pulls in chisq */
-#define NPULLS (PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC + NPULL_DB + NPULL_RENO + NPULL_BUG_SP + NPULL_GAL)
+#define NPULLS (PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC + NPULL_DB + NPULL_RENO + NPULL_BUG_SP + NPULL_DANSS + NPULL_GAL)
 
 
 
@@ -319,12 +329,20 @@ bool singsolve(const int size, void *B_in, void *L_out);
 /******** Gallium **************/
 void gallium_init(void);
 void set_table_gallium(Param_5nu &p, double cff[NBIN_CHISQ][NPULLS+1]);
+
+/******** DANSS **************/
+void danss_init(const int old_new);
+void set_table_danss(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1]);
+void plot_danss_pred(Param_5nu &prm);
+
 /******** Bugey spectrum **************/
 void bugey_init(const int old_new = NEW);
 void set_table_bugey(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1]);
+
 /******** RENO **************/
 void RENO_init(void);
 void set_table_RENO(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1]);
+
 /******** DB **************/
 void DB_init(void);
 void set_table_DB(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1]);

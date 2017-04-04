@@ -51,7 +51,7 @@ EXE=$(mktemp -u nu-tmp-XXXXX)
 
 # Definitions for Thomas' SBL codes
 if [[ -z $SBLDEFS ]]; then
-  SBLDEFS="SBL CHOOZ PV DC DB KAML RENO BUGEY_SP GAL"
+  SBLDEFS="SBL CHOOZ PV DC DB KAML RENO BUGEY_SP DANSS GAL"
 fi
 
 CODE=""

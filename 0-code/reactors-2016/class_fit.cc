@@ -39,6 +39,9 @@ void set_chisq_table(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1])
 #ifdef USE_BUGEY_SP
   if(fit_use_ex[BUG_SP])set_table_bugey(prm, cff);
 #endif
+#ifdef USE_DANSS
+  if(fit_use_ex[DANSS]) set_table_danss(prm, cff);
+#endif
 #ifdef USE_GAL
   if(fit_use_ex[GAL])   set_table_gallium(prm, cff);
 #endif
@@ -62,6 +65,7 @@ Fit::Fit(void)
    n_bin_ex[DB]    = NBIN_DB;
    n_bin_ex[RENO]  = NBIN_RENO;
    n_bin_ex[BUG_SP]= NBIN_BUG_SP;
+   n_bin_ex[DANSS] = NBIN_DANSS;
    n_bin_ex[GAL]   = NBIN_GAL;
      
    // setting the first bin for each experiment
@@ -78,7 +82,8 @@ Fit::Fit(void)
    first_pull[DB]    = PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC;
    first_pull[RENO]  = PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC + NPULL_DB;
    first_pull[BUG_SP]= PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC + NPULL_DB + NPULL_RENO;
-   first_pull[GAL]   = PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC + NPULL_DB + NPULL_RENO + NPULL_BUG_SP;
+   first_pull[DANSS] = PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC + NPULL_DB + NPULL_RENO + NPULL_BUG_SP;
+   first_pull[GAL]   = PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC + NPULL_DB + NPULL_RENO + NPULL_BUG_SP + NPULL_DANSS;
 
    for(int i = 0; i < NPULLS; i++)
      pull_status[i] = ACTIVE;

@@ -67,6 +67,15 @@ typedef struct
   double E_1st_min;
 } wbb_params_type;
 
+/* Parameters passed to the prior function */
+typedef struct
+{
+  int ext_flags;                  /* Which external codes are used? */
+  int n_scan_params;              /* Number of variable parameters in scan or MCMC */
+  int scan_params[32];            /* IDs of these parameters */
+  unsigned long scan_p_flags[32]; /* Flags for each parameter */
+} prior_params;
+
 /* Neutrino flavors */
 #define NU_E    0
 #define NU_MU   1
@@ -191,6 +200,8 @@ double chiKamLAND(int exp, int rule, int n_params, double *x, double *errors,
 double chiLSNDspectrum(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 double chiT2K(int exp, int rule, int n_params, double *x, double *errors,
+              void *user_data);
+double chiT2K_FDonly(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 
 

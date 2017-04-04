@@ -35,7 +35,7 @@ double sys_DC[NBIN_DC];     // reduced detector uncert (green histogram)
 const double isofract_dc[NISO]={0.488, 0.087, 0.359, 0.076};
 
 /* binning in positron energy */
-double bin[NBIN_DC/2][2];
+static double bin[NBIN_DC/2][2];
 
 const double bl_dc[2] = {.4, 1.05};  
 

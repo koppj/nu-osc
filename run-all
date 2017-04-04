@@ -168,6 +168,13 @@ unset SP
 #                    -p "TH14,0,0.8,20" \
 #                    -p "DM41,-1.5,1.5,15,LOGSCALE"
 
+# DANSS testing
+# -------------
+#OUT_FILE=th14dm41-danss$SUFFIX.dat SBLDEFS="DANSS" \
+#  ./compile-and-run -l -f 4 --no-ih -a PARAM_SCAN -e SBL\
+#                    -p "TH14,0,0.8,20" \
+#                    -p "DM41,-2,1,30,LOGSCALE"
+
 
 # ---------------------------------------------------------------------------
 #                             Production Runs
@@ -868,16 +875,16 @@ export SP="-f 4 --no-ih -a MCMC \
                     -p "TH14,0,0.6,20" "
 export NU_SIZE=4
 export OUT_FILE="mcmc-log"
-SBLDEFS="SBL BUGEY_SP" ./compile-and-run -M -l $SP -e SBL \
+SBLDEFS="SBL BUGEY_SP CHOOZ PV DC DB RENO DANNS" ./compile-and-run -M -l $SP -e SBL \
+                           -o $OUTPUT_PATH/dm41th13th14-sbllblreactors$SUFFIX.dat
+SBLDEFS="CHOOZ PV DC DB RENO" ./compile-and-run -M -l $SP -e SBL \
+                           -o $OUTPUT_PATH/dm41th13th14-lblreactors$SUFFIX.dat
+SBLDEFS="GALP" ./compile-and-run -M -l $SP -e SBL \
+                           -o $OUTPUT_PATH/dm41th13th14-gal$SUFFIX.dat
+SBLDEFS="SBL BUGEY_SP DANSS" ./compile-and-run -M -l $SP -e SBL \
                            -o $OUTPUT_PATH/dm41th13th14-sblreactors$SUFFIX.dat
-#OUT_FILE=dm41th13th14-sbllblreactors$SUFFIX.dat SBLDEFS="SBL BUGEY_SP CHOOZ PV DC DB RENO" \
-#  ./compile-and-run -l $SP -e SBL
-#OUT_FILE=dm41th13th14-lblreactors$SUFFIX.dat SBLDEFS="CHOOZ PV DC DB RENO" \
-#  ./compile-and-run -l $SP -e SBL -c DM31
-#OUT_FILE=dm41th13th14-gal$SUFFIX.dat SBLDEFS="GAL" \
-#  ./compile-and-run -l $SP -e SBL
-#OUT_FILE=dm41th13th14-c12$SUFFIX.dat SBLDEFS="" \
-#  ./compile-and-run -l $SP -e C12
+SBLDEFS="" ./compile-and-run -M -l $SP -e C12 \
+                           -o $OUTPUT_PATH/dm41th13th14-sblreactors$SUFFIX.dat
 
 export SP="$SP -s "DELTA_0,0,4.7,3" -s "DELTA_1,0,4.7,3" -m "DELTA_0,DELTA_1""
 #OUT_FILE=dm41th13th14-solar-kaml$SUFFIX.dat SBLDEFS="KAML" \

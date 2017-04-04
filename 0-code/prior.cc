@@ -23,6 +23,7 @@ using namespace std;
 // Global variables
 extern gsl_matrix_complex *U;
 extern int n_flavors;
+extern int action;
 
 // Minimum/maximum values of dm21^2 for the solar neutrino code
 extern double true_sdm;
@@ -270,6 +271,11 @@ int ext_init(int ext_flags)
       ns_reactor::bugey_init(old_new_main);        // Bugey
       sbl_exps[ns_reactor::BUG_SP] = true;
     #endif
+    #ifdef USE_DANSS
+      printf("# Initializing DANSS code ...\n");
+      ns_reactor::danss_init(old_new_main);        // DANSS
+      sbl_exps[ns_reactor::DANSS] = true;
+    #endif
     #ifdef USE_GAL
       printf("# Initializing Gallium code ...\n");
       ns_reactor::gallium_init();                  // Gallium radioactive source experiments
@@ -392,12 +398,12 @@ double my_prior(const glb_params in, void* user_data)
   glbGetProjection(p);
   glbGetOscillationParameters(params);
     // NOTE: We don't use the "in" parameters because they may contain inconsistent
-    // values for Ue3 <-> th13, Ue4 <-> th14, etc. On the other, since GLoBES calls
+    // values for Ue3 <-> th13, Ue4 <-> th14, etc. On the other hand, since GLoBES calls
     // the prior function immediately after a rate calculation, we can be sure that
     // the oscillation engine still has the correct parameter values stored
 
   int i;
-  int ext_flags = *((int *) user_data);
+  prior_params *pp = (prior_params *) user_data;
   double pv = 0.0;
   double fitvalue,centralvalue,inputerror;
 
@@ -479,7 +485,7 @@ double my_prior(const glb_params in, void* user_data)
 
   // Add chi^2 from external codes
   // -----------------------------
-  if (ext_flags)
+  if (pp->ext_flags)
   {
     // Workaround for Thomas' reactor code allowing only certain ranges for
     // dm21sq, dm31sq, dm41sq, dm51sq
@@ -565,31 +571,31 @@ double my_prior(const glb_params in, void* user_data)
 
 
     // Compute chi^2 using external codes
-    if (ext_flags & EXT_MB)
+    if (pp->ext_flags & EXT_MB)
       pv += chi2mb475(sbl_params);
-    if (ext_flags & EXT_MB_300)
+    if (pp->ext_flags & EXT_MB_300)
       pv += chi2mb300(sbl_params);
-    if (ext_flags & EXT_MBANTI)
+    if (pp->ext_flags & EXT_MBANTI)
       pv += chi2_MBA_475(sbl_params);
-    if (ext_flags & EXT_MBANTI_200)
+    if (pp->ext_flags & EXT_MBANTI_200)
       pv += chi2_MBA_200(sbl_params);
-    if (ext_flags & EXT_KARMEN)
+    if (pp->ext_flags & EXT_KARMEN)
       pv += chi2karmen(sbl_params);
-    if (ext_flags & EXT_LSND)
+    if (pp->ext_flags & EXT_LSND)
       pv += chi2lsnd(sbl_params);
-    if (ext_flags & EXT_NOMAD)
+    if (pp->ext_flags & EXT_NOMAD)
       pv += chi2nomad(sbl_params);
-    if (ext_flags & EXT_CDHS)
+    if (pp->ext_flags & EXT_CDHS)
       pv += chi2cdhs(sbl_params);
-    if (ext_flags & EXT_ATM_TABLE)
+    if (pp->ext_flags & EXT_ATM_TABLE)
       pv += chi2atm(sbl_params);
-    if (ext_flags & EXT_MINOS2016)
+    if (pp->ext_flags & EXT_MINOS2016)
       pv += MINOS_2016_prior(in);
 
 
     // SBL reactor experiments + gallium experiments
     // ---------------------------------------------
-    if (ext_flags & EXT_REACTORS)
+    if (pp->ext_flags & EXT_REACTORS)
     {
       // Prepare parameter data structure for Thomas' 2012 reactor code
       struct ns_reactor::Param_5nu reactor_params =
@@ -622,11 +628,15 @@ double my_prior(const glb_params in, void* user_data)
       }
       reactor_params.set_ang();
 
+      // FIXME
+//      plot_danss_pred(reactor_params);
+//      exit(0);
+
       if (memcmp(&last_reactor_params, &reactor_params, sizeof(reactor_params)) != 0)
       {     // Recompute reactor chi^2 only if the relevant parameters have changed
         last_reactor_params = reactor_params;
-//        ns_reactor::fit.pull_status[ns_reactor::FLUX_NORM] = ns_reactor::FIXED; //FIXME
-//        ns_reactor::fit.set_experiments(sbl_exps);//FIXME?
+//        ns_reactor::fit.pull_status[ns_reactor::FLUX_NORM] = ns_reactor::FIXED;
+//        ns_reactor::fit.set_experiments(sbl_exps);
         last_chi2_reactor = ns_reactor::fit.chisq(reactor_params);
         pv += last_chi2_reactor;
       }
@@ -637,7 +647,7 @@ double my_prior(const glb_params in, void* user_data)
 
 //    // Atmospheric neutrinos -- 2011 code (v43)
 //    // ----------------------------------------
-//    if (ext_flags & EXT_ATM_COMP)
+//    if (pp->ext_flags & EXT_ATM_COMP)
 //    {
 //      // Workaround for Michele's code requiring dm31sq < 1e-2
 //      if (fabs(glbGetOscParamByName(params, "DM31")) > 0.99e-2)
@@ -667,12 +677,12 @@ double my_prior(const glb_params in, void* user_data)
 //                        glbGetOscParamByName(params, "DM31"));
 //      else
 //        pv -= 1.e30;
-//    } // ext_flags & EXT_ATM_COMP
+//    } // pp->ext_flags & EXT_ATM_COMP
 
 
     // Atmospheric neutrinos -- 2012 code (v54) and 2017 code (v70)
     // ------------------------------------------------------------
-    if (ext_flags & EXT_ATM_COMP  ||  ext_flags & EXT_DEEPCORE)
+    if (pp->ext_flags & EXT_ATM_COMP  ||  pp->ext_flags & EXT_DEEPCORE)
     {
 #ifdef USE_ATM
       complx (*_U)[n_flavors] =
@@ -703,12 +713,12 @@ double my_prior(const glb_params in, void* user_data)
     printf("my_prior: Compiled without atmospherics support.\n");
     exit(-2);
 #endif
-    } // ext_flags & EXT_ATM_COMP  ||  ext_flags & EXT_DEEPCORE
+    } // pp->ext_flags & EXT_ATM_COMP  ||  pp->ext_flags & EXT_DEEPCORE
 
 
     // Interface to Michele's solar neutrino code
     // ------------------------------------------
-    if (ext_flags & EXT_SOLAR)
+    if (pp->ext_flags & EXT_SOLAR)
     {
 #ifdef USE_SOLAR
       static Angles last_a = { NAN, NAN, NAN, NAN, NAN, NAN, NAN };
@@ -763,12 +773,12 @@ double my_prior(const glb_params in, void* user_data)
     printf("my_prior: Compiled without solar support.\n");
 #endif
     }
-  } // if (ext_flags)
+  } // if (pp->ext_flags)
+
 
   // Add oscillation parameter priors
-  // --------------------------------
-  for(i=0; i < glbGetNumOfOscParams(); i++)
-    if(glbGetProjectionFlag(p,i)==GLB_FREE)
+  for (i=0; i < glbGetNumOfOscParams(); i++)
+    if (glbGetProjectionFlag(p,i) == GLB_FREE)
     {
       fitvalue     = glbGetOscParams(params,i);
       centralvalue = glbGetOscParams(central_values,i);
@@ -777,18 +787,54 @@ double my_prior(const glb_params in, void* user_data)
         pv += SQR((centralvalue-fitvalue)/inputerror);
     }
 
-
   // Add matter parameter priors
-  // ---------------------------
-  for(i=0; i < glb_num_of_exps; i++)
-  if(glbGetDensityProjectionFlag(p,i) == GLB_FREE)
+  for (i=0; i < glb_num_of_exps; i++)
+    if (glbGetDensityProjectionFlag(p,i) == GLB_FREE)
+    {
+      fitvalue     = glbGetDensityParams(params,i);
+      centralvalue = 1.0;
+      inputerror   = glbGetDensityParams(input_errors,i);
+      if(inputerror > 1e-12)
+        pv += SQR((centralvalue-fitvalue)/inputerror);
+    }
+
+  // Extra priors for MCMC mode
+  // --------------------------
+  if (action == NU_ACTION_MCMC)
   {
-    fitvalue     = glbGetDensityParams(params,i);
-    centralvalue = 1.0;
-    inputerror   = glbGetDensityParams(input_errors,i);
-    if(inputerror > 1e-12)
-      pv += SQR((centralvalue-fitvalue)/inputerror);
-  }
+    for (i=0; i < pp->n_scan_params; i++)
+    {
+      // Add non-constant priors only if this parameter doesn't have a user-defined prior yet
+      // NOTE: these priors are not properly normalized (but this shouldn't hurt the MCMC)
+      if (glbGetOscParams(input_errors, pp->scan_params[i]) <= 1e-12)
+      {
+        double x = glbGetOscParams(params,pp->scan_params[i]);
+        if (pp->scan_p_flags[i] & DEG_PLUS_MINUS)
+          x = fabs(x);
+        else if (x < 0)
+          pv += 1.e12;
+        else
+        {
+          if ((pp->scan_p_flags[i] & DEG_S22) && (pp->scan_p_flags[i] & DEG_LOGSCALE))
+          {
+            double s2x  = sin(2.*x);
+            if (s2x != 0.)
+              pv += -2. * log( (1./SQR(s2x)) * 2. * s2x * sqrt(1. - SQR(s2x)) * 2. );
+          }
+          else if (pp->scan_p_flags[i] & DEG_LOGSCALE)
+          {
+            if (x != 0.)
+              pv += -2. * log(1./x);
+          }
+          else if (pp->scan_p_flags[i] & DEG_S22)
+          {
+            double s2x  = sin(2.*x);
+            pv += -2. * log(  2. * s2x * sqrt(1. - SQR(s2x)) * 2. );
+          }
+        } // if (DEG_PLUS_MINUS)
+      } // if (input_errors <= 1e-12)
+    } // for (i)
+  } // if (NU_ACTION_MCMC)
 
 my_prior_end:
   glbFreeParams(central_values);
