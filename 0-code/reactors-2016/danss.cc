@@ -114,7 +114,6 @@ double DANSS_PROB::sinq(const double DmqL, const int bl, const int bin)
 
 /*************************** init *****************************/
 
-// For systematics, see slide 62 of Cern talk
 void danss_init(const int old_new)
 {
   this_old_new_danss = old_new;

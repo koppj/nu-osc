@@ -13,6 +13,7 @@
 #include "glb_types.h"
 #include "glb_prior.h"
 #include "const.h"
+#include "LSND_v5.h"
 #include "nu.h"
 #include "sbl/definitions.h"
 #ifdef NU_USE_MONTECUBES
@@ -248,10 +249,13 @@ static void my_channel_printf_mathematica(FILE *stream, const double *energy,
 /*************************************************************************** 
  * Print event rates                                                       *
  ***************************************************************************/
-int print_rates()
+int print_rates(const long ext_flags)
 {
   FILE *stream = stdout;
   int exp, rule;
+
+  // Print event rates for GLoBES experiments
+  // ----------------------------------------
 
   // Compute true rates 
   glbSetOscillationParameters(true_values);
@@ -288,9 +292,37 @@ int print_rates()
     if (exp < glb_num_of_exps-1)
       glbPrintDelimiter(stream,'m');
     fprintf(stream,"\n");
+
+    // Special treatment for Pedro's MiniBooNE code: call dedicated
+    // print function; requires one prior call to chiMB to compute spectrum
+    #ifdef NU_USE_NUSQUIDS
+    if (strcmp(glbGetFilenameOfExperiment(exp), "MBneutrino200.glb") == 0)
+    {
+      chiMB(exp, GLB_ALL, 0, NULL, NULL, NULL);
+      getMBspectrum("../1-spectra/mb-spectrum.dat");
+    }
+    #endif
   }
+
+  // Print event rates from (some) external codes
+  // --------------------------------------------
+  if (ext_flags & EXT_MINOS2017)
+  {
+    MINOS_2017_prior(true_values, MINOS_2017_PRINT_RATES);
+  }
+
+#ifdef NU_USE_NUSQUIDS
+  if (ext_flags & EXT_LSND_IVAN)
+  {
+    extern LSND *LSND_ivan_fitter;
+    extern regeneration::Param p_oscdecay;
+    LSND_ivan_fitter->print_spectrum(p_oscdecay);
+  }
+#endif
+
   glbPrintDelimiter(stream,'r');
   fprintf(stream, "\n");
+
 
   return 0;
 }
@@ -655,7 +687,7 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
 ////   key_string: Prefix for output
 ////   n_p: Number of parameters to vary
 ////   params: Names of parameters to vary
-////   p_min, p_maxs: Min/max values for each parameter
+////   p_min, p_max: Min/max values for each parameter
 ////   p_flags: Extra options for each parameter (e.g. DEG_LOGSCALE)
 //// -------------------------------------------------------------------------
 //{
@@ -747,10 +779,10 @@ int mcmc_deg(const char *output_file, int n_p, char *params[],
 //   output_file: Path and base name for output file
 //   n_p: Number of parameters to vary
 //   params: Names of parameters to vary
-//   p_min, p_maxs: Min/max values for each parameter
+//   p_min, p_max: Min/max values for each parameter
 //   p_flags: Extra options for each parameter (e.g. DEG_LOGSCALE)
 //   prescan_params: Parameters to vary in prescan
-//   prescan_p_min, prescan_p_maxs: Min/max values for each parameter in prescan
+//   prescan_p_min, prescan_p_max: Min/max values for each parameter in prescan
 //   prescan_p_flags: Extra options for parameters in prescan
 // -------------------------------------------------------------------------
 {
@@ -831,7 +863,7 @@ int mcmc_deg(const char *output_file, int n_p, char *params[],
 
   return 0;
 #else
-  return DBL_MAX;
+  return -7;
 #endif
 }
 

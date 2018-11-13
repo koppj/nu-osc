@@ -18,7 +18,7 @@ Adjustment for reactor code (2012 version):
 - Remove reactor-related stuff from old sbl/ directory
   (remove also minimize-simplex library)
 - Add new reactors/ directory to Makefile (also in the linker call)
-- Create Make in reactors/ directory and add all object files
+- Create Makefile in reactors/ directory and add all object files
   (corresponding to all .cc files)
 - Rename main() function in main.cc to reactor_main to avoid two main's
 - Add namespacing environment to every .cc file and .h in reactors/
@@ -31,4 +31,14 @@ Adjustment for reactor code (2012 version):
 - Replace p.dmq[2] ---> fabs(p.dmq[2])  in chooz.cc and dc.cc to allow
   for inverted hierarchy
 
+
+Adjustments for reactor code (version mychooz-15.3):
+- change location where reactors/ symlink is pointing 
+- copy Makefile from reactors-2016/ directory and adjust list of .o files
+- in prior.cc, remove USE_XXX statements for unused codes (NEOS, DB)
+- Adjust USE_XXX headers in definitions.h
+- in main.cc, comment out main() as well as all functions calling exp10
+- Adjust REACTOR_PATH in definitions.h to ./reactors/
+- Add #ifdef DB_FLUX to db-flux.cc
+- Add #ifdef USE_XXX directives to set_chisq_table() in class_fit.cc
 

@@ -13,12 +13,15 @@ using namespace std;
 #include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_matrix.h>
 #include <globes/globes.h>   /* GLoBES library */
-#include "nu.h"
-#include "const.h"
 #include "sbl/definitions.h"
 #include "reactors/definitions.h"
+#include "db-neos/db-neos.h"
 #include "atm/LibWrap/out.interface.hh"
 #include "solar/LibWrap/out.interface.hh"
+#include "LSND_v5.h"
+#include "nu.h"
+#include "const.h"
+
 
 // Global variables
 extern gsl_matrix_complex *U;
@@ -48,6 +51,16 @@ extern int theta_positive;
 // sure if this flag is still used consistently. Therefore, DO NOT
 // change this!!! Fits with the old fluxes are no longer possible.
 int old_new_main = NEW; // Use OLD or NEW reactor neutrino fluxes?
+
+
+// Daya Bay and NEOS objects for Alvaro's code
+DB_class DB_fitter;
+Neos_DB_class Neos_fitter;
+
+// LSND object for Ivan's code
+#ifdef NU_USE_NUSQUIDS
+LSND *LSND_ivan_fitter = NULL;
+#endif
 
 
 /***************************************************************************
@@ -191,6 +204,8 @@ int solar_parameters(gsl_matrix_complex *U, Angles *a)
  ***************************************************************************/
 int ext_init(int ext_flags)
 {
+  int status;
+
   if (ext_flags & EXT_MB  ||  ext_flags & EXT_MB_300)
   {
     printf("# Initializing MiniBooNE code (neutrinos) ...\n");
@@ -251,16 +266,16 @@ int ext_init(int ext_flags)
       ns_reactor::dc_init(old_new_main);           // Double Chooz
       sbl_exps[ns_reactor::DC] = true;
     #endif
-    #ifdef USE_DB
-      printf("# Initializing Daya Bay sterile neutrino code ...\n");
-      ns_reactor::DB_init();                       // Daya Bay
-      sbl_exps[ns_reactor::DB] = true;
-    #endif
-    #ifdef USE_DB_3F
-      printf("# Initializing Daya Bay 3-flavor code ...\n");
-      ns_reactor::DB_init();                       // Daya Bay
-      sbl_exps[ns_reactor::DB] = true;
-    #endif
+//    #ifdef USE_DB
+//      printf("# Initializing Daya Bay sterile neutrino code ...\n");
+//      ns_reactor::DB_init();                       // Daya Bay
+//      sbl_exps[ns_reactor::DB] = true;
+//    #endif
+//    #ifdef USE_DB_3F
+//      printf("# Initializing Daya Bay 3-flavor code ...\n");
+//      ns_reactor::DB_init();                       // Daya Bay
+//      sbl_exps[ns_reactor::DB] = true;
+//    #endif
     #ifdef USE_RENO
       printf("# Initializing RENO code ...\n");
       ns_reactor::RENO_init();                     // RENO
@@ -276,10 +291,24 @@ int ext_init(int ext_flags)
       ns_reactor::danss_init(old_new_main);        // DANSS
       sbl_exps[ns_reactor::DANSS] = true;
     #endif
+//    #ifdef USE_NEOS
+//      printf("# Initializing NEOS code ...\n");
+//      ns_reactor::neos_init(old_new_main);         // NEOS
+//      sbl_exps[ns_reactor::NEOS] = true;
+//    #endif
     #ifdef USE_GAL
       printf("# Initializing Gallium code ...\n");
       ns_reactor::gallium_init();                  // Gallium radioactive source experiments
       sbl_exps[ns_reactor::GAL] = true;
+    #endif
+
+    #ifdef USE_DB_ALVARO
+      printf("# Initializing Alvaro's Daya Bay code ...\n");
+      DB_fitter.DB_init();                         // Daya Bay
+    #endif
+    #ifdef USE_NEOS_ALVARO
+      printf("# Initializing Alvaro's NEOS code ...\n");
+      Neos_fitter.Neos_DB_init();                  // NEOS
     #endif
 
     printf("# Setting up pull matrices for SBL codes ...\n");
@@ -379,6 +408,28 @@ int ext_init(int ext_flags)
     MINOS_2016_init();
   }
 
+  if (ext_flags & EXT_MINOS2017)      // MINOS 2017
+  {
+    printf("# Initializing MINOS/MINOS+ 2017 code ...\n");
+    MINOS_2017_init();
+  }
+
+#ifdef NU_USE_NUSQUIDS
+  if (ext_flags & EXT_LSND_IVAN)
+  {
+    printf("# Initializing Ivan's LSND code ...\n");
+    LSND_ivan_fitter = new LSND();
+    if (!LSND_ivan_fitter)
+      return -1;
+  }
+#endif
+
+  if (ext_flags & EXT_MB_JK)
+  {
+    printf("# Initializing Joachim's MiniBooNE code ...\n");
+    if ((status=chiMB_jk_init()) != 0)
+      return status;
+  }
   return 0;
 }
 
@@ -591,6 +642,30 @@ double my_prior(const glb_params in, void* user_data)
       pv += chi2atm(sbl_params);
     if (pp->ext_flags & EXT_MINOS2016)
       pv += MINOS_2016_prior(in);
+    if (pp->ext_flags & EXT_MINOS2017)
+      pv += MINOS_2017_prior(in, 0);
+
+    // Ivan's LSND code
+    // ----------------
+  #ifdef NU_USE_NUSQUIDS
+    if (pp->ext_flags & EXT_LSND_IVAN)
+    {
+      if (LSND_ivan_fitter)
+      {
+        extern regeneration::Param p_oscdecay;
+        pv += LSND_ivan_fitter->getChisq(p_oscdecay);
+      }
+      else
+        pv += 2e33;
+    }
+  #endif
+
+    // Joachim's MiniBooNE code
+    // ------------------------
+    if (pp->ext_flags & EXT_MB_JK)
+    {
+      pv += chiMB_jk();
+    }
 
 
     // SBL reactor experiments + gallium experiments
@@ -628,16 +703,18 @@ double my_prior(const glb_params in, void* user_data)
       }
       reactor_params.set_ang();
 
-      // FIXME
-//      plot_danss_pred(reactor_params);
-//      exit(0);
-
       if (memcmp(&last_reactor_params, &reactor_params, sizeof(reactor_params)) != 0)
       {     // Recompute reactor chi^2 only if the relevant parameters have changed
         last_reactor_params = reactor_params;
 //        ns_reactor::fit.pull_status[ns_reactor::FLUX_NORM] = ns_reactor::FIXED;
 //        ns_reactor::fit.set_experiments(sbl_exps);
         last_chi2_reactor = ns_reactor::fit.chisq(reactor_params);
+        #ifdef USE_NEOS_ALVARO
+          last_chi2_reactor += Neos_fitter.chi2(&reactor_params);
+        #endif
+        #ifdef USE_DB_ALVARO
+          last_chi2_reactor += DB_fitter.chi2_syst(&reactor_params);
+        #endif
         pv += last_chi2_reactor;
       }
       else

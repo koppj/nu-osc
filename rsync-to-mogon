@@ -1,6 +1,17 @@
 #!/bin/bash
 
+BASEDIR=$HOME/papers/sterile-nu/
+
+# Copy GLoBES to MOGON
+# To do manually:
+#   - unpack and compile GLoBES
+#   - create symlink packages/globes
+cd $BASEDIR/packages/globes/Distribution
+make dist
+scp globes-3.*tar.gz mogon:~/sterile-nu/packages/
+
 # Copy main working directory
-rsync --delete -avz $HOME/papers/sterile-nu/sim/ mogon:~/sterile-nu/sim/ \
+rsync --delete -avz $BASEDIR/sim/ mogon:~/sterile-nu/sim/ \
       --exclude .git/ --exclude *genie/* --exclude *Input*
+rsync --delete -avz $BASEDIR/packages/ mogon:~/sterile-nu/packages/
 

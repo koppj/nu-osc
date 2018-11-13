@@ -4,6 +4,7 @@
 
 // Mathematics
 #define M_SQRT_PI     1.772453850905516027298 // sqrt(pi)
+#define M_SQRT_3      1.7320508075688772935   // sqrt(3) 
 
 // Particle physics
 #define M_EL          0.51099892e6// [eV] Electron mass
@@ -20,10 +21,10 @@
 #define M_Z          91.1876e9    // [eV] mass of Z boson
 
 // Astrophysics
-#define C           2.9979e8      // [m/s] speed of light
-#define V_SUN    (220.0e3/C)      // Velocity of Sun relative to GC (in units of c)
-#define V_EARTH   (29.8e3/C)      // Velocity of Earth relative to Sun (in units of c)
-#define V_ESC    (550.0e3/C)      // Galactic escape velocity
+#define SPEED_OF_LIGHT  2.9979e8  // [m/s] speed of light
+#define V_SUN    (220.0e3/SPEED_OF_LIGHT) // Velocity of Sun relative to GC (in units of c)
+#define V_EARTH   (29.8e3/SPEED_OF_LIGHT) // Velocity of Earth relative to Sun (in units of c)
+#define V_ESC    (550.0e3/SPEED_OF_LIGHT) // Galactic escape velocity
 #define XI          1.0           // 100% of halo composed of chi0
 #define RHO_0       0.3 * GEV / (CM*CM*CM) // WIMP density
 
@@ -51,7 +52,7 @@
                                      // --> expected zeros of DAMA oscillations
 
 #define KM         (1.e3 * METER)
-#define METER      5.076e6           // [eV^-1 / m]
+#define METER      5.06773e6         // [eV^-1 / m]
 #define CM         (1.e-2 * METER)
 #define FERMI      (1.0e-15*METER)   // [eV^-1 / fm]
 #define ANGSTROM   (1.e-10 * METER)

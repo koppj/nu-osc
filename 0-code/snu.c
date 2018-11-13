@@ -29,6 +29,7 @@
 // -std=gnu99
 // ----------------------------------------------------------------------------
 // ChangeLog:
+//   2017-06-12: - Implemented functions for using tabulated probabilities
 //   2011-01-14: - Implemented filter feature for n_flavors > 3
 //               - New function snu_probability_matrix_all returns
 //                 oscillation probabilities to/from sterile flavors
@@ -105,25 +106,24 @@
 #define SIGN(a,b)   ( (b) > 0.0 ? (fabs(a)) : (-fabs(a)) )
 #define KRONECKER(i,j)  ( (i)==(j) ? 1 : 0 )
 
-// Maximum number of neutrino species 
-#define MAX_PARAMS    (6*SQR(MAX_FLAVORS) - MAX_FLAVORS)
-#define MAX_ANGLES    ((MAX_FLAVORS * (MAX_FLAVORS-1))/2)
-#define MAX_PHASES    (((MAX_FLAVORS-1)*(MAX_FLAVORS-2))/2)
-
 // Fundamental oscillation parameters
 int n_flavors = 0;
 static int n_params  = 0;
 static int n_angles  = 0;
 static int n_phases  = 0;
-static double th[MAX_FLAVORS+1][MAX_FLAVORS+1];// Mixing angles
-static double delta[MAX_PHASES];            // Dirac CP phase
-static double dmsq[MAX_FLAVORS-1];         // Mass squared differences
-static double complex epsilon_s_plus_1[MAX_FLAVORS][MAX_FLAVORS]; // NSI in the source
-static double complex epsilon_m[MAX_FLAVORS][MAX_FLAVORS];        // NSI in the propagation
-static double complex epsilon_d_plus_1[MAX_FLAVORS][MAX_FLAVORS]; // NSI in the detector
+static double th[SNU_MAX_FLAVORS+1][SNU_MAX_FLAVORS+1];// Mixing angles
+static double delta[SNU_MAX_PHASES];           // Dirac CP phases
+static double dmsq[SNU_MAX_FLAVORS-1];         // Mass squared differences
+static double complex epsilon_s_plus_1[SNU_MAX_FLAVORS][SNU_MAX_FLAVORS]; // NSI in the source
+static double complex epsilon_m[SNU_MAX_FLAVORS][SNU_MAX_FLAVORS];        // NSI in propagation
+static double complex epsilon_d_plus_1[SNU_MAX_FLAVORS][SNU_MAX_FLAVORS]; // NSI in detector
+#ifdef NU_USE_NUSQUIDS
+  static double M_A_prime;        // dark force carrier mass
+  static double g_prime;          // dark force carrier coupling
+#endif
 
 // Names of NSI parameters
-char snu_param_strings[MAX_PARAMS][64];
+char snu_param_strings[SNU_MAX_PARAMS][64];
 
 // Internal temporary variables
 static gsl_matrix_complex *U=NULL; // The vacuum mixing matrix
@@ -142,12 +142,12 @@ extern int density_corr[];
 
 // The order in which the rotation matrices corresponding to the different
 // mixing angles are multiplied together (numbers are indices to th[][]
-static int rotation_order[MAX_ANGLES][2];
+static int rotation_order[SNU_MAX_ANGLES][2];
 
 // Which rotation matrices contain the complex phases? Indices are to
 // delta[], -1 indicates no complex phase in a particular matrix;
 // phase_order[0] corresponds to the leftmost rotation matrix
-static int phase_order[MAX_ANGLES];
+static int phase_order[SNU_MAX_ANGLES];
 
 //FIXME Check if CP violation works the right way in mass-to-flavor
 //
@@ -556,6 +556,10 @@ int snu_init_probability_engine_3()
 // ----------------------------------------------------------------------------
 // Initialize probability engine for the 3-flavor case with NSI (no steriles)
 // ----------------------------------------------------------------------------
+// Return values:
+//   > 0: number of oscillation parameters defined
+//   < 0: error
+// ----------------------------------------------------------------------------
 {
   int rotation_order[][2] = { {2,3}, {1,3}, {1,2} };
   int phase_order[] = { -1, 0, -1 };
@@ -568,8 +572,12 @@ int snu_init_probability_engine(int _n_flavors, int _rotation_order[][2], int _p
 // ----------------------------------------------------------------------------
 // Allocates internal data structures for the probability engine.
 // ----------------------------------------------------------------------------
+// Return values:
+//   > 0: number of oscillation parameters defined
+//   < 0: error
+// ----------------------------------------------------------------------------
 {
-  if (_n_flavors < 3 || _n_flavors > MAX_FLAVORS)
+  if (_n_flavors < 3 || _n_flavors > SNU_MAX_FLAVORS)
   {
     fprintf(stderr, "snu_init_probability_engine: Too many or too few neutrino flavors (%d).\n",
             _n_flavors);
@@ -701,6 +709,20 @@ int snu_init_probability_engine(int _n_flavors, int _rotation_order[][2], int _p
     n_params += 6;  // Remember to change when adding parameters!
   }
 
+  // Extra parameters for oscillation + decay scenario
+#ifdef NU_USE_NUSQUIDS
+  sprintf(snu_param_strings[k++], "M_A_PRIME");  // dark force mediator mass
+  sprintf(snu_param_strings[k++], "G_PRIME");    // dark force mediator coupling to \nu_s
+  sprintf(snu_param_strings[k++], "MA_OVER_M4"); // alternative way of defining M_{A'}
+  n_params += 3;
+  if (n_flavors > 3)
+  {
+    sprintf(snu_param_strings[k++], "M4_GAMMA");
+                     // m_4*\Gamma_{A'} - alternative way of specifying coupling strength
+    n_params++;
+  }
+#endif
+
   if (k != n_params)
   {
     fprintf(stderr, "snu_init_probability_engine: n_params has an incorrect value (%d).\n",
@@ -716,7 +738,7 @@ int snu_init_probability_engine(int _n_flavors, int _rotation_order[][2], int _p
 //    if (i % 4 == 3)  printf("\n");
 //  }
 
-  return 0;
+  return n_params;
 }
 
 
@@ -1221,6 +1243,39 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
   gsl_matrix_complex_free(T);
   gsl_matrix_complex_free(R);
 
+
+  // Extra parameters for oscillation + decay scenario
+  // -------------------------------------------------
+#ifdef NU_USE_NUSQUIDS
+  // transmit parameters to Ivan's osc/decay code; to make sure all parameters
+  // are consistently set (including for instance th14, th24 in case the user,
+  // gives only Ue4, Um4), we first issue a call to snu_get_oscillation_parameters.
+  // afterwards, we *overwrite* all osc/decay related parameters again with the
+  // values from vector p because snu_get_oscillation_parameters will give
+  // nonsensical results if these parameters are not set yet
+  glb_params tmp_params = glbAllocParams();
+  if (tmp_params)
+  {
+    snu_get_oscillation_parameters(tmp_params, user_data);
+    glbSetOscParamByName(tmp_params, glbGetOscParamByName(p, "M_A_PRIME"),  "M_A_PRIME");
+    glbSetOscParamByName(tmp_params, glbGetOscParamByName(p, "G_PRIME"),    "G_PRIME");
+    glbSetOscParamByName(tmp_params, glbGetOscParamByName(p, "MA_OVER_M4"), "MA_OVER_M4");
+    glbSetOscParamByName(tmp_params, glbGetOscParamByName(p, "M4_GAMMA"),   "M4_GAMMA");
+    status += snu_set_oscillation_parameters_osc_decay_internal(n_flavors, tmp_params);
+
+    // Now calls snu_get_oscillation_parameters *again* to retrieve the final
+    // values of M_{A'} and g' and store them
+    snu_get_oscillation_parameters_osc_decay_internal(n_flavors, tmp_params);
+    M_A_prime = glbGetOscParamByName(tmp_params, "M_A_PRIME");
+    g_prime   = glbGetOscParamByName(tmp_params, "G_PRIME");
+  }
+  else
+  {
+    fprintf(stderr, "snu_set_oscillation_parameters: error allocating glb_params vector.\n");
+    status = -1003;
+  }
+#endif
+
   return status;
 }
 
@@ -1297,7 +1352,7 @@ int snu_get_oscillation_parameters(glb_params p, void *user_data)
     glbSetOscParamByName(p, sin(th[1][4]), "Ue4");
     glbSetOscParamByName(p, sin(th[2][4])*cos(th[1][4]), "Um4");
     glbSetOscParamByName(p, sin(th[3][4])*cos(th[1][4])*cos(th[2][4]), "Ut4");
-    glbSetOscParamByName(p, 4. * SQR(sin(2.*th[1][4]) * cos(th[2][4])), "s22thmue");
+    glbSetOscParamByName(p, SQR(sin(2.*th[1][4] * sin(th[2][4]))), "s22thmue");
   }
   else if (n_flavors == 5)
   {
@@ -1315,6 +1370,11 @@ int snu_get_oscillation_parameters(glb_params p, void *user_data)
     glbSetOscParamByName(p, glbGetOscParamByName(p,"Ue4")*glbGetOscParamByName(p,"Um4"),
                          "Ue4Um4");
   }
+
+  // Extra parameters for oscillation + decay scenario
+#ifdef NU_USE_NUSQUIDS
+  snu_get_oscillation_parameters_osc_decay_internal(n_flavors, p);
+#endif
 
   return 0;
 }
@@ -1516,7 +1576,7 @@ int snu_S_matrix_cd(double E, double L, double rho, int cp_sign, void *user_data
 
 
 // ----------------------------------------------------------------------------
-int snu_filtered_probability_matrix_cd(double P[MAX_FLAVORS][MAX_FLAVORS],
+int snu_filtered_probability_matrix_cd(double P[SNU_MAX_FLAVORS][SNU_MAX_FLAVORS],
         double E, double L, double rho, double sigma, int cp_sign, void *user_data)
 // ----------------------------------------------------------------------------
 // Calculates the probability matrix for neutrino oscillations in matter
@@ -1662,7 +1722,7 @@ int snu_probability_matrix(double _P[3][3], int cp_sign, double E,
 // full matrix and then extract the upper left 3x3 submatrix.
 // ----------------------------------------------------------------------------
 {
-  double P[MAX_FLAVORS][MAX_FLAVORS];
+  double P[SNU_MAX_FLAVORS][SNU_MAX_FLAVORS];
   int status;
   int i, j;
 
@@ -1677,7 +1737,7 @@ int snu_probability_matrix(double _P[3][3], int cp_sign, double E,
 
 
 // ----------------------------------------------------------------------------
-int snu_probability_matrix_all(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sign, double E,
+int snu_probability_matrix_all(double P[SNU_MAX_FLAVORS][SNU_MAX_FLAVORS], int cp_sign, double E,
     int psteps, const double *length, const double *density,
     double filter_sigma, void *user_data)
 // ----------------------------------------------------------------------------
@@ -1744,8 +1804,8 @@ int snu_probability_matrix_all(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sign, 
 
 
 // ----------------------------------------------------------------------------
-int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sign, double E,
-    int psteps, const double *length, const double *density,
+int snu_probability_matrix_m_to_f(double P[SNU_MAX_FLAVORS][SNU_MAX_FLAVORS], int cp_sign,
+    double E, int psteps, const double *length, const double *density,
     double filter_sigma, void *user_data)
 // ----------------------------------------------------------------------------
 // Calculates the neutrino oscillation probability matrix, assuming that the
@@ -1777,7 +1837,7 @@ int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sig
     else
     {
       fprintf(stderr, "ERROR: Filter feature not implemented for non-constant density\n");
-      memset(P, 0, MAX_FLAVORS*MAX_FLAVORS*sizeof(P[0][0]));
+      memset(P, 0, SNU_MAX_FLAVORS*SNU_MAX_FLAVORS*sizeof(P[0][0]));
       return -1;
     }
   }
@@ -1832,7 +1892,7 @@ int snu_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS], int cp_sig
 
 
 // ----------------------------------------------------------------------------
-int snu_filtered_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS],
+int snu_filtered_probability_matrix_m_to_f(double P[SNU_MAX_FLAVORS][SNU_MAX_FLAVORS],
         double E, double L, double rho, double sigma, int cp_sign, void *user_data)
 // ----------------------------------------------------------------------------
 // Calculates the probability matrix for neutrino oscillations in matter
@@ -1960,6 +2020,549 @@ int snu_filtered_probability_matrix_m_to_f(double P[MAX_FLAVORS][MAX_FLAVORS],
     }
     
   return 0;
+}
+
+
+// ----------------------------------------------------------------------------
+//                    N U S Q U I D S   I N T E R F A C E
+// ----------------------------------------------------------------------------
+
+#ifdef NU_USE_NUSQUIDS
+
+#include "glb_error.h"
+
+static double *nusquids_spectrum = NULL;
+glb_probability_nusquids_function nu_hook_probability_matrix_nusquids
+                                        = snu_probability_matrix_osc_decay;
+
+// ----------------------------------------------------------------------------
+int snu_probability_matrix_nusquids(double P[][2][3],
+      unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
+      int psteps, const double *length, const double *density)
+// ----------------------------------------------------------------------------
+// Calculates the neutrino oscillation probability matrix using nuSQuIDS. As
+// nuSQuIDS simulates also processes like tau regeneration or neutrino decay,
+// there can be migration between energy bins, hence the function computes
+// the probability matrix for a whole range of energy bins at once.
+// ----------------------------------------------------------------------------
+// Parameters:
+//   P:         Buffer for the storage of the final weights. The indices of P
+//              correspond to energy, cp sign (nu/nubar), final flavor.
+//   cp_sign:   +1 for neutrinos, -1 for antineutrinos
+//   n_E:       number of energy bins
+//   E:         list of neutrino energies (in GeV)
+//   ini_state_nu/nubar: initial state for neutrinos/antineutrinos. Each entry
+//              is a list of length n_E specifying the unoscillated energy
+//              spectrum of one neutrino flavor
+//   psteps:    Number of layers in the matter density profile
+//   length:    Lengths of the layers in the matter density profile in km
+//   density:   The matter densities in g/cm^3
+// ----------------------------------------------------------------------------
+{
+  int status;
+
+  // compute n-flavor probabilities matrix
+  double P_full[n_E][2][SNU_MAX_FLAVORS];
+  status = snu_probability_matrix_nusquids_internal(P_full, n_E, E,
+             ini_state_nu, ini_state_nubar, psteps, length, density,
+             n_flavors, th, delta, dmsq, M_A_prime, g_prime);
+
+  // copy probabilities for the active flavors
+  size_t n_bytes = sizeof(double) * n_E * 2 * SNU_MAX_FLAVORS;
+  for (unsigned k=0; k < n_E; k++)
+    for (unsigned j=0; j < 3; j++)
+    {
+      P[k][0][j] = P_full[k][0][j];
+      P[k][1][j] = P_full[k][1][j];
+    }
+ 
+
+  // save computed spectrum for later use
+  if (nusquids_spectrum)
+    nusquids_spectrum = glb_realloc(nusquids_spectrum, n_bytes);
+  else
+    nusquids_spectrum = glb_malloc(n_bytes);
+  memcpy(nusquids_spectrum, P_full, n_bytes);
+
+  return status;
+}
+
+
+// ----------------------------------------------------------------------------
+int snu_nusquids_rates(double _R[3], int cp_sign, int bin_number)
+// ----------------------------------------------------------------------------
+// Retrieves the oscillated rates from a previous nuSQuIDS run, i.e.
+// from a previous call to snu_probability_matrix_nusquids.
+// ----------------------------------------------------------------------------
+// Parameters:
+//   R:          Storage buffer for the rates for the three active flavors
+//   cp_sign:    +1 for neutrinos, -1 for antineutrinos
+//   bin_number: the index of the energy bin for which P should be returned
+// ----------------------------------------------------------------------------
+{
+  double (*P)[][2][SNU_MAX_FLAVORS] = (double (*)[][2][SNU_MAX_FLAVORS]) nusquids_spectrum;
+  if (!nusquids_spectrum)
+    return -1;
+
+  if (cp_sign > 0)
+    for (int i=0; i < 3; i++)
+      _R[i] = (*P)[bin_number][0][i];
+
+  return 0;
+}
+
+
+// ----------------------------------------------------------------------------
+int snu_probability_matrix_osc_decay(double P[][2][3],
+      unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
+      int psteps, const double *length, const double *density)
+// ----------------------------------------------------------------------------
+// Calculates the neutrino oscillation probability matrix using Ivan Esteban's
+// analytic treatment of oscillations + decay.  As there can be migration between
+// energy bins, the function computes the probability matrix for a whole range
+// of energy bins at once.
+// ----------------------------------------------------------------------------
+// Parameters:
+//   P:         Buffer for the storage of the final weights. The indices of P
+//              correspond to energy, cp sign (nu/nubar), final flavor.
+//   cp_sign:   +1 for neutrinos, -1 for antineutrinos
+//   n_E:       number of energy bins
+//   E:         list of neutrino energies (in GeV)
+//   ini_state_nu/nubar: initial state for neutrinos/antineutrinos. Each entry
+//              is a list of length n_E specifying the unoscillated energy
+//              spectrum of one neutrino flavor
+//   psteps:    Number of layers in the matter density profile
+//   length:    Lengths of the layers in the matter density profile in km
+//   density:   The matter densities in g/cm^3
+// ----------------------------------------------------------------------------
+{
+  int status;
+
+  // compute n-flavor probabilities matrix
+  double P_full[n_E][2][SNU_MAX_FLAVORS];
+  status = snu_probability_matrix_osc_decay_internal(P_full, n_E, E,
+             ini_state_nu, ini_state_nubar, psteps, length, density, n_flavors);
+
+  // copy probabilities for the active flavors
+  size_t n_bytes = sizeof(double) * n_E * 2 * SNU_MAX_FLAVORS;
+  for (unsigned k=0; k < n_E; k++)
+    for (unsigned j=0; j < 3; j++)
+    {
+      P[k][0][j] = P_full[k][0][j];
+      P[k][1][j] = P_full[k][1][j];
+    }
+
+  // save computed spectrum for later use
+  if (nusquids_spectrum)
+    nusquids_spectrum = glb_realloc(nusquids_spectrum, n_bytes);
+  else
+    nusquids_spectrum = glb_malloc(n_bytes);
+  memcpy(nusquids_spectrum, P_full, n_bytes);
+
+  return status;
+}
+
+#endif // NU_USE_NUSQUIDS
+
+
+// ----------------------------------------------------------------------------
+//   U S I N G   F O R   P R E - C O M P U T E D   P R O B A B I L I T I E S
+// ----------------------------------------------------------------------------
+
+#include "glb_error.h"
+#include "glb_probability.h"
+#include "nu.h"
+
+// -------------------------------------------------------------------------
+struct snu_probability_table *snu_alloc_probability_table()
+// -------------------------------------------------------------------------
+// Allocates a new data structure for holding a probability table
+// -------------------------------------------------------------------------
+{
+  struct snu_probability_table *p = glb_malloc(sizeof(struct snu_probability_table));
+  if (!p)
+  {
+    glb_error("snu_alloc_probability_table: cannot allocate probability table.\n");
+    return NULL;
+  }
+
+  p->default_values = glbAllocParams();
+  p->probability_table = NULL;
+  p->n_p = 0;
+  for (int i=0; i < SNU_MAX_PARAMS+1; i++)
+  {
+    p->params[i]  = NULL;
+    p->p_min[i]   = NAN;
+    p->p_max[i]   = NAN;
+    p->p_steps[i] = -1;
+    p->p_flags[i] = 0;
+  }
+
+  return p;
+}
+
+
+// -------------------------------------------------------------------------
+int snu_free_probability_table(struct snu_probability_table *p)
+// -------------------------------------------------------------------------
+// Frees memory associated with a probability table
+// -------------------------------------------------------------------------
+{
+  if (p)
+  {
+    if (p->default_values) { glbFreeParams(p->default_values);  p->default_values=NULL; }
+    if (p->probability_table) { glb_free(p->probability_table); p->probability_table=NULL; }
+    p->n_p = 0;
+    for (int i=0; i < SNU_MAX_PARAMS+1; i++)
+    {
+      if (p->params[i])  { glb_free(p->params[i]);  p->params[i]  = NULL; }
+      p->p_min[i]   = NAN;
+      p->p_max[i]   = NAN;
+      p->p_steps[i] = -1;
+      p->p_flags[i] = 0;
+    }
+  }
+
+  return GLB_SUCCESS;
+}
+
+
+// -------------------------------------------------------------------------
+int snu_compute_probability_table(int experiment, struct snu_probability_table *p,
+                                  const char *output_file)
+// -------------------------------------------------------------------------
+// Compute a probability table for the given experiment, based on the
+// parameters in p that must have been filled in already. If an output file
+// is given, the table is immediately written to disk.
+// -------------------------------------------------------------------------
+{
+  struct glb_experiment *e = glb_experiment_list[experiment];
+
+  if (!p)
+  {
+    glb_error("snu_compute_probability_table: NULL input");
+    return GLBERR_INVALID_ARGS;
+  }
+  if (!p->default_values)
+  {
+    glb_error("snu_compute_probability_table: p->default_values not given");
+    return GLBERR_INVALID_ARGS;
+  }
+  if (p->n_p <= 0)
+  {
+    glb_error("snu_compute_probability_table: missing scan specification (n_p=0)");
+    return GLBERR_INVALID_ARGS;
+  }
+  if (experiment < 0  ||  experiment >= glb_num_of_exps)
+  {
+    glb_error("snu_compute_probability_table: invalid experiment number: %d", experiment);
+    return GLBERR_INVALID_ARGS;
+  }
+
+  // Check for invalid oscillation parameter names
+  for (int i=0; i < p->n_p; i++)
+  {
+    if (!p->params[i])
+    {
+      glb_error("snu_compute_probability_table: scan parameter #%d not given", i);
+      return GLBERR_INVALID_ARGS;
+    }
+    if (glbFindParamByName(p->params[i]) < 0)
+    {
+      glb_error("snu_compute_probability_table: Invalid oscillation parameter: %s.\n",
+                p->params[i]);
+      return GLBERR_INVALID_ARGS;
+    }
+    if (p->p_steps[i] <= 0)
+    {
+      glb_error("snu_compute_probability_table: invalid input p_steps=%d for "
+                "parameter #%d", p->p_steps[i], i);
+      return GLBERR_INVALID_ARGS;
+    }
+  }
+
+  // Allocate buffer for the actual probability table
+  unsigned long n_points = 1;
+  for (int i=0; i < p->n_p; i++)
+    n_points *= p->p_steps[i] + 1;
+  p->probability_table = glb_malloc(sizeof(*p->probability_table) * n_points
+               * e->simbins * 18);
+  if (!p->probability_table)
+  {
+    glb_error("snu_compute_probability_table: cannot allocate probability table.");
+    return GLBERR_MALLOC_FAILED;
+  }
+
+  // Open output file
+  FILE *f = NULL;
+  if (output_file)
+  {
+    f = fopen(output_file, "w");
+    if (!f)
+    {
+      glb_error("snu_compute_probability_table: Cannot open file %s", output_file);
+      return GLBERR_FILE_NOT_FOUND;
+    }
+
+    // Write header consisting of number, names and ranges of parameters
+    fprintf(f, "# GLoBES pre-computed probability table\n");
+    fprintf(f, "# for experiment %s\n", e->filename);
+    fprintf(f, "N_DATA %lu\n", n_points * e->simbins);
+    for (int i=0; i < p->n_p; i++)
+    {
+      fprintf(f, "PARAM %s %10.5g %10.5g %5d %5lu\n",
+              p->params[i], p->p_min[i], p->p_max[i], p->p_steps[i], p->p_flags[i]);
+    }
+  }
+
+  // The main loop
+  glb_params test_values = glbAllocParams();
+  glbCopyParams(p->default_values, test_values);
+  MPIFOR(j, 0, (int) n_points-1)
+  {
+    double p_test_values[p->n_p];
+    for (int i=0; i < p->n_p; i++)
+    {
+      // Convert 1d index to a multi-dimensional index for the i-th dimension
+      int k = n_points;
+      int m = j;
+      for (int n=0; n <= i; n++)
+      {
+        m %= k;
+        k /= p->p_steps[n] + 1;
+      }
+      m /= k;
+
+      if (p->p_flags[i] & DEG_LOGSCALE)
+      {
+        if (p->p_steps[i] == 0)
+          p_test_values[i] = POW10(p->p_min[i]);
+        else
+          p_test_values[i] = POW10(p->p_min[i] + m * (p->p_max[i]-p->p_min[i])/p->p_steps[i]);
+      }
+      else
+      {
+        if (p->p_steps[i] == 0)
+          p_test_values[i] = p->p_min[i];
+        else
+          p_test_values[i] = p->p_min[i] + m * (p->p_max[i]-p->p_min[i])/p->p_steps[i];
+      }
+      glbSetOscParamByName(test_values, p_test_values[i], p->params[i]);
+    }
+
+    // For 5-neutrino scenarios, the distinction between 3+2 and 1+3+1 is hardcoded
+    // for compatibility with Thomas' code TODO: Find a better solution
+    if (n_flavors >= 5)
+    {
+#ifndef Ip3pI
+      glbSetOscParamByName(test_values,  fabs(glbGetOscParamByName(test_values, "DM41")),      "DM41");
+      glbSetOscParamByName(test_values,  fabs(glbGetOscParamByName(test_values, "DM51")),      "DM51");
+#else
+      glbSetOscParamByName(test_values, -fabs(glbGetOscParamByName(test_values, "DM41")),      "DM41");
+      glbSetOscParamByName(test_values,  fabs(glbGetOscParamByName(test_values, "DM51")),      "DM51");
+#endif
+    }
+
+    // Test if GLoBES will accept the chosen oscillation parameters (it may not,
+    // for instance if the chosen values of s22thmue and Um4 are inconsistent),
+    // and if so, run degfinder
+    if (glbSetOscillationParameters(test_values) == 0)
+    {
+      double filter = (e->filter_state == GLB_ON) ? e->filter_value : -1.0;
+      glb_probability_matrix_function probability_matrix = e->probability_matrix
+                       ? e->probability_matrix : glb_hook_probability_matrix;
+      void *user_data = e->probability_user_data
+                       ? e->probability_user_data : glb_probability_user_data;
+
+      for (int k=0; k < e->simbins; k++)
+      {
+        double E = e->smear_data[0]->simbincenter[k];
+        double Pnu[3][3], Pnubar[3][3];
+        if (probability_matrix(Pnu, +1, E, e->psteps, e->lengthtab,
+                               e->densitytab, filter, user_data) != GLB_SUCCESS)
+          glb_error("snu_compute_probability_table: Calculation of osc. probabilities (CP=+1) failed.");
+        if (probability_matrix(Pnubar, -1, E, e->psteps, e->lengthtab,
+                               e->densitytab, filter, user_data) != GLB_SUCCESS)
+          glb_error("snu_compute_probability_table: Calculation of osc. probabilities (CP=-1) failed.");
+
+        memcpy(p->probability_table + j*e->simbins*18 + k*18, Pnu, 9*sizeof(Pnu[0][0]));
+        memcpy(p->probability_table + j*e->simbins*18 + k*18 + 9, Pnubar, 9*sizeof(Pnubar[0][0]));
+        if (f)
+        {
+          for (int l=0; l < 9; l++)
+            fprintf(f, "%10.5g ", ((double *) Pnu)[l]);
+          fprintf(f, "    ");
+          for (int l=0; l < 9; l++)
+            fprintf(f, "%10.5g ", ((double *) Pnubar)[l]);
+          fprintf(f, "\n");
+        } // if (f)
+      } // for (k=simbins)
+    } // if (glbSetOscillationParameters)
+  } // MPIFOR(j)
+
+  if (f)  fclose(f);
+  glbFreeParams(test_values);
+  return GLB_SUCCESS;
+}
+
+
+// ----------------------------------------------------------------------------
+int snu_load_probability_table(const char *input_file, struct snu_probability_table *p)
+// ----------------------------------------------------------------------------
+// Load table of pre-computed probabilities from file. The receiving data
+// structure p is assumed to be acllocated but uninitialized; all required
+// memory (p->probability_table, p->params) will be allocated.
+// ----------------------------------------------------------------------------
+{
+  if (!p)
+  {
+    glb_error("snu_load_probability_table: NULL input");
+    return GLBERR_INVALID_ARGS;
+  }
+
+  // Open input file
+  FILE *f = glb_fopen(input_file, "r");
+  if (!f)
+  {
+    glb_error("snu_load_probability_table: Cannot open file %s", input_file);
+    return GLBERR_FILE_NOT_FOUND;
+  }
+
+  p->n_p = 0;
+  if (p->probability_table)
+  {
+    glb_free(p->probability_table);
+    p->probability_table = NULL;
+  }
+
+  const int max_line = 1024;  // Maximum length of line
+  char this_line[max_line];   // Buffer for current line
+  int nl = 0;                 // Number of lines
+  int nd = 0;                 // Number of data lines read
+  int ne = 0;                 // Number of expected data lines
+  while (fgets(this_line, max_line, f))
+  {
+    nl++;
+    if (strlen(this_line) > max_line - 2)
+    {
+      glb_error("snu_load_probability_table: Line %d too long in file %s",
+                nl, input_file);
+      fclose(f);
+      return GLBERR_INVALID_FILE_FORMAT;
+    }
+
+    // Ignore comments and blank l ines
+    if (this_line[0] == '#'  ||  this_line[strspn(this_line, " \t")] == '\n')
+      continue;                             /* Ignore comments and blank lines */
+
+    // Read parameter declarations
+    char this_param[64];
+    if (sscanf(this_line, "PARAM %64s %lf %lf %d %lu", this_param,
+               &p->p_min[p->n_p], &p->p_max[p->n_p], &p->p_steps[p->n_p],
+               &p->p_flags[p->n_p]) == 5)
+    {
+      if (nd != 0)
+      {
+        glb_error("snu_load_probability_table: Error in file %s, line %d: "
+                  "parameter declarations must precede data lines", nl, input_file);
+        fclose(f);
+        return GLBERR_INVALID_FILE_FORMAT;
+      }
+      else
+      {
+        p->params[p->n_p] = strdup(this_param);
+        p->n_p++;
+        if (p->n_p > SNU_MAX_PARAMS)
+        {
+          glb_error("snu_load_probability_table: Error in file %s, line %d: "
+                    "too many scan parameters", nl, input_file);
+          fclose(f);
+          return GLBERR_INVALID_FILE_FORMAT;
+        }
+      }
+    }
+
+    // Read number of parameters
+    else if (sscanf(this_line, "N_DATA %d", &ne) == 1)
+    {
+    }
+
+    // Read probability data
+    else
+    {
+      if (ne <= 0)
+      {
+        glb_error("snu_load_probability_table: Error in file %s, line %d: "
+                  "N_DATA entry missing or invalid", nl, input_file);
+        fclose(f);
+        return GLBERR_INVALID_FILE_FORMAT;
+      }
+
+      // Allocate memory for probability table
+      if (!p->probability_table)
+        p->probability_table = glb_malloc(sizeof(*p->probability_table) * ne * 18);
+
+      double P[18];
+      if (sscanf(this_line, "%lf %lf %lf  %lf %lf %lf  %lf %lf %lf "
+                            "%lf %lf %lf  %lf %lf %lf  %lf %lf %lf",
+                 &P[0], &P[1],  &P[2],  &P[3],  &P[4],  &P[5],  &P[6],  &P[7],  &P[8],
+                 &P[9], &P[10], &P[11], &P[12], &P[13], &P[14], &P[15], &P[16], &P[18]) != 18)
+      {
+        glb_error("snu_load_probability_table: Error reading probability data "
+                  "in file %s, line %d.", nl, input_file);
+        fclose(f);
+        return GLBERR_INVALID_FILE_FORMAT;
+      }
+      else
+      {
+        if (nd >= ne)
+        {
+          glb_error("snu_load_probability_table: Too many data entries "
+                    "in file %s, line %d.", nl, input_file);
+          fclose(f);
+          return GLBERR_INVALID_FILE_FORMAT;
+        }
+        memcpy(&p->probability_table[nd++], P, sizeof(*P) * 18);
+      } // if (fscanf(probability data))
+    } // if (fscanf(meta data)
+  } // while (fgets)
+
+  fclose(f);
+  return GLB_SUCCESS;  
+}
+
+
+// ----------------------------------------------------------------------------
+int snu_tabulated_probability_matrix(double _P[3][3], int cp_sign, double E,
+    int psteps, const double *length, const double *density,
+    double filter_sigma, void *user_data)
+// ----------------------------------------------------------------------------
+// Get oscillation probabilities from pre-computed table using linear
+// interpolation. For parameter values outside the tabulated range, call
+// snu_probability_matrix
+// ----------------------------------------------------------------------------
+{
+  struct snu_probability_matrix *p = (struct snu_probability_matrix *) user_data;
+
+  if (!p)
+  {
+    glb_error("snu_tabulated_probability_matrix: no probability table given.");
+    return GLBERR_INVALID_ARGS;
+  }
+
+//  int idx[p->n_p];
+//  for (int i=0; i < p->n_p; i++)
+//  {
+//    double x = glbGetOscParamByName(osc_params, p->params[i]);
+//    if (p->p_flags[i] & DEG_LOGSCALE)
+//      x = log10(x);
+//    if (x < p->p_min[i] || x >= p->p_max[i])
+//      return snu_probability_matrix(P, cp_sign, E, psteps, length, density,
+//                                    filter_sigma, user_data);
+//    else
+//      idx[i] = p->p_steps[i] * (x - p->p_min[i]) / (p->p_max[i] - p->p_min[i]);
+//  }
+  return GLB_SUCCESS;
 }
 
 

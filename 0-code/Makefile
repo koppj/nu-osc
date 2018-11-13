@@ -46,10 +46,15 @@
 include $(ROOTSYS)/etc/Makefile.arch
 
 # Profiling?
-export PROF_FLAGS=-pg
+#export PROF_FLAGS=-pg
+export EXTRA_FLAGS=$(PROF_FLAGS)
 
 # Determine operating system
 UNAME_S := $(shell uname -s)
+
+# NuSQuIDS
+NUSQUIDS_INC_FLAGS=`pkg-config --cflags squids nusquids hdf5`
+NUSQUIDS_LD_FLAGS=`pkg-config --libs squids nusquids hdf5` -lpthread
 
 # Set platform-specific variables
 ifeq ($(UNAME_S),Linux)
@@ -59,21 +64,25 @@ ifeq ($(UNAME_S),Linux)
     export prefix = ${HOME}/sterile-nu/globes
     INCFLAGS = $(shell $(globesconf) --include) \
 	       -I$(shell $(rootconfig) --incdir) \
-	       -I${HOME}/sterile-nu/globes-3.2.15/source/
+	       $(NUSQUIDS_INC_FLAGS) \
+	       -I${HOME}/sterile-nu/packages/globes/Distribution/source
     export CFLAGS   = -Wall -std=c99 -g -O2 -D_BSD_SOURCE -fgnu89-inline \
-                      -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
-    export CXXFLAGS = -Wall -g -O2 -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
+                      -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
+    export CXXFLAGS = -std=c++11 -Wall -g -O2 -Wno-write-strings \
+      		      $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
   else
     export GCC = mpicc # gcc
     export GPP = mpic++ #g++
     export prefix = ${HOME}/papers/sterile-nu/globes
     INCFLAGS = $(shell $(globesconf) --include) \
 	       -I$(shell $(rootconfig) --incdir) \
-	       -I${HOME}/projects/globes/Distribution/source \
+	       -I${HOME}/papers/sterile-nu/packages/globes/Distribution/source \
+	       $(NUSQUIDS_INC_FLAGS) \
 	       -I/usr/include/openmpi/
-    export CFLAGS   = -std=c99 -Wall -g -O2 -D_BSD_SOURCE -fgnu89-inline -ffast-math \
-                      -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
-    export CXXFLAGS = -Wall -g -O2 -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
+    export CFLAGS   = -std=c99 -Wall -g -O2 -D_DEFAULT_SOURCE -fPIC -fgnu89-inline -ffast-math \
+                      -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
+    export CXXFLAGS = -std=c++11 -Wall -g -O2 -Wno-write-strings \
+      		      $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
   endif
 endif
 ifeq ($(UNAME_S),Darwin)
@@ -82,10 +91,12 @@ ifeq ($(UNAME_S),Darwin)
   export prefix = ${HOME}/uni/papers/sterile-nu/globes
   INCFLAGS = $(shell $(globesconf) --include) \
 	     -I$(shell $(rootconfig) --incdir) \
-	     -I${HOME}/uni/projects/globes/Distribution/source
+	     $(NUSQUIDS_INC_FLAGS) \
+	     -I${HOME}/uni/papers/sterile-nu/packages/globes/Distribution/source
   export CFLAGS   = -std=c99 -Wall -g -O2 -D_BSD_SOURCE -fgnu89-inline -ffast-math \
-                    -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
-  export CXXFLAGS = -Wall -g -O2 -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(PROF_FLAGS)
+                    -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
+  export CXXFLAGS = -std=c++11 -Wall -g -O2 -Wno-write-strings \
+                    $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
 endif
 
 export exec_prefix = ${prefix}
@@ -104,25 +115,39 @@ else
 #	         -nodefaultlibs -static-libgcc -lgcc -lstdc++ -lm_p -lc
 #	         -nodefaultlibs -static -static-libgcc -lgcc -lstdc++ -lm -lc
 endif
-LDFLAGS = $(GLB_LDFLAGS) \
-	  $(shell $(rootconfig) --glibs)  \
+
+LDFLAGS = $(GLB_LDFLAGS) $(NUSQUIDS_LD_FLAGS) \
+	  $(shell $(rootconfig) --glibs) \
 	  -L./atm/LibMath -L./atm/LibPhys -L./atm/LibWrap \
 	  -L./$(solar_dir)/LibMath -L./$(solar_dir)/LibPhys \
-	  -L./$(solar_dir)/LibWrap -L./$(solar_dir)/LibProb \
-	  -latmwrapper -latmphysics -latmmathres \
-      	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun \
-          -lmontecubes -lmpi
+	  -L./$(solar_dir)/LibWrap -L./$(solar_dir)/LibProb
+#	  -lmpi
+#          -lmontecubes -lmpi
+#	  -latmwrapper -latmphysics -latmmathres \
+#      	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun \
+# Link Michele's libraries statically, the rest dynamically
+#LDFLAGS = -Wl,-Bdynamic $(GLB_LDFLAGS) \
+#	  $(shell $(rootconfig) --glibs) -static \
+#	  -L./atm/LibMath -L./atm/LibPhys -L./atm/LibWrap \
+#	  -L./$(solar_dir)/LibMath -L./$(solar_dir)/LibPhys \
+#	  -L./$(solar_dir)/LibWrap -L./$(solar_dir)/LibProb \
+#	  -latmwrapper -latmphysics -latmmathres \
+#      	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun \
+#          -Wl,-Bdynamic -lmontecubes -lmpi
 
 BIN     = nu
-OBJ     = nu.o const.o sys.o snu.o degfinder.o sensitivities.o prem.o \
-	  mb.o e776.o c12.o icarus-2012.o icarus-2014.o opera-2013.o minos.o prior.o
-HEADER  = nu.h const.h snu.h sbl/definitions.h reactors/definitions.h
-SUBDIRS = sbl reactors
+OBJ     = nu.o const.o sys.o snu.o nusquids.o degfinder.o sensitivities.o prem.o \
+	  mb.o mb-jk.o e776.o c12.o icarus-2012.o icarus-2014.o opera-2013.o minos.o prior.o
+HEADER  = nu.h const.h snu.h LSND_v5.h \
+	  sbl/definitions.h reactors/definitions.h db-neos/db-neos.h osc_decay/osc_decay.h \
+	  nusquids_decay/nusquids_decay.h
+SUBDIRS = sbl reactors db-neos
 
 all: $(BIN)
 
 $(BIN): $(OBJ) $(SUBDIRS)
-	${GPP} $(CFLAGS) $(INCFLAGS) $(shell ls *.o sbl/*.o reactors/*.o) $(LDFLAGS) -o $(BIN)
+	${GPP} $(CFLAGS) $(INCFLAGS) $(shell ls *.o sbl/*.o reactors/*.o db-neos/*.o) \
+	 	 $(LDFLAGS) -o $(BIN)
 
 %.o : %.c $(HEADER)
 	${GCC} $(CFLAGS) $(INCFLAGS) -c $<

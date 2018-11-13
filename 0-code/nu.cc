@@ -8,6 +8,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <libgen.h>
 #include <argp.h>
 #include <gsl/gsl_complex_math.h>
 
@@ -307,6 +308,26 @@ int eval_env()
 
 
 // -------------------------------------------------------------------------
+double parse_expr(const char *str)
+// -------------------------------------------------------------------------
+// Calls Python to interpret str as an expression and returns the resulting
+// floating point value.
+// -------------------------------------------------------------------------
+{
+  FILE *f = NULL;
+  char cmd[strlen(str) + 100];
+  double result;
+
+  sprintf(cmd, "python -c 'from math import *; print %s'", str);
+  f = popen(cmd, "r");
+  fscanf(f, "%lf", &result);
+  pclose(f);
+
+  return result;
+}
+
+
+// -------------------------------------------------------------------------
 error_t parse_opt(int key, char *arg, struct argp_state *state)
 // -------------------------------------------------------------------------
 // The main command line parser
@@ -368,11 +389,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         p = strtok(NULL, delim);
         if (p)
         {
-          scan_p_min[n_scan_params] = atof(p);
+          scan_p_min[n_scan_params] = parse_expr(p);
           p = strtok(NULL, delim);
           if (p)
           {
-            scan_p_max[n_scan_params] = atof(p);
+            scan_p_max[n_scan_params] = parse_expr(p);
             p = strtok(NULL, delim);
             if (p)
             {
@@ -403,11 +424,11 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
         p = strtok(NULL, delim);
         if (p)
         {
-          prescan_p_min[n_prescan_params] = atof(p);
+          prescan_p_min[n_prescan_params] = parse_expr(p);
           p = strtok(NULL, delim);
           if (p)
           {
-            prescan_p_max[n_prescan_params] = atof(p);
+            prescan_p_max[n_prescan_params] = parse_expr(p);
             p = strtok(NULL, delim);
             if (p)
             {
@@ -918,6 +939,7 @@ int load_exps(const int n_exps, char **exps)
     }
 
     // Pedro's MiniBooNE simulation
+    #ifdef NU_USE_NUSQUIDS
     else if (strcasecmp(exps[i], "MBall200") == 0)
     {
       chiMB_init(0);
@@ -928,6 +950,7 @@ int load_exps(const int n_exps, char **exps)
       chiMB_init(1);
       mb_loaded++;
     }
+    #endif
 
 //    else if (strcasecmp(exps[i], "MBall") == 0  ||  strcasecmp(exps[i], "MBneutrino200.glb") == 0)
 //    {
@@ -1012,7 +1035,7 @@ int load_exps(const int n_exps, char **exps)
   }
   if (mb_loaded > 1)
   {
-    fprintf(stderr, "Do not loade MiniBooNE multiple times - use MBall for combined nu+nubar fit.\n");
+    fprintf(stderr, "Do not load MiniBooNE multiple times - use MBall for combined nu+nubar fit.\n");
     return -6;
   }
 
@@ -1089,6 +1112,7 @@ int main(int argc, char *argv[])
   }
   if (action != NU_ACTION_PARAM_SCAN  &&
       action != NU_ACTION_MCMC  &&
+      action != NU_ACTION_PROB_TABLE  &&
       action != NU_ACTION_EXPOSURE_SCAN  &&  n_scan_params > 0)
   {
     fprintf(stderr, "Warning: -p is used only when -a PARAM_SCAN is given.\n");
@@ -1146,32 +1170,40 @@ int main(int argc, char *argv[])
 
   // Initialize and register non-standard probability engine. This has to be done
   // before any calls to glbAllocParams() or glbAllocProjections()
+  int n_params = 0;
   if (n_flavors == 3)
   {
     int default_rotation_order[][2] = { {2,3}, {1,3}, {1,2} };
     int default_phase_order[] = { -1, 0, -1};
-    snu_init_probability_engine(n_flavors, default_rotation_order, default_phase_order);
-    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+1, &snu_probability_matrix,
-      &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
+    n_params = snu_init_probability_engine(n_flavors,
+                                           default_rotation_order, default_phase_order);
+//    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+1, &snu_probability_matrix,
+//      &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
   }
   else if (n_flavors == 4)
   {
     int default_rotation_order[][2] = { {3,4}, {2,4}, {1,4}, {2,3}, {1,3}, {1,2} };
     int default_phase_order[] = { -1,  1, -1, -1,  0,   2};
-    snu_init_probability_engine(n_flavors, default_rotation_order, default_phase_order);
-    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+5, &snu_probability_matrix,
-      &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
+    n_params = snu_init_probability_engine(n_flavors,
+                                           default_rotation_order, default_phase_order);
   }
   else if (n_flavors == 5)
   {
     int default_rotation_order[][2] = { {4, 5}, {3,5}, {2,5}, {1,5}, {3,4}, {2,4}, {1,4},
                                         {2,3}, {1,3}, {1,2} };
     int default_phase_order[] = { -1, -1, -1,  2, -1, -1,  1, -1,  0, -1};
-    snu_init_probability_engine(n_flavors, default_rotation_order, default_phase_order);
-    glbRegisterProbabilityEngine(6*SQR(n_flavors)-n_flavors+7, &snu_probability_matrix,
-      &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
-      // Remember to change when adding parameters!
+    n_params = snu_init_probability_engine(n_flavors,
+                                           default_rotation_order, default_phase_order);
   }
+  glbRegisterProbabilityEngine(n_params, &snu_probability_matrix,
+    &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
+
+#ifdef NU_USE_NUSQUIDS
+  glbRegisterNuSQuIDSEngine(nu_hook_probability_matrix_nusquids);
+  printf("# Using NuSQuIDS probability engine.\n");
+#else
+  printf("# Using SNU probability engine.\n");
+#endif
 
   for (int j=0; j < glbGetNumOfOscParams(); j++)
   {
@@ -1339,13 +1371,15 @@ int main(int argc, char *argv[])
   {
     printf("#   %s (version %s)", glbGetFilenameOfExperiment(i),
            glbVersionOfExperiment(i));
-    if (strcasecmp(glbGetFilenameOfExperiment(i), "MBneutrino200.glb") == 0)
-    {
-//      extern double Eminnu, Eminbar;
-//      printf("; nu mode E > %g, nu-bar mode E > %g", Eminnu, Eminbar);
-      extern double Emin;
-      printf("; E > %g MeV", Emin);
-    }
+    #ifdef NU_USE_NUSQUIDS
+      if (strcasecmp(glbGetFilenameOfExperiment(i), "MBneutrino200.glb") == 0)
+      {
+//        extern double Eminnu, Eminbar;
+//        printf("; nu mode E > %g, nu-bar mode E > %g", Eminnu, Eminbar);
+        extern double Emin;
+        printf("; E > %g MeV", Emin);
+      }
+    #endif
     printf("\n");
   }
   printf("#\n");
@@ -1363,7 +1397,11 @@ int main(int argc, char *argv[])
   if (ext_flags & EXT_KARMEN)
     printf("#   KARMEN\n");
   if (ext_flags & EXT_LSND)
-    printf("#   LSND\n");
+    printf("#   LSND (Thomas' code)\n");
+  if (ext_flags & EXT_LSND_IVAN)
+    printf("#   LSND (Ivan's code)\n");
+  if (ext_flags & EXT_MB_JK)
+    printf("#   MiniBooNE (Joachim's code)\n");
 
   if (ext_flags & EXT_REACTORS)
   {
@@ -1398,8 +1436,18 @@ int main(int argc, char *argv[])
     #ifdef USE_DANSS
       printf("#     DANSS\n");
     #endif
+    #ifdef USE_NEOS
+      printf("#     NEOS\n");
+    #endif
     #ifdef USE_GAL
       printf("#     Gallium\n");
+    #endif
+
+    #ifdef USE_NEOS_DB_ALVARO
+      printf("#     Combined NEOS+ Daya Bay analysis\n");
+    #endif
+    #ifdef USE_DB_ALVARO
+      printf("#     Daya Bay (Alvaro's implementation)\n");
     #endif
   }
 
@@ -1469,64 +1517,13 @@ int main(int argc, char *argv[])
     return -5;
   ext_init(ext_flags);              // Initialize external codes 
 
-
-  // TODO: Remove
-//  glbSetOscillationParameters(true_values);
-//  {
-//    double P[MAX_FLAVORS][MAX_FLAVORS];
-//    int flags = 0;
-//    double L;
-//    L = 0.1*KM;
-//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
-//    L = 0.2*KM;
-//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
-//    L = 0.5*KM;
-//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
-//    L = 1.0*KM;
-//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
-//    L = 2.0*KM;
-//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
-//    L = 5.0*KM;
-//    snu_filtered_probability_matrix_cd(P, 4*MEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[0][0], P[0][1], P[0][2]);
-//  }
-//  {
-//    double P[MAX_FLAVORS][MAX_FLAVORS];
-//    int flags = 0;
-//    double L;
-//    L = 1*KM;
-//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
-//    L = 10*KM;
-//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
-//    L = 100*KM;
-//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
-//    L = 200*KM;
-//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
-//    L = 500*KM;
-//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
-//    L = 1000*KM;
-//    snu_filtered_probability_matrix_cd(P, 2*GEV, L, 0.0, 0.0, +1, &flags);
-//    printf(" %7g   %10.7g  %10.7g  %10.7g\n", L/KM, P[1][0], P[1][1], P[1][2]);
-//  }
-//  exit(0);
-
   switch (action)
   {
     // Print event rates 
     case NU_ACTION_SPECTRUM:
       printf("# Printing event rates.\n");
       printf("#\n");
-      print_rates();
+      print_rates(ext_flags);
       break;
 
     // General parameter scan
@@ -1598,6 +1595,41 @@ int main(int argc, char *argv[])
       break;
     }
 
+    // Tabulate oscillation probabilities
+    case NU_ACTION_PROB_TABLE:
+    {
+      printf("# Tabulating oscillation probabilities\n");
+      printf("#\n");
+
+      for (int i=0; i < glb_num_of_exps; i++)
+      {
+        // Prepare data structures
+        char fname[1024];
+        sprintf(fname, "%s-%s", output_file, basename(glb_experiment_list[i]->filename));
+        struct snu_probability_table p;
+        p.default_values = glbAllocParams();
+        glbCopyParams(true_values, p.default_values);
+        p.n_p = n_scan_params;
+        for (int j=0; j < p.n_p; j++)
+        {
+          p.params[j]  = strdup(scan_params[j]);
+          p.p_min[j]   = scan_p_min[j];
+          p.p_max[j]   = scan_p_max[j];
+          p.p_steps[j] = scan_p_steps[j];
+          p.p_flags[j] = scan_p_flags[j];
+        }
+
+        // Compute probability table
+        snu_compute_probability_table(i, &p, fname);
+
+
+        // FIXME FIXME Read probability table again
+        struct snu_probability_table *p2 = snu_alloc_probability_table();
+        snu_load_probability_table(fname, p2);
+      }
+      break;
+    }
+
     // Scan over parameters and over exposure
     case NU_ACTION_EXPOSURE_SCAN:
     {
@@ -1614,7 +1646,8 @@ int main(int argc, char *argv[])
   }
 
   time(&end_time);
-  printf("# Run ended on %s\n", asctime(localtime(&end_time)));
+  printf("# Run ended on %s", asctime(localtime(&end_time)));
+  printf("# Running time (wallclock): %g sec\n\n", difftime(end_time, start_time));
  
   // Destroy parameter and projection vector(s) 
   glbFreeParams(true_values);
@@ -1624,7 +1657,10 @@ int main(int argc, char *argv[])
   glbFreeProjection(prescan_proj);
   glbFreeProjection(proj);
 
-  chiMB_clear();
+  #ifdef NU_USE_NUSQUIDS
+    chiMB_clear();
+  #endif
+  chiMB_jk_clear();
     
   // Cleanup MPI 
   #ifdef NU_MPI

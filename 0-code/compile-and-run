@@ -48,10 +48,11 @@ shift $((OPTIND-2))
 
 # Pick name for temporary executable
 EXE=$(mktemp -u nu-tmp-XXXXX)
+SLURM_SCRIPT=nu-script${EXE#nu-tmp}
 
 # Definitions for Thomas' SBL codes
 if [[ -z $SBLDEFS ]]; then
-  SBLDEFS="SBL CHOOZ PV DC DB KAML RENO BUGEY_SP DANSS GAL"
+  SBLDEFS="SBL CHOOZ PV DC DB KAML RENO BUGEY_SP GAL DANSS DB_FLUX DB_ALVARO NEOS_ALVARO"
 fi
 
 CODE=""
@@ -104,12 +105,8 @@ if $RUN_MPI; then
     echo "# Running job $EXE locally in MPI mode, $NU_SIZE processes ..."
     mpirun -np $NU_SIZE ./$EXE $@ | tee ../results/$OUT_FILE &
   else
-    echo "# Submitting job $EXE in MPI file, output file $OUT_FILE ..."
-    bsub -q thepshort \
-         -n 1 \
-         -N \
-         -M 1000000 \
-         "mpirun -np $NU_SIZE ./$EXE $@ > ../results/$OUT_FILE"
+    echo "# Submitting job $EXE in MPI mode, output file $OUT_FILE ..."
+    NU_COMMAND="mpirun -np $NU_SIZE ./$EXE $@ > ../results/$OUT_FILE"
   fi
 
 # Manual parallelization
@@ -121,23 +118,12 @@ elif [[ -z $NU_RANK ]]; then
       export OUT_FILE="${OF%%.dat}_${NU_RANK}.dat"
     fi
 
-    # Submit to MOGON
-    #   -q <queue>
-    #   -n <no of cores>
-    #   -o <name of output file (stdout, stderr)>
-    #   -N            --   Send email when job is finished
-    #   -W <hrs:min>  --   Maximum wall clock time (hrs:min)
-    #   -M xxx        --   Memory limit
     if $RUN_LOCALLY; then
       echo "# Running job $EXE locally ..."
       ./$EXE $@ | tee ../results/$OUT_FILE &
     else
       echo "# Submitting job $EXE, output file $OUT_FILE ..."
-      bsub -q thepshort \
-           -n 1 \
-           -N \
-           -M 1000000 \
-           "./$EXE $@ > ../results/$OUT_FILE"
+      NU_COMMAND="./$EXE $@ > ../results/$OUT_FILE"
     fi
   done
 else
@@ -159,13 +145,55 @@ else
     ./$EXE $@ | tee ../results/$OUT_FILE &
   else
     echo "# Submitting job $EXE, output file $OUT_FILE ..."
-    bsub -q theplong \
-         -n 1 \
-         -N \
-         -W 96:00 \
-         -M 1000000 \
-         "./$EXE $@ > ../results/$OUT_FILE"
+    NU_COMMAND="./$EXE $@ > ../results/$OUT_FILE"
   fi
+fi
+
+
+# If running on cluster, create run script if necessary and submit to queue
+if [ $RUN_LOCALLY = false ]; then
+  # For LFS:
+  #   -q <queue>
+  #   -n <no of cores>
+  #   -o <name of output file (stdout, stderr)>
+  #   -N            --   Send email when job is finished
+  #   -W <hrs:min>  --   Maximum wall clock time (hrs:min)
+  #   -M xxx        --   Memory limit
+#  bsub -q theplong \
+#       -n 1 \
+#       -N \
+#       -W 96:00 \
+#       -M 1000000 \
+#       $NU_COMMAND
+
+  # For SLURM:
+  #   -A <account>
+  #   -p <partition/queue>
+  #   -n <# of tasks/cores>
+  #   -N <# of nodes>
+  #   -J <jobname>
+  cat > $SLURM_SCRIPT << EOF
+#!/bin/bash
+# SLURM script for sterile neutrino code
+# Mona Dentler, Joachim Kopp (JGU Mainz), 2017
+#
+#SBATCH -J ${SLURM_SCRIPT#nu-script} # Job name
+#SBATCH -o ../results/$OUT_FILE  # Specify stdout output file (%j expands to jobId)
+#SBATCH -p long                  # Queue name
+#SBATCH -N 1                     # Total number of nodes requested (16 cores/node)
+#SBATCH -n 1                     # Total number of tasks
+#SBATCH -A thep                  # Specify allocation to charge against
+ 
+# Load all necessary modules if needed (these are examples)
+# Loading modules in the script ensures a consistent environment.
+module load gcc/6.2.0
+module load gsl/2.1
+ 
+# Launch the executable
+$NU_COMMAND
+EOF
+
+  sbatch $SLURM_SCRIPT
 fi
 
 

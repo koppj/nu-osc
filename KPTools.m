@@ -86,6 +86,7 @@ SetOptions[Histogram,MyOptions];
 SetOptions[ContourPlot,MyOptions];
 SetOptions[ListContourPlot,MyOptions];
 SetOptions[DensityPlot,MyOptions];
+SetOptions[ListDensityPlot,MyOptions];
 SetOptions[RegionPlot,MyOptions];
 SetOptions[ParametricPlot,MyOptions];
 On[SetOptions::optnf];

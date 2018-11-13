@@ -3,11 +3,12 @@
 namespace ns_reactor
 {
 
-#ifdef USE_DB
-
 // source: Daya Bay talk at Neutrino 2016 - 1230 days
 // using data from spectrum on slide 11 
-  
+
+
+#ifdef USE_DB
+
 #define NREACT_DB 6
 #define NDET_EH1  2
 #define NDET_EH2  2
@@ -39,7 +40,7 @@ double pred_EH1_3f[NBIN_DB], pred_EH2_3f[NBIN_DB], pred_EH3_3f[NBIN_DB];
 
 
 // baselines from table 2 of 1210.6327
-const double basel_DB[NDET_DB][NREACT_DB] = {
+static const double basel_DB[NDET_DB][NREACT_DB] = {
   {0.362, 0.372, 0.903, 0.817, 1.354, 1.265},   // EH1
   {0.358, 0.368, 0.903, 0.817, 1.354, 1.266},   // EH1
   {1.332, 1.358, 0.468, 0.490, 0.558, 0.499},   // EH2
@@ -94,10 +95,9 @@ const double bg_err_DB[NBG_DB][NDET_DB] = {
 }; 
 
 
+/******************* class DB_PROB ********************************/
 
-/************************************************************/
-
-class DB_PROB{
+class DB_PROB {
  private:
   double log_DmqL_min, log_DmqL_max;
   double DmqL_min, DmqL_max;
@@ -109,7 +109,6 @@ class DB_PROB{
  public:
   void calc_integrals(void);
   double P(Param_5nu &prm, int det, int react, int bin);
-
 } DB_prob;
 
 
@@ -125,6 +124,131 @@ double DB_PROB::P(Param_5nu &p, int det, int react, int bin)
   }
   return P; 
 } 
+
+
+// interpolating on the table
+double DB_PROB::sinq(const double DmqL, const int bin)
+{
+  if(DmqL <  DmqL_min) error("DB_PROB::sinq: DmqL too small");
+  if(DmqL >= DmqL_max) error("DB_PROB::sinq: DmqL too large");
+
+  const double logD = log10(DmqL);
+
+  int i = int( (logD - log_DmqL_min) / Del);
+  if(i < 0 || i >= N_RATE_COEF-1) error("DB_PROB::sinq: index out of range");
+
+  const double x = (logD - i * Del - log_DmqL_min) / Del;
+  if(x < 0. || x > 1.) error("DB_PROB::sinq: x out of range");
+
+  return sinq_av[bin][i] + (sinq_av[bin][i+1] - sinq_av[bin][i]) * x;
+}
+
+
+/****************************************************
+ * integration routines
+ ****************************************************/
+
+// 1310.6732 gives sigma/E = 8% @ 1 MeV - assume sqrt(E) scaling
+inline double e_res_db(const double T_e){ 
+  return 0.08 * sqrt(T_e);
+}
+
+double gauss_int_db(double eNu)
+{   
+   double T_e = eNu + ME - DELTA;
+
+   // take into account energy scale correction according to Fig. 1 of 1310.6732
+   //T_e *= read(REACTOR_PATH"Data_DB-Neutrino14/energy-scale.txt", T_e);
+
+   const double sigma = e_res_db(T_e);
+
+   double x_max = (T_max(bin_gl_db) - T_e) / (sigma*M_SQRT2);
+   double x_min = (T_min(bin_gl_db) - T_e) / (sigma*M_SQRT2);
+
+   double res = (erf(x_max) - erf(x_min)) / 2.;
+   if(res < 0.) {
+      fprintf(stderr, "BLOODY HELL!!\n");
+      exit(1);
+   }   
+   return res;
+}
+
+double db_flux(const double Enu)
+{
+  // slide 19 of Neutrino2014 talk
+  const double isofract_DB[NISO] = {0.586, 0.076, 0.288, 0.050};
+
+  double w = 0.;
+  for(int i = 0; i < NISO; i++)
+    w += isofract_DB[i] * global_flux(i, Enu, old_new_main);
+  return w;
+}
+
+double int_n0_db(double e)
+{
+  const double EposKin = e - ME - DELTA;
+  return crossSect(EposKin) * db_flux(e) * gauss_int_db(e);
+}
+
+double int_sinq_db(double e)
+{
+  double Cos;
+  if(gl_DmqL_db <= 0.) Cos = 1.;
+  else
+  {
+    const double a1 = 2.54 * gl_DmqL_db / e * 0.95;
+    const double a2 = 2.54 * gl_DmqL_db / e * 1.05;
+    Cos = (sin(a2) - sin(a1))/(a2 - a1);
+  }
+
+  const double EposKin = e - ME - DELTA;
+  return crossSect(EposKin) * 0.5*(1.-Cos) * db_flux(e) * gauss_int_db(e);
+}
+
+
+
+void DB_PROB::calc_integrals(void)
+{
+  // DmqL in units of eV^2 m 
+  log_DmqL_min = ATM_MIN + log10(10.);      
+  log_DmqL_max = STE_MAX + log10(2000.);   
+
+  DmqL_min = exp10(log_DmqL_min);
+  DmqL_max = exp10(log_DmqL_max);
+
+  Del = (log_DmqL_max - log_DmqL_min) / (N_RATE_COEF - 1.);
+
+  for(int i = 0; i < NBIN_DB; i++){
+    bin_gl_db = i;
+
+    double emin = T_min(i) - 3. * e_res_db(T_min(i)) - ME + DELTA;
+    if(emin < EnuMIN) emin = EnuMIN;
+    double emax = T_max(i) + 3. * e_res_db(T_max(i)) - ME + DELTA;
+    if(emax > EnuMAX) emax = EnuMAX;
+
+    const double n0 = qromb1(int_n0_db, emin, emax, 1.e-6);
+
+    for(int j = 0; j  < N_RATE_COEF; j++){
+      gl_DmqL_db = exp10(log_DmqL_min + j * Del);
+      sinq_av[i][j] = qromb1(int_sinq_db, emin, emax, 1.e-6) / n0;
+    }
+  }
+
+  /*
+  // printing the averaged sinq factor 
+  for(double L = 100.; L < 2000.; L *= 1.01)
+    printf("%e %e %e %e %e\n", L, sinq(7.5e-5 * L, 1), sinq(7.5e-5 * L, 35), 
+	  sinq(2.3e-3 * L, 1), sinq(2.3e-3 * L, 35));
+  exit(0);
+  */
+  return;
+}
+
+#endif
+
+/****************** end definition of class DB_PROB *************************/
+
+#ifdef USE_DB
 
 // re-scaling the no-osc FD spectrum with oscillation probability
 // do not include background in prediction to match official results
@@ -205,7 +329,10 @@ void set_table_DB(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1])
     cff[b][fp] = cff[b][NPULLS];
 
     // accidentals
-    cff[b][fp+1] = DB_accidentals[i];
+    cff[b][fp+1] = 0.0;
+      /* In the 3f analysis, this was DB_accidentals[i], but this doesn't make sense
+       * when we are dealing with ratios rather than absolute event rates. The
+       * impact was negligible anyway. */
   }
 
   // energy scale
@@ -371,25 +498,6 @@ void DB_init(void)
 
 
 
-
-// interpolating on the table
-double DB_PROB::sinq(const double DmqL, const int bin)
-{
-  if(DmqL <  DmqL_min) error("DB_PROB::sinq: DmqL too small");
-  if(DmqL >= DmqL_max) error("DB_PROB::sinq: DmqL too large");
-
-  const double logD = log10(DmqL);
-
-  int i = int( (logD - log_DmqL_min) / Del);
-  if(i < 0 || i >= N_RATE_COEF-1) error("DB_PROB::sinq: index out of range");
-
-  const double x = (logD - i * Del - log_DmqL_min) / Del;
-  if(x < 0. || x > 1.) error("DB_PROB::sinq: x out of range");
-
-  return sinq_av[bin][i] + (sinq_av[bin][i+1] - sinq_av[bin][i]) * x;
-}
-
-
 /****************************************************
  * plotting
  ****************************************************/
@@ -408,110 +516,9 @@ void DB_spectrum(Param_5nu &prm)
   }
   return;
 }
-  
-  
-
-/****************************************************
- * integration routines
- ****************************************************/
-
-// 1310.6732 gives sigma/E = 8% @ 1 MeV - assume sqrt(E) scaling
-inline double e_res_db(const double T_e){ 
-  return 0.08 * sqrt(T_e);
-}
-double gauss_int_db(double eNu)
-{   
-   double T_e = eNu + ME - DELTA;
-
-   // take into account energy scale correction according to Fig. 1 of 1310.6732
-   //T_e *= read(REACTOR_PATH"Data_DB-Neutrino14/energy-scale.txt", T_e);
-
-   const double sigma = e_res_db(T_e);
-
-   double x_max = (T_max(bin_gl_db) - T_e) / (sigma*M_SQRT2);
-   double x_min = (T_min(bin_gl_db) - T_e) / (sigma*M_SQRT2);
-
-   double res = (erf(x_max) - erf(x_min)) / 2.;
-   if(res < 0.) {
-      fprintf(stderr, "BLOODY HELL!!\n");
-      exit(1);
-   }   
-   return res;
-}
-
-double db_flux(const double Enu)
-{
-  // slide 19 of Neutrino2014 talk
-  const double isofract_DB[NISO] = {0.586, 0.076, 0.288, 0.050};
-
-  double w = 0.;
-  for(int i = 0; i < NISO; i++)
-    w += isofract_DB[i] * global_flux(i, Enu, old_new_main);
-  return w;
-}
-
-double int_n0_db(double e)
-{
-  const double EposKin = e - ME - DELTA;
-  return crossSect(EposKin) * db_flux(e) * gauss_int_db(e);
-}
-
-double int_sinq_db(double e)
-{
-  double Cos;
-  if(gl_DmqL_db <= 0.) Cos = 1.;
-  else
-  {
-    const double a1 = 2.54 * gl_DmqL_db / e * 0.95;
-    const double a2 = 2.54 * gl_DmqL_db / e * 1.05;
-    Cos = (sin(a2) - sin(a1))/(a2 - a1);
-  }
-
-  const double EposKin = e - ME - DELTA;
-  return crossSect(EposKin) * 0.5*(1.-Cos) * db_flux(e) * gauss_int_db(e);
-}
 
 
-
-void DB_PROB::calc_integrals(void)
-{
-  // DmqL in units of eV^2 m 
-  log_DmqL_min = ATM_MIN + log10(10.);      
-  log_DmqL_max = STE_MAX + log10(2000.);   
-
-  DmqL_min = exp10(log_DmqL_min);
-  DmqL_max = exp10(log_DmqL_max);
-
-  Del = (log_DmqL_max - log_DmqL_min) / (N_RATE_COEF - 1.);
-
-  for(int i = 0; i < NBIN_DB; i++){
-    bin_gl_db = i;
-
-    double emin = T_min(i) - 3. * e_res_db(T_min(i)) - ME + DELTA;
-    if(emin < EnuMIN) emin = EnuMIN;
-    double emax = T_max(i) + 3. * e_res_db(T_max(i)) - ME + DELTA;
-    if(emax > EnuMAX) emax = EnuMAX;
-
-    const double n0 = qromb1(int_n0_db, emin, emax, 1.e-6);
-
-    for(int j = 0; j  < N_RATE_COEF; j++){
-
-      gl_DmqL_db = exp10(log_DmqL_min + j * Del);
-      sinq_av[i][j] = qromb1(int_sinq_db, emin, emax, 1.e-6) / n0;
-    }
-  }
-
-  /*
-  // printing the averaged sinq factor 
-  for(double L = 100.; L < 2000.; L *= 1.01)
-    printf("%e %e %e %e %e\n", L, sinq(7.5e-5 * L, 1), sinq(7.5e-5 * L, 35), 
-	  sinq(2.3e-3 * L, 1), sinq(2.3e-3 * L, 35));
-  exit(0);
-  */
-  return;
-}
-
-
-#endif
+#endif // USE_DB || USE_NEOS
 
 } // namespace
+

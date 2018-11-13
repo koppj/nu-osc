@@ -7,7 +7,7 @@ cd 0-code/
 echo "******** Warnings in C code **************"
 grep "FIXME" *
 echo "******************************************"
-grep "FIXME" $(find glb/* -name *.glb)
+grep "FIXME" $(find glb/* -name "*.glb")
 echo "******************************************"
 #echo
 
@@ -84,12 +84,12 @@ unset SP
 # ----------------------------------------------------------
 
 # 3+1 fit
-#OUT_FILE=th24dm41-minos$SUFFIX.dat ./compile-and-run -l \
-#    -f 4 -e MINOS_2016 -a PARAM_SCAN \
-#    -t "TH23=0.925,DM31=0.00245" \
-#    -m "TH23,DM31,TH34" \
-#    -p "TH24,0,0.35,35" \
-#    -p "DM41,-4,3,56,LOGSCALE"
+OUT_FILE=th24dm41-minos-2017$SUFFIX.dat ./compile-and-run -l \
+    -f 4 -e MINOS_2017 -a PARAM_SCAN \
+    -t "TH23=0.925,DM31=0.00245" \
+    -m "TH23,DM31,TH34" \
+    -p "TH24,0,0.35,35" \
+    -p "DM41,-4,3,56,LOGSCALE"
 
 
 # MINOS debugging / testing (old GLoBES-based code)
@@ -166,11 +166,27 @@ unset SP
 #  ./compile-and-run -l -f 4 --no-ih -a PARAM_SCAN -e SBL\
 #                    -m "TH13,DM31" \
 #                    -p "TH14,0,0.8,20" \
-#                    -p "DM41,-1.5,1.5,15,LOGSCALE"
+#                    -p "DM41,-1.5,1.5,60,LOGSCALE"
 
 # DANSS testing
 # -------------
 #OUT_FILE=th14dm41-danss$SUFFIX.dat SBLDEFS="DANSS" \
+#  ./compile-and-run -l -f 4 --no-ih -a PARAM_SCAN -e SBL\
+#                    -p "TH14,0,0.8,20" \
+#                    -p "DM41,-2,1,30,LOGSCALE"
+
+
+# NEOS testing
+# -------------
+#OUT_FILE=th14dm41-neos$SUFFIX.dat SBLDEFS="NEOS" \
+#  ./compile-and-run -l -f 4 --no-ih -a PARAM_SCAN -e SBL\
+#                    -p "TH14,0,0.8,20" \
+#                    -p "DM41,-2,1,30,LOGSCALE"
+
+
+# Testing of Alvaro's codes
+# -------------------------
+#OUT_FILE=th14dm41-db-neos$SUFFIX.dat SBLDEFS="DB_NEOS_ALVARO" \
 #  ./compile-and-run -l -f 4 --no-ih -a PARAM_SCAN -e SBL\
 #                    -p "TH14,0,0.8,20" \
 #                    -p "DM41,-2,1,30,LOGSCALE"
@@ -855,6 +871,50 @@ unset SCAN_PARAMS
 #                              MCMC Tests
 # ---------------------------------------------------------------------------
 
+# Standard oscillation fits
+# -------------------------
+
+#OUTPUT_PATH=/temp/jkopp/sterile-nu/mcmc/
+#export NU_SIZE=4
+#export OUT_FILE="mcmc-log"
+#SBLDEFS="CHOOZ DB_3F DC RENO KAML" \
+#  ./compile-and-run -M -l \
+#                    -f 3 --no-ih -a MCMC \
+#                    -e SBL -e SOLAR -e ATM_COMP -e T2K -e MINOS_2016 \
+#                    -p "DM21,5e-5,1e-4,15" \
+#                    -p "DM31,2.0e-3,3.0e-3,15" \
+#                    -p "DELTA_0,0,2*pi,8" \
+#                    -p "TH12,asin(sqrt(0.2)),asin(sqrt(0.4)),20" \
+#                    -p "TH13,0,0.5*asin(sqrt(0.15)),20" \
+#                    -p "TH23,asin(sqrt(0.2),asin(sqrt(0.7)),20" \
+#                    -o $OUTPUT_PATH/3f$SUFFIX.dat
+#unset NU_SIZE
+#unset OUT_FILE
+
+# Conventional frequentist fits for comparison
+#OUT_FILE="dm31th23$SUFFIX.dat" SBLDEFS="CHOOZ DB_3F DC RENO KAML" \
+#  ./compile-and-run -M -l -f 3 --no-ih -a PARAM_SCAN \
+#                                  -e SBL -e SOLAR -e ATM_COMP -e T2K -e MINOS_2016 \
+#                                  -p "DM31,2.0e-3,3.0e-3,20" \
+#                                  -p "TH23,asin(sqrt(0.2),asin(sqrt(0.7)),20" \
+#                                  -m "TH12,TH13,DELTA_0,DM21"
+#OUT_FILE="dm21th12$SUFFIX.dat" SBLDEFS="CHOOZ DB_3F DC RENO KAML" \
+#  ./compile-and-run -M -l -f 3 --no-ih -a PARAM_SCAN \
+#                                  -e SBL -e SOLAR -e ATM_COMP -e T2K -e MINOS_2016 \
+#                                  -p "DM21,5e-5,1e-4,20" \
+#                                  -p "TH12,asin(sqrt(0.2)),asin(sqrt(0.4)),20" \
+#                                  -m "TH13,TH23,DELTA_0,DM31"
+#OUT_FILE="th13delta$SUFFIX.dat" SBLDEFS="CHOOZ DB_3F DC RENO KAML" \
+#  ./compile-and-run -M -l -f 3 --no-ih -a PARAM_SCAN \
+#                                  -e SBL -e SOLAR -e ATM_COMP -e T2K -e MINOS_2016 \
+#                                  -p "TH13,0,0.5*asin(sqrt(0.15)),20" \
+#                                  -p "DELTA_0,0,2*pi,8" \
+#                                  -m "TH12,TH23,DM21,DM31"
+
+
+# Sterile neutrino fits
+# ---------------------
+
 #export SP="-v -f 5 -a MCMC \
 #         -t "TH14=0.01,TH24=0.01,TH15=0.01,TH25=0.01,DELTA_0=1.3" \
 #         -p "DM41,-1,1,10,LOGSCALE"         -p "DM51,-1,1,10,LOGSCALE" \
@@ -875,16 +935,20 @@ export SP="-f 4 --no-ih -a MCMC \
                     -p "TH14,0,0.6,20" "
 export NU_SIZE=4
 export OUT_FILE="mcmc-log"
-SBLDEFS="SBL BUGEY_SP CHOOZ PV DC DB RENO DANNS" ./compile-and-run -M -l $SP -e SBL \
-                           -o $OUTPUT_PATH/dm41th13th14-sbllblreactors$SUFFIX.dat
-SBLDEFS="CHOOZ PV DC DB RENO" ./compile-and-run -M -l $SP -e SBL \
-                           -o $OUTPUT_PATH/dm41th13th14-lblreactors$SUFFIX.dat
-SBLDEFS="GALP" ./compile-and-run -M -l $SP -e SBL \
-                           -o $OUTPUT_PATH/dm41th13th14-gal$SUFFIX.dat
-SBLDEFS="SBL BUGEY_SP DANSS" ./compile-and-run -M -l $SP -e SBL \
-                           -o $OUTPUT_PATH/dm41th13th14-sblreactors$SUFFIX.dat
-SBLDEFS="" ./compile-and-run -M -l $SP -e C12 \
-                           -o $OUTPUT_PATH/dm41th13th14-sblreactors$SUFFIX.dat
+###SBLDEFS="SBL BUGEY_SP" ./compile-and-run -M -l $SP -e SBL \
+###                           -o $OUTPUT_PATH/dm41th13th14-mytest$SUFFIX.dat
+
+
+#SBLDEFS="SBL BUGEY_SP CHOOZ PV DC DB RENO DANNS" ./compile-and-run -M -l $SP -e SBL \
+#                           -o $OUTPUT_PATH/dm41th13th14-sbllblreactors$SUFFIX.dat
+#SBLDEFS="CHOOZ PV DC DB RENO" ./compile-and-run -M -l $SP -e SBL \
+#                           -o $OUTPUT_PATH/dm41th13th14-lblreactors$SUFFIX.dat
+#SBLDEFS="GALP" ./compile-and-run -M -l $SP -e SBL \
+#                           -o $OUTPUT_PATH/dm41th13th14-gal$SUFFIX.dat
+#SBLDEFS="SBL BUGEY_SP DANSS" ./compile-and-run -M -l $SP -e SBL \
+#                           -o $OUTPUT_PATH/dm41th13th14-sblreactors$SUFFIX.dat
+#SBLDEFS="" ./compile-and-run -M -l $SP -e C12 \
+#                           -o $OUTPUT_PATH/dm41th13th14-c12$SUFFIX.dat
 
 export SP="$SP -s "DELTA_0,0,4.7,3" -s "DELTA_1,0,4.7,3" -m "DELTA_0,DELTA_1""
 #OUT_FILE=dm41th13th14-solar-kaml$SUFFIX.dat SBLDEFS="KAML" \

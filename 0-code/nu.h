@@ -15,9 +15,10 @@
 #include "snu.h"
 
 // Select/deselect parts of the code
-#define USE_ATM              // Michele's atmospherics code
-#define USE_SOLAR            // Michele's solar code
-#define NU_USE_MONTECUBES    // MonteCUBES support
+// (can also be done from the Makefile)
+//#define USE_ATM              // Michele's atmospherics code
+//#define USE_SOLAR            // Michele's solar code
+//#define NU_USE_MONTECUBES    // MonteCUBES support
 
 // Macros
 #define SQR(x)      ((x)*(x))                        // x^2
@@ -86,8 +87,13 @@ typedef struct
 #define NU_S    NU_S1
 
 /* Different plot types */
-enum { NU_ACTION_SPECTRUM, NU_ACTION_PARAM_SCAN, NU_ACTION_MCMC, NU_ACTION_EXPOSURE_SCAN/*,
-       NU_ACTION_CHECK_BF*/ };
+enum { NU_ACTION_SPECTRUM,
+       NU_ACTION_PARAM_SCAN,
+       NU_ACTION_MCMC,
+       NU_ACTION_EXPOSURE_SCAN,
+       NU_ACTION_PROB_TABLE
+       // NU_ACTION_CHECK_BF
+     };
 
 /* External analysis routines */
 enum { EXT_MB         = 0x000001,
@@ -103,7 +109,10 @@ enum { EXT_MB         = 0x000001,
        EXT_ATM_COMP   = 0x000400,
        EXT_DEEPCORE   = 0x000800,
        EXT_SOLAR      = 0x001000,
-       EXT_MINOS2016  = 0x002000
+       EXT_MINOS2016  = 0x002000,
+       EXT_MINOS2017  = 0x004000,
+       EXT_LSND_IVAN  = 0x008000,
+       EXT_MB_JK      = 0x010000
 };
 
 /* Experiment and rule numbers */
@@ -135,6 +144,9 @@ extern int EXP_REACTOR_FAR;
 #define RULE_WBB_LAR_MU_QE    5
 #define RULE_WBB_LAR_EBAR_QE  6
 #define RULE_WBB_LAR_MUBAR_QE 7
+
+/* MINOS 2017 flags */
+#define MINOS_2017_PRINT_RATES  0x01  /* Output event rates */
 
 /* Options for degfinder */
 #define DEG_NO_NH      0x01   /* Omit normal hierarchy fits                    */
@@ -215,12 +227,20 @@ double chiMINOS_2010(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 int MINOS_2016_init();
 double MINOS_2016_prior(glb_params params);
+int MINOS_2017_init();
+double MINOS_2017_prior(glb_params params, unsigned flags);
 
-/* mb-2010.c */
+/* mb-2018.cc */
 int chiMB_init(int threshold);
 int chiMB_clear();
 double chiMB(int exper, int rule, int n_params, double *x, double *errors,
               void *user_data);
+int getMBspectrum(const char *fname);
+
+/* mb-jk-2018.cc */
+int chiMB_jk_init();
+int chiMB_jk_clear();
+double chiMB_jk();
 
 /* e776.c */
 double chi_E776(int exp, int rule, int n_params, double *x,
@@ -260,7 +280,7 @@ double chi_OPERA(int exp, int rule, int n_params, double *x, double *errors,
 double sample(double min, double max, int steps, int i);
 typedef int (*sens_func)(const char *, double, double, int, double, double, int);
 int RestrictWBBEnergyWindow(wbb_params_type *wbb_params);
-int print_rates();
+int print_rates(const long ext_flags);
 int my_print_params(glb_params p);
 int param_scan(const char *key_string, int n_p, char *params[], double p_min[], double p_max[],
        int p_steps[], unsigned long p_flags[], int n_min_params, char *min_params[],

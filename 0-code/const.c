@@ -11,6 +11,7 @@ const env_param actions[] =
   { "PARAM_SCAN",             NU_ACTION_PARAM_SCAN             },
   { "MCMC",                   NU_ACTION_MCMC                   },
   { "EXPOSURE_SCAN",          NU_ACTION_EXPOSURE_SCAN          },
+  { "PROB_TABLE",             NU_ACTION_PROB_TABLE             },
 //  { "CHECK_BF",               NU_ACTION_CHECK_BF               },
   { NULL, -1  }
 };
@@ -34,5 +35,10 @@ const env_param ext_scenarios[] =
   { "DEEPCORE",         EXT_DEEPCORE         },
   { "SOLAR",            EXT_SOLAR            },
   { "MINOS_2016",       EXT_MINOS2016        },
+  { "MINOS_2017",       EXT_MINOS2017        },
+#ifdef NU_USE_NUSQUIDS
+  { "LSND_IVAN",        EXT_LSND_IVAN        },
+#endif
+  { "MB_JK",            EXT_MB_JK            },
   { NULL, -1 }
 };

@@ -1,6 +1,6 @@
-OBJ     = bugey.o danss.o gallium.o class_fit.o dayabay.o db-sterile.o kamland.o dc.o main.o \
-   	  qrom.o reno.o chooz.o class_flux.o class_minimize.o linear_algebra.o \
-	  palo-verde.o read.o sbl_reactors.o class_read_2dim.o
+OBJ     = bugey.o neos.o danss.o gallium.o class_fit.o dayabay.o db-sterile.o \
+          kamland.o dc.o main.o qrom.o reno.o chooz.o class_flux.o class_minimize.o \
+	  linear_algebra.o palo-verde.o read.o sbl_reactors.o class_read_2dim.o
 HEADER  = definitions.h qrom.h
 SUBDIRS = 
 

@@ -15,7 +15,7 @@
 
 /* GLOBAL VAR */
 /* Density correlation list */
-static int density_corr[32];
+//static int density_corr[32];
 static int OPERA_EXP=99;
 static double NORMALIZATION=1E20;
 static int OPERA_bins=3;
@@ -55,8 +55,8 @@ double chi_OPERA(int exp, int rule, int n_params, double *x, double *errors,
       rate=0;
       /* All read from slide 29 of Neutrino 2016 Opera talk */
       double opera_data[3]  = {1., 6., 6.};
-      double opera_bg[3]    = {0.58022, 3.40993, 5.15097}; /* bg WITHOUT SM oscillation */
-      double opera_bg_sm[3] = {0.783446, 4.04865, 5.76063}; /* bg WITH SM oscillation */
+//      const double opera_bg[3]    = {0.58022, 3.40993, 5.15097}; /* bg w/o SM oscillation */
+      const double opera_bg_sm[3] = {0.783446, 4.04865, 5.76063}; /* bg w/ SM oscillation */
       for(int i=0; i<OPERA_bins; i++){
         rate  = signal_fit[i]*NORMALIZATION + opera_bg_sm[i];
         chi2 += glb_likelihood(opera_data[i],(1+x[0])*rate);

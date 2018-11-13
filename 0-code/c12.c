@@ -62,12 +62,12 @@ double chi_karmen_c12_JR(int exp, int rule, int n_params,
       /* data from J. Reichenbacher thesis */
       double *signal_fit_rates = glbGetSignalFitRatePtr(exp, 0);
       double signal_rates[26];
-      double signal_norm;
+//      double signal_norm; // FIXME Why is this not used?
       double chi2 = 0.0;
       int  i,ew_low, ew_high;
 
       glbGetEnergyWindowBins(exp, rule, &ew_low, &ew_high);
-      signal_norm = 1.0 + x[0];
+//      signal_norm = 1.0 + x[0];
       for(i=ew_low; i<=ew_high; i++)
         signal_rates[i] = signal_fit_rates[i];
 

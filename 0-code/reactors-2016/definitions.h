@@ -9,16 +9,19 @@
 
 // Which experiments to include
 // TAG_DEFS - This signals ./compile-and-run where to insert new #define's
-#define USE_SBL
-#define USE_CHOOZ
-#define USE_PV
-#define USE_KAML
-#define USE_DC
-#define USE_DB
-#define USE_RENO
-#define USE_BUGEY_SP
-#define USE_DANSS
-#define USE_GAL
+//#define USE_SBL
+//#define USE_CHOOZ
+//#define USE_PV
+//#define USE_KAML
+//#define USE_DC
+//#define USE_RENO
+//#define USE_BUGEY_SP
+//#define USE_DANSS
+//#define USE_GAL
+//#define USE_DB_ALVARO
+//#define USE_NEOS_ALVARO
+
+#define USE_DB_3F //FIXME FIXME FIXME
 
 #ifdef USE_ALL
 # define USE_SBL
@@ -26,11 +29,14 @@
 # define USE_PV
 # define USE_KAML
 # define USE_DC
-# define USE_DB
+//# define USE_DB
 # define USE_RENO
 # define USE_BUGEY_SP
 # define USE_DANSS
+//# define USE_NEOS
 # define USE_GAL
+# define USE_DB_ALVARO
+# define USE_NEOS_ALVARO
 #endif
 
 // if gal is not used define NO_GAL to avoid gallium initialization
@@ -41,7 +47,7 @@
 namespace ns_reactor
 {
 
-enum EXPERIMENTS {SBL, CHOOZ, PV, KAML, DC, DB, RENO, BUG_SP, DANSS, GAL, N_EXP};
+enum EXPERIMENTS {SBL, CHOOZ, PV, KAML, DC, DB, RENO, BUG_SP, DANSS, NEOS, GAL, N_EXP};
 
 enum SBL_Reactors {BUGEY4, ROVNO, BUGEY3_1, BUGEY3_2, BUGEY3_3, 
 		   GOSGEN_1, GOSGEN_2, GOSGEN_3, ILL, 
@@ -104,14 +110,15 @@ enum SBL_Reactors {BUGEY4, ROVNO, BUGEY3_1, BUGEY3_2, BUGEY3_3,
 # define NPULL_DC 0
 #endif
 
+
 #ifdef USE_DB_3F
 # ifdef USE_DB
 #   error "USE_DB and USE_DB_3F are mutually exclusive."
 # endif
-# define NBIN_DB 34
+# define NBIN_DB  34
 # define NPULL_DB 3 // relat. detector norm, accidentals, energy scale 
 #elif defined USE_DB
-# define NBIN_DB 70
+# define NBIN_DB  70
 # define NPULL_DB 3 // relat. detector norm, accidentals, energy scale 
 #else
 # define NBIN_DB 0
@@ -142,6 +149,14 @@ enum SBL_Reactors {BUGEY4, ROVNO, BUGEY3_1, BUGEY3_2, BUGEY3_3,
 # define NPULL_DANSS 0
 #endif
 
+#ifdef USE_NEOS
+# define NBIN_NEOS 60
+# define NPULL_NEOS 3
+#else
+# define NBIN_NEOS 0
+# define NPULL_NEOS 0
+#endif
+
 #ifdef USE_GAL
 # define NBIN_GAL 4
 # define NPULL_GAL 2
@@ -150,8 +165,25 @@ enum SBL_Reactors {BUGEY4, ROVNO, BUGEY3_1, BUGEY3_2, BUGEY3_3,
 # define NPULL_GAL 0
 #endif
 
+#ifdef USE_DB_ALVARO
+#  if defined USE_DB
+#    error "USE_DB_ALVARO and USE_DB are mutually exclusive."
+#  elif defined USE_DB_3F
+#    error "USE_DB_ALVARO and USE_DB_3F are mutually exclusive."
+#  endif
+#endif
+
+#ifdef USE_NEOS_ALVARO
+#  if defined USE_DB
+#    error "USE_NEOS_ALVARO and USE_DB are mutually exclusive."
+#  elif defined USE_DB_3F
+#    error "USE_NEOS_ALVARO and USE_DB_3F are mutually exclusive."
+#  endif
+#endif
+
+
 /* total bins in chisq */
-#define NBIN_CHISQ (NBIN_SBL + NBIN_CHOOZ + NBIN_PV + NBIN_KAML + NBIN_DC + NBIN_DB + NBIN_RENO + NBIN_BUG_SP + NBIN_DANSS + NBIN_GAL)
+#define NBIN_CHISQ (NBIN_SBL + NBIN_CHOOZ + NBIN_PV + NBIN_KAML + NBIN_DC + NBIN_DB + NBIN_RENO + NBIN_BUG_SP + NBIN_DANSS + NBIN_NEOS + NBIN_GAL)
 
 
 #define N_CO_UNC 3   // 2nd order polynomial for bin-to-bin uncorrelated flux error
@@ -169,7 +201,7 @@ enum Pulls {
 
 
 /* total pulls in chisq */
-#define NPULLS (PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC + NPULL_DB + NPULL_RENO + NPULL_BUG_SP + NPULL_DANSS + NPULL_GAL)
+#define NPULLS (PULL_GLOBAL + NPULL_SBL + NPULL_CHOOZ + NPULL_PV + NPULL_KAML + NPULL_DC + NPULL_DB + NPULL_RENO + NPULL_BUG_SP + NPULL_DANSS + NPULL_NEOS + NPULL_GAL)
 
 
 
@@ -329,6 +361,11 @@ bool singsolve(const int size, void *B_in, void *L_out);
 /******** Gallium **************/
 void gallium_init(void);
 void set_table_gallium(Param_5nu &p, double cff[NBIN_CHISQ][NPULLS+1]);
+
+/******** NEOS **************/
+void neos_init(const int old_new);
+void set_table_neos(Param_5nu &prm, double cff[NBIN_CHISQ][NPULLS+1]);
+void plot_neos_pred(Param_5nu &prm);
 
 /******** DANSS **************/
 void danss_init(const int old_new);
