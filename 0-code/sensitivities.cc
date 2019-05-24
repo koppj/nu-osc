@@ -311,6 +311,11 @@ int print_rates(const long ext_flags)
     MINOS_2017_prior(true_values, MINOS_2017_PRINT_RATES);
   }
 
+  if (ext_flags & EXT_MB_JK)
+  {
+    chiMB_jk(true);
+  }
+
 #ifdef NU_USE_NUSQUIDS
   if (ext_flags & EXT_LSND_IVAN)
   {

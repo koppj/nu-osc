@@ -664,7 +664,7 @@ double my_prior(const glb_params in, void* user_data)
     // ------------------------
     if (pp->ext_flags & EXT_MB_JK)
     {
-      pv += chiMB_jk();
+      pv += chiMB_jk(0);
     }
 
 

@@ -240,7 +240,7 @@ int getMBspectrum(const char *fname);
 /* mb-jk-2018.cc */
 int chiMB_jk_init();
 int chiMB_jk_clear();
-double chiMB_jk();
+double chiMB_jk(int print_spectrum);
 
 /* e776.c */
 double chi_E776(int exp, int rule, int n_params, double *x,
