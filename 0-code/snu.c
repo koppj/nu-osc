@@ -2038,7 +2038,7 @@ glb_probability_nusquids_function nu_hook_probability_matrix_nusquids
 // ----------------------------------------------------------------------------
 int snu_probability_matrix_nusquids(double P[][2][3],
       unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
-      int psteps, const double *length, const double *density)
+      int psteps, const double *length, const double *density, const double filter_value)
 // ----------------------------------------------------------------------------
 // Calculates the neutrino oscillation probability matrix using nuSQuIDS. As
 // nuSQuIDS simulates also processes like tau regeneration or neutrino decay,
@@ -2057,6 +2057,8 @@ int snu_probability_matrix_nusquids(double P[][2][3],
 //   psteps:    Number of layers in the matter density profile
 //   length:    Lengths of the layers in the matter density profile in km
 //   density:   The matter densities in g/cm^3
+//   filter_value: width of low-pass filter for smoothing fast oscillations
+//              *** currently ignored by NuSQuIDS ***
 // ----------------------------------------------------------------------------
 {
   int status;
@@ -2115,7 +2117,7 @@ int snu_nusquids_rates(double _R[3], int cp_sign, int bin_number)
 // ----------------------------------------------------------------------------
 int snu_probability_matrix_osc_decay(double P[][2][3],
       unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
-      int psteps, const double *length, const double *density)
+      int psteps, const double *length, const double *density, const double filter_value)
 // ----------------------------------------------------------------------------
 // Calculates the neutrino oscillation probability matrix using Ivan Esteban's
 // analytic treatment of oscillations + decay.  As there can be migration between
@@ -2134,6 +2136,8 @@ int snu_probability_matrix_osc_decay(double P[][2][3],
 //   psteps:    Number of layers in the matter density profile
 //   length:    Lengths of the layers in the matter density profile in km
 //   density:   The matter densities in g/cm^3
+//   filter_value: width of low-pass filter for smoothing fast oscillations
+//              (implemented as in GLoBES, see GLoBES manual for details)//
 // ----------------------------------------------------------------------------
 {
   int status;
@@ -2141,7 +2145,7 @@ int snu_probability_matrix_osc_decay(double P[][2][3],
   // compute n-flavor probabilities matrix
   double P_full[n_E][2][SNU_MAX_FLAVORS];
   status = snu_probability_matrix_osc_decay_internal(P_full, n_E, E,
-             ini_state_nu, ini_state_nubar, psteps, length, density, n_flavors);
+             ini_state_nu, ini_state_nubar, psteps, length, density, n_flavors, filter_value);
 
   // copy probabilities for the active flavors
   size_t n_bytes = sizeof(double) * n_E * 2 * SNU_MAX_FLAVORS;

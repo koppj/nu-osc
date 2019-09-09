@@ -92,10 +92,10 @@ int snu_print_gsl_matrix_complex(gsl_matrix_complex *A);
 
 int snu_probability_matrix_nusquids(double P[][2][3],
       unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
-      int psteps, const double *length, const double *density);
+      int psteps, const double *length, const double *density, const double filter_value);
 int snu_probability_matrix_osc_decay(double P[][2][3],
       unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
-      int psteps, const double *length, const double *density);
+      int psteps, const double *length, const double *density, const double filter_value);
 
 struct snu_probability_table *snu_alloc_probability_table();
 int snu_free_probability_table(struct snu_probability_table *p);
@@ -120,7 +120,7 @@ double snu_get_m4Gamma_osc_decay();
 int snu_probability_matrix_osc_decay_internal(double P[][2][SNU_MAX_FLAVORS],
       unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
       int psteps, const double *length, const double *density,
-      unsigned n_flavors);
+      unsigned n_flavors, const double filter_value);
 
 // prem.c
 int LoadPREMProfile(const char *prem_file);

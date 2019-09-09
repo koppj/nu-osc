@@ -13,7 +13,7 @@
 #include "glb_types.h"
 #include "glb_prior.h"
 #include "const.h"
-#include "LSND_v5.h"
+#include "LSND.h"
 #include "nu.h"
 #include "sbl/definitions.h"
 #ifdef NU_USE_MONTECUBES
@@ -261,6 +261,32 @@ int print_rates(const long ext_flags)
   glbSetOscillationParameters(true_values);
   glbSetRates();
 
+  // FIXME
+//  const int nn=21;
+//  double E[nn];
+//  double phi[nn][3], phibar[nn][3];
+//  double L=730.;
+//  double rho=0.;
+//  for (int i=0; i < nn; i++)
+//  {
+//    E[i] = 0.01 + i * 2./(nn-1);
+//    phi[i][0] = 0.0;
+//    phi[i][1] = 1.0;
+//    phi[i][2] = 0.0;
+//    phibar[i][0] = 0.0;
+//    phibar[i][1] = 0.0;
+//    phibar[i][2] = 0.0;
+//  }
+//  double P[nn][2][3];
+//  double Pglb[3][3];
+//  snu_probability_matrix_osc_decay(P, nn, E, phi, phibar, 1, &L, &rho);
+//  for (int i=0; i < nn; i++)
+//  {
+//    snu_probability_matrix(Pglb, 1, E[i], 1, &L, &rho, 0.2, NULL);
+//    printf("OSC_PROB %7.4g %10.5g %10.5g\n", E[i], P[i][0][0], Pglb[1][0]);
+//  }
+//  getchar();
+ 
   // Setup output in Mathematica format 
   glbSetPrintDelimiters("{", ", ", "}");
   glbSetChannelPrintFunction((void *)my_channel_printf_mathematica);

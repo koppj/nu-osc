@@ -10,13 +10,14 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_linalg.h>
 #include <globes/globes.h>
+#include "glb_error.h"
 #include "osc_decay/osc_decay.h"
 #include "nu.h"
 
 // Flags that affect chi^2 calculation
-//#define OSC_NORM       // Take into account impact of \nu_\mu disapp. on normalization
-//#define OSC_BG         // Include oscillations of \nu_e backgrounds
-//#define OSC_NUMU       // Allow also the \nu_\mu sample to oscillate
+#define OSC_NORM       // Take into account impact of \nu_\mu disapp. on normalization
+#define OSC_BG         // Include oscillations of \nu_e backgrounds
+#define OSC_NUMU       // Allow also the \nu_\mu sample to oscillate
 
 // Data structures from Ivan's oscillation+decay code
 #ifdef NU_USE_NUSQUIDS
@@ -72,17 +73,20 @@ static const double pred_mu_bar[] =
   {  9998.957451, 13461.301884, 11298.240453,  7604.960449,
      4331.886940,  2125.537108,   891.222608,   336.987112 };
 
-static const double bg_e_unosc[] =              // total neutrino mode BG
+static double bg_e_unosc[] =               // total neutrino mode BG
   { 361.002334, 216.002142, 239.436776, 127.517957, 179.035344, 133.901816,
     139.020389, 113.446978,  81.204519,  98.603919, 137.953204 };
-static const double bg_e_frac_nue_from_mu[] =   // fractional contrib. of \nu_e from \mu decay
+static double bg_e_frac_nue_from_mu[] =    // fractional contrib. of \nu_e from \mu decay
   { 0.073, 0.152, 0.241, 0.303, 0.358, 0.463, 0.443, 0.454, 0.452, 0.466, 0.397 };
-static const double bg_e_frac_nue_from_K[] =    // fractional contrib. of \nu_e from K decay
+static double bg_e_frac_nue_from_K[] =     // fractional contrib. of \nu_e from K decay
   { 0.034, 0.06, 0.095, 0.178, 0.199, 0.267, 0.306, 0.325, 0.391, 0.462, 0.663 };
-static const double bg_e_frac_other[] =         // fractional contrib. of non-\nu_e BG
+static double bg_e_frac_other[] =          // fractional contrib. of non-\nu_e BG
   { 0.894, 0.788, 0.664, 0.519, 0.442, 0.269, 0.251, 0.221, 0.157, 0.072, 0.0 };
 
-static const double bg_e_bar_unosc[] =          // total antineutrino mode BG
+static const double bg_e_coherentgamma[] = // official prediction for coherent gamma BG
+  { 40.531, 42.669, 54.947, 17.1765, 13.09, 4.91125, 1.9665, 1.9665, 1.968, 1.6425, 0. };
+
+static double bg_e_bar_unosc[] =          // total antineutrino mode BG
   {  90.289907,  53.077595,  57.098801,  32.937945,  43.159072,  34.174322,
      36.383542,  28.737807,  22.339305,  26.509072,  42.697791 };
 
@@ -105,7 +109,7 @@ static double R_nu_bar[E_true_bins][E_reco_bins_e];
 /***************************************************************************
  * Initialize data structures required for MiniBooNE chi^2 calculation *
  ***************************************************************************/
-int chiMB_jk_init()
+int chiMB_jk_init(const char *bg_tune)
 {
   printf("# Flags in Joachim's MiniBooNE code: ");
   #ifdef OSC_BG
@@ -242,6 +246,48 @@ int chiMB_jk_init()
   M4    = gsl_matrix_alloc(NCOV4, NCOV4);
   M4inv = gsl_matrix_alloc(NCOV4, NCOV4);
   perm  = gsl_permutation_alloc(NCOV4);
+
+  // load backgrounds from file
+  if (bg_tune)
+  {
+    const int n_bg = 2;
+    const char *bg[n_bg] = { "coherentphoton", "pi0" };
+    for (int j=0; j < n_bg; j++)
+    {
+      char bg_file[512];
+      double *buffer[2];
+      int n_rows=-1;
+      int status;
+      sprintf(bg_file, "%s/%s-%s", MB_DATA_DIR, bg[j], bg_tune);
+      if ((status=LoadNdAlloc(bg_file, buffer, 2, &n_rows)) != GLB_SUCCESS)
+        return status;
+
+      // check that number of rows and energy binning are correct
+      if (n_rows != E_reco_bins_e)
+      {
+        fprintf(stderr, "chiMB_jk_init: invalid number of rows in file %s.\n", bg_file);
+        return GLBERR_INVALID_FILE_FORMAT;
+      }
+      for (int i=0; i < E_reco_bins_e; i++)
+        if (fabs(buffer[0][i] - 0.5*(E_reco_bin_edges_e[i] + E_reco_bin_edges_e[i+1]))
+                   / buffer[0][i] > 1e-5)
+        {
+          fprintf(stderr, "chiMB_jk_init: invalid energy (%g MeV) in row %d of file %s.\n",
+                  buffer[0][i], i+1, bg_file);
+          return GLBERR_INVALID_FILE_FORMAT;
+        }
+
+      // adjust BG prediction
+      for (int i=0; i < E_reco_bins_e; i++)
+      {
+        double t = bg_e_unosc[i] - bg_e_coherentgamma[i] + buffer[1][i];
+        bg_e_frac_nue_from_mu[i] *= bg_e_unosc[i] / t;
+        bg_e_frac_nue_from_K[i]  *= bg_e_unosc[i] / t;
+        bg_e_frac_other[i]       *= bg_e_unosc[i] / t;
+        bg_e_unosc[i]             = t;
+      }
+    }
+  }
 
   return 0;
 }
@@ -384,6 +430,12 @@ double chiMB_jk(int print_spectrum)
           rates_e_bar[ir] += R_nu_bar[it][ir]
                                * (finalstate_nu_bar[0][NU_E] + finalstate_nu_bar[1][NU_E])
                                / inistate_nu_bar[1][NU_MU];
+//        printf("e:    %3d   %10.5g %10.5g %10.5g %10.5g\n", ir,
+//               R_nu[it][ir], finalstate_nu[0][NU_E], finalstate_nu[1][NU_E],
+//               inistate_nu[1][NU_MU]);//FIXME
+//        printf("ebar: %3d   %10.5g %10.5g %10.5g %10.5g\n", ir,
+//               R_nu_bar[it][ir], finalstate_nu_bar[0][NU_E], finalstate_nu_bar[1][NU_E],
+//               inistate_nu_bar[1][NU_MU]);//FIXME
       } // for(ir)
     #endif // ifdef OSC_NORM
   } // for(it)
@@ -586,7 +638,7 @@ double chiMB_jk(int print_spectrum)
     P4[i+NE+NMU]   = data_e_bar[i] - (rates_e_bar[i] + rates_bg_e_bar[i]);
 //    P4[i+NE+NMU] = P4[i+NE+NMU] * P4[i+NE+NMU] / data_e_bar[i]; //FIXME
 //    printf("ebar  %3d  %10.5g  %10.5g  %10.5g\n", i, data_e_bar[i],
-//        rates_e_bar[i] + rates_bg_e_bar[i], P4[i+NE+NMU]); //FIXME 
+//        rates_e_bar[i] + 0*rates_bg_e_bar[i], P4[i+NE+NMU]); //FIXME 
   }
   for (int i=0; i < NMU; i++)
   {

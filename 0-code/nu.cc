@@ -1078,6 +1078,14 @@ int main(int argc, char *argv[])
   true_sdm = 7.6e-5;
   true_ldm = 2.47e-3;
 
+  // NuFit 3.2
+  true_theta12 = 33.62 * M_PI/180.;
+  true_theta13 =  8.54 * M_PI/180.;
+  true_theta23 = 47.2  * M_PI/180.;
+  true_deltacp = 3.0*M_PI/2.0;
+  true_sdm     = 7.4e-5;
+  true_ldm     = 2.494e-3;
+
   time_t start_time, end_time;
   time(&start_time);
   printf("# GLoBES neutrino oscillation simulation\n");
@@ -1279,7 +1287,7 @@ int main(int argc, char *argv[])
   // - by default th12 and dm21 carry priors
   // - if any -c option is given, only the parameters given there will have a prior
   // - th12 and dm21 priors are omitted if solar neutrinos are included in the fit
-  // - Right now only priors on th12, dm21, th23, dm31 are supported
+  // - Right now only priors on th12, dm21, th13, th23, dm31 are supported
 //  prior_th12    = 0.05 * true_theta12;
 //  prior_th13    = 0.0;
 //  prior_th23    = 0.0;
@@ -1296,7 +1304,19 @@ int main(int argc, char *argv[])
     else if (strcmp(constrained_params[i], "TH23") == 0)
       prior_th23    = 0.09 * true_theta23;
     else if (strcmp(constrained_params[i], "DM31") == 0)
-      prior_ldm     = 0.09e-3; //FIXME 0.05 * true_ldm;
+      prior_ldm     = 0.09e-3; // 0.05 * true_ldm;
+
+    // NuFit 3.2
+    if (strcmp(constrained_params[i], "TH12") == 0)
+      prior_th12    = 0.78 * M_PI/180.;
+    else if (strcmp(constrained_params[i], "DM21") == 0)
+      prior_sdm     = 0.21e-5;
+    else if (strcmp(constrained_params[i], "TH13") == 0)
+      prior_th13    = 0.15 * M_PI/180.;
+    else if (strcmp(constrained_params[i], "TH23") == 0)
+      prior_th23    = 3.9  * M_PI/180.;
+    else if (strcmp(constrained_params[i], "DM31") == 0)
+      prior_ldm     = 0.033e-3;
   }
   for (int i=0; i < glbGetNumOfOscParams(); i++)
     glbSetOscParams(input_errors, 0.0, i);

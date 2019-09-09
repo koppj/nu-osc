@@ -353,7 +353,7 @@ double snu_get_m4Gamma_osc_decay()
 int snu_probability_matrix_osc_decay_internal(double P[][2][SNU_MAX_FLAVORS],
       unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
       int psteps, const double *length, const double *density,
-      unsigned n_flavors)
+      unsigned n_flavors, const double filter_value)
 // ----------------------------------------------------------------------------
 // Calculates the neutrino oscillation probability matrix using analytical
 // approximations for oscillations + decay (based on Ivan Esteban's code).
@@ -373,6 +373,8 @@ int snu_probability_matrix_osc_decay_internal(double P[][2][SNU_MAX_FLAVORS],
 //   length:    Lengths of the layers in the matter density profile in km
 //   density:   The matter densities in g/cm^3
 //   n_flavors: number of neutrino flavors considered
+//   filter_value: width of low-pass filter for smoothing fast oscillations
+//              (implemented as in GLoBES, see GLoBES manual for details)
 // ----------------------------------------------------------------------------
 {
   using namespace regeneration;
@@ -417,7 +419,7 @@ int snu_probability_matrix_osc_decay_internal(double P[][2][SNU_MAX_FLAVORS],
   marray<double,2> final_state({2, n_flavors});
   for (unsigned k=0; k < n_E; k++)
   {
-    final_state = prob.getFinalFlux(bin_centers[k], L * units::km);
+    final_state = prob.getFinalFlux(bin_centers[k], L * units::km, filter_value * units::GeV);
     for (unsigned c=0; c < 2; c++)
     {
       for (unsigned j=0; j < n_flavors; j++)

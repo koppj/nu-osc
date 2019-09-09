@@ -184,6 +184,7 @@ double chi2lsnd(params p)
 
   // chisq rate only
   const double chisq_rate = sqr(prob - PROB) / PROB_SIG_SQ;
+  printf("chi2-rate: %g\n", chisq_rate);//FIXME FIXME
 
   // chisq shape  
   double z = 0., n = 0.;

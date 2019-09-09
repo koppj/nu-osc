@@ -27,15 +27,15 @@ public:
     };
 
   const std::vector<double> bkg = {0.32723, 0.66329, 0.62780, 1.01812, 1.30893, 1.24529, 1.18773,
-				   1.23634, 0.74152, 0.36418, 0.01557};
+                                   1.23634, 0.74152, 0.36418, 0.01557};
   const std::vector<double> data = {3.51486, 9.62374, 6.68933, 8.23408, 7.77990, 6.39282, 3.41284,
-				    4.51452, -0.53821, 0.00861, 1.24661};
+                                    4.51452, -0.53821, 0.00861, 1.24661};
   const std::vector<double> intrinsic = {0.15756, 1.11457, 1.89502, 1.75170, 1.28377, 0.77955,
-					 0.52717, 0.34606, 0.17877, 0.07187, 0.03788};
+                                         0.52717, 0.34606, 0.17877, 0.07187, 0.03788};
   const std::vector<double> eff = {28.71048, 17.10480, 14.68284, 13.90392, 13.80024, 12.41772,
-				   12.69828, 12.54444, 9.617724, 5.6433, 4.803708};
+                                   12.69828, 12.54444, 9.617724, 5.6433, 4.803708};
   const std::vector<double> no_beam = {1.48514, 4.37626, 5.31067, 3.76592, 4.22010, 3.60718,
-				       3.58716, 3.48548, 3.53821, 0.99139, 0.75339};
+                                       3.58716, 3.48548, 3.53821, 0.99139, 0.75339};
   
 private:
   gsl_interp_accel *acc_e, *acc_ebar, *acc_mu, *acc_mubar_DAR, *acc_mubar_DIF;
@@ -77,7 +77,7 @@ private:
       return gsl_spline_eval(spl_mubar_DIF, E, acc_mubar_DIF);
     else
       return gsl_spline_eval(spl_mubar_DIF, E, acc_mubar_DIF) +
-	gsl_spline_eval(spl_mubar_DAR, E, acc_mubar_DAR);
+        gsl_spline_eval(spl_mubar_DAR, E, acc_mubar_DAR);
   }
 
   inline double getXsec(double E){
@@ -85,12 +85,12 @@ private:
     constexpr double beta1 = -13.462;
     constexpr double gamma1 = -42.137;
     constexpr double Delta = 1.293*units::MeV;
-    constexpr double sigma0 = 0.01604/pow(units::MeV, 2)*1.0e-7;
+    constexpr double sigma0 = 0.01604/SQR(units::MeV)*1.0e-7;
     constexpr double M = 938.92*units::MeV;
     if(E<Delta) //Kinematic limit
       return 0;
     else
-      return sigma0 * (alpha1 + beta1*Delta/M + gamma1*(E-Delta)/M) * pow(E-Delta,2);
+      return sigma0 * (alpha1 + beta1*Delta/M + gamma1*(E-Delta)/M) * SQR(E-Delta);
   }
   
   /* Utilities for numerical integration */
@@ -145,7 +145,7 @@ private:
 
     double Escale = 0.975;
     return 0.5*(erf(1.51515*(Etrue-Escale*Erecomin)/sqrt(Etrue))
-		- erf(1.51515*(Etrue-Escale*Erecomax)/sqrt(Etrue)));
+                - erf(1.51515*(Etrue-Escale*Erecomax)/sqrt(Etrue)));
   }
   
 public:
@@ -203,10 +203,10 @@ public:
       E_mubar_DIF[i] = EDIF*units::MeV;
       f_mubar_DIF[i] = yDIF*1.0e-3;
       if(i<53){
-	ifileDAR>>EDAR>>yDAR;
-	
-	E_mubar_DAR[i] = EDAR*units::MeV;
-	f_mubar_DAR[i] = yDAR;
+        ifileDAR>>EDAR>>yDAR;
+        
+        E_mubar_DAR[i] = EDAR*units::MeV;
+        f_mubar_DAR[i] = yDAR;
       }
     }
     ifileDAR.close();
@@ -260,25 +260,28 @@ public:
       double A_L = (Lmax-Lmin)/2.;
       double B_L = (Lmax+Lmin)/2.;
       theor = 0; 
-      for(int i_L=0; i_L<2; ++i_L)
-	for(int i_E=0; i_E<16; ++i_E){
-	  double E_1 = A_E*x32[i_E] + B_E;
-	  double E_2 = -A_E*x32[i_E] + B_E;
-	  double L_1 = A_L*x4[i_L] + B_L;
-	  double L_2 = -A_L*x4[i_L] + B_L;
-	  marray<double, 2>
-	    flx_11 = prb.getFinalFlux(E_1, L_1), flx_12 = prb.getFinalFlux(E_1, L_2),
-	    flx_21 = prb.getFinalFlux(E_2, L_1), flx_22 = prb.getFinalFlux(E_2, L_2);
-	  // marray<double, 2>
-	  //   flx_11 = prb.getInitialFlux(E_1), flx_12 = prb.getInitialFlux(E_1),
-	  //   flx_21 = prb.getInitialFlux(E_2), flx_22 = prb.getInitialFlux(E_2);
-	    
-	  theor += A_E * A_L * w4[i_L] * w32[i_E] *
-	    ( flx_11[1][0] * getXsec(E_1) * eres(n, L_1, E_1) / pow(L_1, 2) +
-	      flx_12[1][0] * getXsec(E_1) * eres(n, L_2, E_1) / pow(L_2, 2) +
-	      flx_21[1][0] * getXsec(E_2) * eres(n, L_1, E_2) / pow(L_1, 2) +
-	      flx_22[1][0] * getXsec(E_2) * eres(n, L_2, E_2) / pow(L_2, 2));
-	}
+      for(int i_E=0; i_E<16; ++i_E){
+        double E_1 =  A_E*x32[i_E] + B_E;
+        double E_2 = -A_E*x32[i_E] + B_E;
+        double xsec_E1 = getXsec(E_1);
+        double xsec_E2 = getXsec(E_2);
+        for(int i_L=0; i_L<2; ++i_L){
+          double L_1 =  A_L*x4[i_L] + B_L;
+          double L_2 = -A_L*x4[i_L] + B_L;
+          marray<double, 2>
+            flx_11 = prb.getFinalFlux(E_1, L_1), flx_12 = prb.getFinalFlux(E_1, L_2),
+            flx_21 = prb.getFinalFlux(E_2, L_1), flx_22 = prb.getFinalFlux(E_2, L_2);
+          // marray<double, 2>
+          //   flx_11 = prb.getInitialFlux(E_1), flx_12 = prb.getInitialFlux(E_1),
+          //   flx_21 = prb.getInitialFlux(E_2), flx_22 = prb.getInitialFlux(E_2);
+            
+          theor += A_E * A_L * w4[i_L] * w32[i_E] *
+            ( flx_11[1][0] * xsec_E1 * eres(n, L_1, E_1) / SQR(L_1) +
+              flx_12[1][0] * xsec_E1 * eres(n, L_2, E_1) / SQR(L_2) +
+              flx_21[1][0] * xsec_E2 * eres(n, L_1, E_2) / SQR(L_1) +
+              flx_22[1][0] * xsec_E2 * eres(n, L_2, E_2) / SQR(L_2));
+        }
+      }
       
       theor /= (1/Lmin - 1/Lmax);
       
@@ -287,7 +290,7 @@ public:
       
       /* Add the background */
       if(includeBkg)
-	theor += bkg[n];
+        theor += bkg[n];
 
       result.push_back(theor);
     }
@@ -302,21 +305,21 @@ public:
 
     for(double eta = 1-0.7; eta <= 1+0.7; eta += 0.05)
       for(double rho = 1-0.6; rho <= 1+0.1; rho += 0.02){
-	double chq = 0;
-	double tot = 0;
-	for(size_t n = 0; n<pred.size(); ++n){
-	  double theor = rho*pred[n];
-	  chq += 2*(eta*theor + bkg[n] - data[n] + (data[n]+no_beam[n])*
-		    log((data[n]+no_beam[n]) / (eta*theor + bkg[n] + no_beam[n])));
-	  tot += theor- intrinsic[n];
-	}
+        double chq = 0;
+        double tot = 0;
+        for(size_t n = 0; n<pred.size(); ++n){
+          double theor = rho*pred[n];
+          chq += 2*(eta*theor + bkg[n] - data[n] + (data[n]+no_beam[n])*
+                    log((data[n]+no_beam[n]) / (eta*theor + bkg[n] + no_beam[n])));
+          tot += theor- intrinsic[n];
+        }
 
-	chq += pow((tot/16713.2 - 0.264e-2)/0.040e-2, 2);
-	  
-	chq += pow((rho-1)/0.2, 2);
+        chq += SQR((tot/16713.2 - 0.264e-2)/0.040e-2);
+          
+        chq += SQR((rho-1)/0.2);
 
-	if(chq < chqMin)
-	  chqMin = chq;
+        if(chq < chqMin)
+          chqMin = chq;
       }
     
     return chqMin;

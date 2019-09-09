@@ -1496,7 +1496,7 @@ double MINOS_2017_prior(const glb_params params, unsigned flags)
     bin_centers_fd[j] = L_fd / FDCC_TrueNC_minos->GetXaxis()->GetBinCenter(n_bins_true_fd-j);
   }
   nu_hook_probability_matrix_nusquids(P_fd, n_bins_true_fd, bin_centers_fd,
-                                      ini_state_nu_fd, ini_state_nubar_fd, 1, &L_fd, &rho_fd);
+                                      ini_state_nu_fd, ini_state_nubar_fd, 1, &L_fd, &rho_fd, 0.);
   for (int j=0; j < n_bins_true_fd; j++)
   {
     int m = n_bins_true_fd - j - 1;
@@ -1545,7 +1545,7 @@ double MINOS_2017_prior(const glb_params params, unsigned flags)
     bin_centers_nd[j] = L_nd / NDCC_TrueNC_minos->GetXaxis()->GetBinCenter(n_bins_true_nd-j);
   }
   nu_hook_probability_matrix_nusquids(P_nd, n_bins_true_nd, bin_centers_nd,
-                                      ini_state_nu_nd, ini_state_nubar_nd, 1, &L_nd, &rho_nd);
+                                      ini_state_nu_nd, ini_state_nubar_nd, 1, &L_nd, &rho_nd, 0.);
   for (int j=0; j < n_bins_true_nd; j++)
   {
     int m = n_bins_true_nd - j - 1;

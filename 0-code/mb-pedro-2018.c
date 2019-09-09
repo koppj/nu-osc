@@ -24,7 +24,7 @@
 #define NU_FLAVOURS 3
 
 // Path for external data files. Note: #include's need to be adjusted separately
-#define MB_DATA_PATH "./glb/mb-2012/mb-data/" /* Original Mona *///FIXME
+#define MB_DATA_PATH "./glb/mb-2012/mb-data/" /* Original Mona */
 //#define MB_DATA_PATH "./mb-data/" /* PM */
 
 // TAG_DEFS - This signals ./compile-and-run where to insert new #define's

@@ -18,7 +18,7 @@ using namespace std;
 #include "db-neos/db-neos.h"
 #include "atm/LibWrap/out.interface.hh"
 #include "solar/LibWrap/out.interface.hh"
-#include "LSND_v5.h"
+#include "LSND.h"
 #include "nu.h"
 #include "const.h"
 
@@ -427,8 +427,10 @@ int ext_init(int ext_flags)
   if (ext_flags & EXT_MB_JK)
   {
     printf("# Initializing Joachim's MiniBooNE code ...\n");
-    if ((status=chiMB_jk_init()) != 0)
+    if ((status=chiMB_jk_init(NULL)) != 0)
       return status;
+//    if ((status=chiMB_jk_init("gibuu")) != 0)//FIXME
+//      return status;
   }
   return 0;
 }

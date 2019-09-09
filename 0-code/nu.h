@@ -187,6 +187,10 @@ extern double sys_startval_reactor[MAX_SYS];
 extern "C" {
 #endif
 
+/* util.c */
+int LoadNd(const char *filename, double **buffer, const int n_columns, int *n_rows);
+int LoadNdAlloc(const char *filename, double **buffer, const int n_columns, int *n_rows);
+
 /* degfinder.c */
 double ChiNPWrapper(glb_params base_values, int hierarchy, glb_params fit_values);
 int degfinder(const glb_params base_values, const int n_prescan_params,
@@ -238,7 +242,7 @@ double chiMB(int exper, int rule, int n_params, double *x, double *errors,
 int getMBspectrum(const char *fname);
 
 /* mb-jk-2018.cc */
-int chiMB_jk_init();
+int chiMB_jk_init(const char *bg_tune);
 int chiMB_jk_clear();
 double chiMB_jk(int print_spectrum);
 

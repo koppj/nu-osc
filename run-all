@@ -28,10 +28,10 @@ export SP="-f 4 -a PARAM_SCAN --no-ih \
 
 # 2-flavor fit to reproduce the official ICARUS result
 export SP="-f 4 -a PARAM_SCAN --no-ih \
-           -t "TH13=0.0" -t "TH23=0" \
+           -t "TH13=0,TH23=0,TH14=0,TH24=0,TH34=0,DM41=1,M4_GAMMA=1e-30,MA_OVER_M4=0.1" \
            -p "TH12,-4.01,-1.01,30,LOGSCALE" \
            -p "DM21,-2.0,2.0,40,LOGSCALE""
-#./nu $SP -e ICARUS-2014  >  ../9-devel/icarus-2014-test.dat
+unbuffer ./nu $SP -e ICARUS-2014  | tee  ../9-devel/icarus-2014-test.dat
 unset SP
 
 
@@ -84,12 +84,12 @@ unset SP
 # ----------------------------------------------------------
 
 # 3+1 fit
-OUT_FILE=th24dm41-minos-2017$SUFFIX.dat ./compile-and-run -l \
-    -f 4 -e MINOS_2017 -a PARAM_SCAN \
-    -t "TH23=0.925,DM31=0.00245" \
-    -m "TH23,DM31,TH34" \
-    -p "TH24,0,0.35,35" \
-    -p "DM41,-4,3,56,LOGSCALE"
+#OUT_FILE=th24dm41-minos-2017$SUFFIX.dat ./compile-and-run -l \
+#    -f 4 -e MINOS_2017 -a PARAM_SCAN \
+#    -t "TH23=0.925,DM31=0.00245" \
+#    -m "TH23,DM31,TH34" \
+#    -p "TH24,0,0.35,35" \
+#    -p "DM41,-4,3,56,LOGSCALE"
 
 
 # MINOS debugging / testing (old GLoBES-based code)
