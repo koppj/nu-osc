@@ -232,14 +232,18 @@ int snu_set_oscillation_parameters_osc_decay_internal(int n_flavors, glb_params 
   { 
     p_oscdecay.snq14 = p_oscdecay.snq24 = p_oscdecay.snq34 = p_oscdecay.dmq41 = 0.0;
     if (glbGetOscParamByName(params, "DM31") > 0.)  // Normal ordering
-      p_oscdecay.m_nu = { 0.,
-                 sqrt(glbGetOscParamByName(params, "DM21")),
-                 sqrt(glbGetOscParamByName(params, "DM31")) };
+    {
+      p_oscdecay.m_nu[0] = 0.;
+      p_oscdecay.m_nu[1] = sqrt(glbGetOscParamByName(params, "DM21"));
+      p_oscdecay.m_nu[2] = sqrt(glbGetOscParamByName(params, "DM31"));
+    }
     else                                            // Inverted ordering
-      p_oscdecay.m_nu = { 0.,
-                 sqrt(-glbGetOscParamByName(params, "DM31")),
-                 sqrt(-glbGetOscParamByName(params, "DM31") + 
-                       glbGetOscParamByName(params, "DM21")) };
+    {
+      p_oscdecay.m_nu[0] = 0.;
+      p_oscdecay.m_nu[1] = sqrt(-glbGetOscParamByName(params, "DM31"));
+      p_oscdecay.m_nu[2] = sqrt(-glbGetOscParamByName(params, "DM31") + 
+                                 glbGetOscParamByName(params, "DM21"));
+    }
   }
   else if (n_flavors == 4)
   {
@@ -248,17 +252,21 @@ int snu_set_oscillation_parameters_osc_decay_internal(int n_flavors, glb_params 
     p_oscdecay.snq34 = SQR(sin(glbGetOscParamByName(params, "TH34")));
     p_oscdecay.dmq41 = glbGetOscParamByName(params, "DM41");
     if (glbGetOscParamByName(params, "DM31") > 0.)  // Normal ordering
-      p_oscdecay.m_nu = { 0.,
-                 sqrt(glbGetOscParamByName(params, "DM21")),
-                 sqrt(glbGetOscParamByName(params, "DM31")),
-                 sqrt(glbGetOscParamByName(params, "DM41")) };
+    {
+      p_oscdecay.m_nu[0] = 0.;
+      p_oscdecay.m_nu[1] = sqrt(glbGetOscParamByName(params, "DM21"));
+      p_oscdecay.m_nu[2] = sqrt(glbGetOscParamByName(params, "DM31"));
+      p_oscdecay.m_nu[3] = sqrt(glbGetOscParamByName(params, "DM41"));
+    }
     else                                            // Inverted ordering
-      p_oscdecay.m_nu = { 0.,
-                 sqrt(-glbGetOscParamByName(params, "DM31")),
-                 sqrt(-glbGetOscParamByName(params, "DM31") + 
-                       glbGetOscParamByName(params, "DM21")),
-                 sqrt(-glbGetOscParamByName(params, "DM31") + 
-                       glbGetOscParamByName(params, "DM41")) };
+    {
+      p_oscdecay.m_nu[0] = 0.;
+      p_oscdecay.m_nu[1] = sqrt(-glbGetOscParamByName(params, "DM31"));
+      p_oscdecay.m_nu[2] = sqrt(-glbGetOscParamByName(params, "DM31") + 
+                                 glbGetOscParamByName(params, "DM21"));
+      p_oscdecay.m_nu[3] = sqrt(-glbGetOscParamByName(params, "DM31") + 
+                                 glbGetOscParamByName(params, "DM41"));
+    }
     // FIXME include extra complex phases
   }
   else   // > 4 flavors not supported yet
@@ -310,7 +318,7 @@ int snu_get_oscillation_parameters_osc_decay_internal(int n_flavors, glb_params 
 {
   glbSetOscParamByName(params, p_oscdecay.m_A, "M_A_PRIME");
   glbSetOscParamByName(params, p_oscdecay.g,   "G_PRIME");
-  if (n_flavors > 3  &&  p_oscdecay.m_nu.size() == (unsigned) n_flavors)
+  if (n_flavors > 3)
   {
     glbSetOscParamByName(params, p_oscdecay.m_A / p_oscdecay.m_nu[3], "MA_OVER_M4");
     glbSetOscParamByName(params, snu_get_m4Gamma_osc_decay(), "M4_GAMMA");
@@ -332,20 +340,15 @@ double snu_get_m4Gamma_osc_decay()
 // mass, from Ivan's oscillation+decay code
 // ----------------------------------------------------------------------------
 {
-  if (p_oscdecay.m_nu.size() > 3)
+  if (p_oscdecay.g > 0.)
   {
-    if (p_oscdecay.g > 0.)
-    {
-      double Gamma_tot = 0.0;
-      for (int i=0; i < 3; i++)
-        Gamma_tot += p_oscdecay.getGamma(i);
-      return Gamma_tot * p_oscdecay.m_nu[3];
-    }
-    else
-      return 0.0;
+    double Gamma_tot = 0.0;
+    for (int i=0; i < 3; i++)
+      Gamma_tot += p_oscdecay.getGamma(i);
+    return Gamma_tot * p_oscdecay.m_nu[3];
   }
   else
-    return NAN;
+    return 0.0;
 }
 
 

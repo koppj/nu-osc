@@ -21,9 +21,9 @@ static const int CH_E_E    = 1;
 static const int CH_MU_TAU = 2;
 
 static int ICARUS_EXP=99;
-static double norm_sig    = 1E20;
-static double norm_e_bg   = 1E20;
-static double norm_tau_bg = 1E20;
+static const double norm_sig    = 15.1622; /* determined with commented code at the bottom */
+static const double norm_e_bg   = 10.3369;
+static const double norm_tau_bg =  2.22244;
 static const double eff = 0.74;
 static const double eff_e_bg = 0.65;
     /* Efficiencies for signal and for the intrinsic \nu_e BG, see slide 5
@@ -73,18 +73,18 @@ double chi_icarus_2014(int exp, int rule, int n_params, double *x, double *error
 
   /* Use the following to compare with official ICARUS plot, not taking into
    * account BG oscillation */
-#warning "Using ICARUS code in debug mode"
-  fit_rate = eff * signal_fit[0] * norm_sig
-           + eff_e_bg * 7.0
-           + eff * 1.6;
-  fit_rate = eff * signal_fit[0] * norm_sig //FIXME
-           + eff * 2.9
-           + eff_e_bg * 7.0
-           + eff * 1.6;
+//#warning "Using ICARUS code in debug mode"
+//  fit_rate = eff * signal_fit[0] * norm_sig
+//           + eff_e_bg * 7.0
+//           + eff * 1.6;
+//  fit_rate = eff * signal_fit[0] * norm_sig
+//           + eff * 2.9
+//           + eff_e_bg * 7.0
+//           + eff * 1.6;
 
       /* Expected \nu_e background (from Nu2014 slides):
        * 7.0 (beam contamination) + 2.9 (\theta_{13}) + 1.6 (\nu_\tau) */
-//  printf("  fit %g\n", fit_rate); //FIXME
+//  printf("  fit %g\n", fit_rate);
 
 #ifdef FELDMAN_COUSINS_TEST
   double *signal_rates = glbGetChannelRatePtr(ICARUS_EXP, CH_MU_E,   GLB_POST);
@@ -132,7 +132,7 @@ double icarus_2014_fc_callback(double logs22thmue_test, void *params)
 int icarus_2014_feldman_cousins()
 {
   const unsigned long n_pseudo_exp = 500;
-  const double dm41 = 1.0; /* eV^2 */
+  const double dm41 = 0.03; /* eV^2 */
   const double logs22thmue_min = -4.;
   const double logs22thmue_max = -0.5;
   const int logs22thmue_steps  = 35;
@@ -254,7 +254,9 @@ int init_icarus_2014()
   ICARUS_EXP = glb_num_of_exps;
   glbInitExperiment("icarus-2014.glb", &glb_experiment_list[0], &glb_num_of_exps);
 
-  /* Simulate \theta_{13}-induced \nu_e events to determine normalization */
+  /* Simulate \theta_{13}-induced \nu_e events to determine normalization
+   * !!! make sure to use GLoBES oscillation engine for this, as osc_decay does
+   *     not include matter effects (important for theta-13) !!! */
   glb_params init_values = glbAllocParams();
   for (int i=0; i < glbGetNumOfOscParams(); i++)
     glbSetOscParams(init_values,0.0,i);
@@ -267,21 +269,12 @@ int init_icarus_2014()
   double *signal_rates = glbGetChannelRatePtr(ICARUS_EXP, CH_MU_E,   GLB_POST);
   double *bg_e_rates   = glbGetChannelRatePtr(ICARUS_EXP, CH_E_E,    GLB_POST);
   double *bg_tau_rates = glbGetChannelRatePtr(ICARUS_EXP, CH_MU_TAU, GLB_POST);
-  norm_sig    = 2.9 / signal_rates[0]; //FIXME
-  norm_e_bg   = 7.0 / bg_e_rates[0];
-  norm_tau_bg = 1.6 / bg_tau_rates[0];
+  printf("# Initializing ICARUS code, Neutrino 2014 version ...\n");
+  printf("#   Signal      normalization: %g\n",   2.9 / signal_rates[0]);
+  printf("#   BG \\nu_e    normalization: %g\n",  7.0 / bg_e_rates[0]);
+  printf("#   BG \\nu_\\tau normalization: %g\n", 1.6 / bg_tau_rates[0]);
       /* Expected background before applying efficiencies (from Nu2014 slides):
        * 7.0 (beam contamination) + 2.9 (\theta_{13}) + 1.6 (\nu_\tau) */
-
-  //FIXME
-//  double *mu_rates = glbGetChannelRatePtr(ICARUS_EXP, 3, GLB_POST);
-//  printf(" ICARUS \nu_\mu rate: %g\n", mu_rates[0] * norm_sig);
-
-
-  printf("# Initializing ICARUS code, Neutrino 2014 version ...\n");
-  printf("#   Signal      normalization: %g\n", norm_sig);
-  printf("#   BG \\nu_e    normalization: %g\n", norm_e_bg);
-  printf("#   BG \\nu_\\tau normalization: %g\n", norm_tau_bg);
 
 #ifdef FELDMAN_COUSINS_TEST
   icarus_2014_feldman_cousins();

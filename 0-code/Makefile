@@ -41,13 +41,14 @@
 #         and LDFLAGS and use -static option in LDFLAGS,
 #         and link against -lc_p if available (use GLB_LDFLAGS_PROF instead
 #         of GLB_LDFLAGS)
+#       - don't use -ffast-math as this prevents consistency checks on osc. params in snu.c
 
 # For ROOT
 include $(ROOTSYS)/etc/Makefile.arch
 
 # Profiling?
-#export PROF_FLAGS=-pg
-export EXTRA_FLAGS=$(PROF_FLAGS)
+#export PROF_FLAGS=-pg -O0 -no-pie
+export EXTRA_FLAGS=$(PROF_FLAGS) -O1
 
 # Determine operating system
 UNAME_S := $(shell uname -s)
@@ -79,7 +80,7 @@ ifeq ($(UNAME_S),Linux)
 	       -I${HOME}/papers/sterile-nu/packages/globes/Distribution/source \
 	       $(NUSQUIDS_INC_FLAGS) \
 	       -I/usr/include/openmpi/
-    export CFLAGS   = -std=c99 -Wall -g -O2 -D_DEFAULT_SOURCE -fPIC -fgnu89-inline -ffast-math \
+    export CFLAGS   = -std=c99 -Wall -g -O2 -D_DEFAULT_SOURCE -fPIC -fgnu89-inline \
                       -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
     export CXXFLAGS = -std=c++11 -Wall -g -O2 -Wno-write-strings \
       		      $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
@@ -93,7 +94,7 @@ ifeq ($(UNAME_S),Darwin)
 	     -I$(shell $(rootconfig) --incdir) \
 	     $(NUSQUIDS_INC_FLAGS) \
 	     -I${HOME}/uni/papers/sterile-nu/packages/globes/Distribution/source
-  export CFLAGS   = -std=c99 -Wall -g -O2 -D_BSD_SOURCE -fgnu89-inline -ffast-math \
+  export CFLAGS   = -std=c99 -Wall -g -O2 -D_BSD_SOURCE -fgnu89-inline \
                     -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
   export CXXFLAGS = -std=c++11 -Wall -g -O2 -Wno-write-strings \
                     $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
@@ -112,6 +113,7 @@ else
   GLB_LDFLAGS = -g -pg -L${prefix}/lib \
 	        -Wl,-rpath -Wl,${prefix}/lib \
   	        -lglobes -L/home/jkopp/software/installed/lib -lgsl -lgslcblas \
+	        -static-libgcc -lgcc -lstdc++ -lm -lc
 #	         -nodefaultlibs -static-libgcc -lgcc -lstdc++ -lm_p -lc
 #	         -nodefaultlibs -static -static-libgcc -lgcc -lstdc++ -lm -lc
 endif

@@ -136,12 +136,17 @@ int chiMB_jk_init(const char *bg_tune)
   int n_nu = 0;    // Event counter
   while (!feof(f))
   {
-    int status, i_true, i_reco;
+    volatile int status, i_true, i_reco;
+      // Here, I ran into a GCC bug: with -O2, the code sometimes claims
+      // that i_reco>=0 even though i_reco=-1 (indicating an energy outside
+      // the simulated range). I assume this is because i_reco is relocated
+      // into a processor register and then treated as unsigned int.
+      // Including "volatile" is a workaround for this.
     double E_true, E_reco, L, w;
     status = fscanf(f, "%lg %lg %lg %lg", &E_true, &E_reco, &L, &w);
     if (status == EOF)
       break;
-    i_true = E_true_bins * (E_true - E_true_min)   / (E_true_max   - E_true_min);
+    i_true = E_true_bins * (E_true - E_true_min) / (E_true_max   - E_true_min);
     i_reco = E_reco_bins_e;
     while (E_reco < E_reco_bin_edges_e[i_reco])
         i_reco--;
@@ -162,12 +167,12 @@ int chiMB_jk_init(const char *bg_tune)
   int n_nu_bar = 0;
   while (!feof(f))
   {
-    int status, i_true, i_reco;
+    volatile int status, i_true, i_reco;
     double E_true, E_reco, L, w;
     status = fscanf(f, "%lg %lg %lg %lg", &E_true, &E_reco, &L, &w);
     if (status == EOF)
       break;
-    i_true = E_true_bins * (E_true - E_true_min)   / (E_true_max   - E_true_min);
+    i_true = E_true_bins * (E_true - E_true_min) / (E_true_max   - E_true_min);
     i_reco = E_reco_bins_e;
     while (E_reco < E_reco_bin_edges_e[i_reco])
         i_reco--;
@@ -430,15 +435,17 @@ double chiMB_jk(int print_spectrum)
           rates_e_bar[ir] += R_nu_bar[it][ir]
                                * (finalstate_nu_bar[0][NU_E] + finalstate_nu_bar[1][NU_E])
                                / inistate_nu_bar[1][NU_MU];
-//        printf("e:    %3d   %10.5g %10.5g %10.5g %10.5g\n", ir,
+//        printf("rate e:    %3d   %10.5g %10.5g %10.5g %10.5g   %10.5g\n", ir,
 //               R_nu[it][ir], finalstate_nu[0][NU_E], finalstate_nu[1][NU_E],
-//               inistate_nu[1][NU_MU]);//FIXME
-//        printf("ebar: %3d   %10.5g %10.5g %10.5g %10.5g\n", ir,
+//               inistate_nu[1][NU_MU], rates_e[ir]);//FIXME
+//        printf("rate ebar: %3d   %10.5g %10.5g %10.5g %10.5g\n", ir,
 //               R_nu_bar[it][ir], finalstate_nu_bar[0][NU_E], finalstate_nu_bar[1][NU_E],
 //               inistate_nu_bar[1][NU_MU]);//FIXME
       } // for(ir)
     #endif // ifdef OSC_NORM
+//    printf("\n");//FIXME
   } // for(it)
+//  getchar();//FIXME
 
   // Background oscillations for \nu_e sample
   //   - we compute oscillation probabilities only at the centers of the E_reco bins

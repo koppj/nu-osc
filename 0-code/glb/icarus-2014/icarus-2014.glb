@@ -12,7 +12,7 @@ $version="3.0.0"
 
 /* ####### flux ####### */
 nuflux(#ICARUS_SPECTRUM)<
-        @flux_file = "icarus_spectrum_2014.dat"
+        @flux_file = "icarus-flux-1503.01876.dat"
         @time      =  1 /* POT */
         @power     =  1 /* dummy */
         @norm      =  1
@@ -46,28 +46,27 @@ energy(#RESDUMMY)<
 >
 
 /* ####### Cross sections ####### */
-cross(#FLAT)<
-  @cross_file = "XFlat.dat"
+cross(#XCC)<
+  @cross_file = "XCC.dat" // this was incorrectly taken as XFlat.dat until September 2019
 >
 
 
 /* ####### Channel definitions ####### */
 
 channel(#mu_e)<
-  @channel = #ICARUS_SPECTRUM : + : mu : e   : #FLAT : #RESDUMMY
+  @channel = #ICARUS_SPECTRUM : + : mu : e   : #XCC : #RESDUMMY
 >
 
-/* FIXME: this channel should have a somewhat harder spectrum (see Nu2014 slides) */
 channel(#e_e)<
-  @channel = #ICARUS_SPECTRUM : + : e  : e   : #FLAT : #RESDUMMY
+  @channel = #ICARUS_SPECTRUM : + : e  : e   : #XCC : #RESDUMMY
 >
 
 channel(#mu_tau)<
-  @channel = #ICARUS_SPECTRUM : + : mu : tau : #FLAT : #RESDUMMY
+  @channel = #ICARUS_SPECTRUM : + : mu : tau : #XCC : #RESDUMMY
 >
 
 //channel(#mu_mu_NOSC)<
-//  @channel = #ICARUS_SPECTRUM : + : NOSC_mu : NOSC_mu : #FLAT : #RESDUMMY
+//  @channel = #ICARUS_SPECTRUM : + : NOSC_mu : NOSC_mu : #XCC : #RESDUMMY
 //>
 
 

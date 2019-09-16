@@ -511,7 +511,7 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
     mcb_setChainNo(4);                             // Number of MCMC chains
     mcb_setBurnNo(MCB_DYNAMIC_BURN);
     mcb_setLengthMax(1e7);                         // Max. length of each chain
-//FIXME    mcb_setLengthMin(5000);                        // Min. length of each chain
+//    mcb_setLengthMin(5000);                        // Min. length of each chain
     mcb_setLengthMin(50);                        // Min. length of each chain
     mcb_setVerbosity(5);
     mcb_addStartPosition(base_values);
@@ -519,11 +519,11 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
     for (int i=0; i < *n_deg; i++)
       deg_pos_ind[i] = i;
     mcb_setDegeneracySteps(deg_pos, deg_pos_ind, *n_deg); // Tell MonteCUBES about degeneracies
-//    mcb_setVerbosity(100);//FIXME
-//    mcb_seedMersenne(777);//FIXME
+//    mcb_setVerbosity(100);
+//    mcb_seedMersenne(777);
     for (int i=0; i < glbGetNumOfOscParams(); i++) // MonteCUBES convergence criteria
-//      glbSetOscParams(mcb_conv_crit, 0.025, i);//FIXME
-      glbSetOscParams(mcb_conv_crit, 2.0, i);//FIXME
+//      glbSetOscParams(mcb_conv_crit, 0.025, i);
+      glbSetOscParams(mcb_conv_crit, 2.0, i);
     glbSetDensityParams(mcb_conv_crit, 1.0, GLB_ALL);
     mcb_setConvergenceCriteria(mcb_conv_crit);
 

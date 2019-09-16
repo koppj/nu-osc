@@ -1,0 +1,14 @@
+# MiniBooNE coherent photon (\Delta -> \gamma) background
+# calculated using generator nuance
+#   E [MeV]  BG [events/MeV]
+       250    0.36936
+     337.5    0.64715
+       425    0.48133
+     512.5    0.24643
+     612.5     0.1255
+     737.5    0.03732
+       875   0.016615
+      1025   0.012727
+      1175   0.012776
+      1375  0.0063935
+      2250 0.00072788

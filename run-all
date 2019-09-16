@@ -31,7 +31,7 @@ export SP="-f 4 -a PARAM_SCAN --no-ih \
            -t "TH13=0,TH23=0,TH14=0,TH24=0,TH34=0,DM41=1,M4_GAMMA=1e-30,MA_OVER_M4=0.1" \
            -p "TH12,-4.01,-1.01,30,LOGSCALE" \
            -p "DM21,-2.0,2.0,40,LOGSCALE""
-unbuffer ./nu $SP -e ICARUS-2014  | tee  ../9-devel/icarus-2014-test.dat
+#unbuffer ./nu $SP -e ICARUS-2014  | tee  ../9-devel/icarus-2014-test.dat
 unset SP
 
 

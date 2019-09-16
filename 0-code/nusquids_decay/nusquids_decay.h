@@ -665,9 +665,11 @@ public:
 	*/
 	nuSQUIDSDecay(nuSQUIDSDecay&& other):
 	nuSQUIDS(std::move(other)),
-	iinteractions(other.iinteractions),
-	pscalar(other.pscalar),	majorana(other.majorana), 
-	DT(other.DT), DT_evol(other.DT_evol), m_nu(other.m_nu)
+	majorana(other.majorana),
+        iinteractions(other.iinteractions),
+        pscalar(other.pscalar),
+        m_nu(other.m_nu),
+	DT(other.DT), DT_evol(other.DT_evol)
 	{
 		couplings = gsl_matrix_alloc(other.numneu,other.numneu);
 		gsl_matrix_memcpy(couplings,other.couplings);
