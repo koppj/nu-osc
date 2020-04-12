@@ -22,24 +22,24 @@ double E776data[4][E776BINS] =
 
 inline static double glb_prior(double x, double center, double sigma)
 {
-      double tmp = (x - center)/sigma;
-      return tmp*tmp;
+  double tmp = (x - center)/sigma;
+  return tmp*tmp;
 }
 
 inline static double glb_likelihood(double true_rate, double fit_rate)
 {
-      double res;
-      res = fit_rate - true_rate;
-      if (true_rate > 0)
-      {
-            if (fit_rate <= 0.0)
-              res = 1e100;
-            else
-              res += true_rate * log( true_rate / fit_rate );
-      }
-      else
-            res = fabs(res);
-      return 2.0 * res;
+  double res;
+  res = fit_rate - true_rate;
+  if (true_rate > 0)
+  {
+    if (fit_rate <= 0.0)
+      res = 1e100;
+    else
+      res += true_rate * log( true_rate / fit_rate );
+  }
+  else
+    res = fabs(res);
+  return 2.0 * res;
 }
 
 double chi_E776(int exp, int rule, int n_params, double *x,
@@ -71,25 +71,25 @@ double chi_E776(int exp, int rule, int n_params, double *x,
     fit_rate_pos += signal_fit_rates_pos[i]
         + pi0_norm_pos*data[2*E776BINS+i] /* read pi0 + polarity */
         + nue_beam_norm_pos*bg_fit_rates_pos[i];
-      fit_rate_neg += signal_fit_rates_neg[i]
+    fit_rate_neg += signal_fit_rates_neg[i]
         + pi0_norm_neg*data[3*E776BINS+i] /* read pi0 - polarity */
         + nue_beam_norm_neg*bg_fit_rates_neg[i];
-      datapos += data[0*E776BINS+i];
-      dataneg += data[1*E776BINS+i];
+    datapos += data[0*E776BINS+i];
+    dataneg += data[1*E776BINS+i];
   }
   chi2 += glb_likelihood(datapos, fit_rate_pos);
   chi2 += glb_likelihood(dataneg, fit_rate_neg);
 
   for (i=3; i <= ew_high; i++)
   {
-      fit_rate_pos = signal_fit_rates_pos[i]
+    fit_rate_pos = signal_fit_rates_pos[i]
         + pi0_norm_pos*data[2*E776BINS+i] /* read pi0 + polarity */
         + nue_beam_norm_pos*bg_fit_rates_pos[i];
-      fit_rate_neg = signal_fit_rates_neg[i]
+    fit_rate_neg = signal_fit_rates_neg[i]
         + pi0_norm_neg*data[3*E776BINS+i] /* read pi0 - polarity */
         + nue_beam_norm_neg*bg_fit_rates_neg[i];
-      chi2 += glb_likelihood(data[0*E776BINS+i], fit_rate_pos);
-      chi2 += glb_likelihood(data[1*E776BINS+i], fit_rate_neg); /* antinu */
+    chi2 += glb_likelihood(data[0*E776BINS+i], fit_rate_pos);
+    chi2 += glb_likelihood(data[1*E776BINS+i], fit_rate_neg); /* antinu */
   }
 
   /* I have 4 errors: pi0 background and beam nue for each polarity */
@@ -97,6 +97,8 @@ double chi_E776(int exp, int rule, int n_params, double *x,
 
   if (isnan(chi2))
     chi2=1.e102;
+//  printf("  chi2 E776 = %g    x=(%7g %7g %7g %7g)\n", chi2,
+//         x[0], x[1], x[2], x[3]); //FIXME
   return chi2;
 }
 

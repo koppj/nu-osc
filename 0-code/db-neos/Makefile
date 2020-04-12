@@ -10,6 +10,9 @@ all: $(OBJ)
 %.o : %.cc $(HEADER)
 	${GPP} $(CXXFLAGS) $(INCFLAGS) -c $<
 
+%.o : %.cpp $(HEADER)
+	${GPP} $(CXXFLAGS) $(INCFLAGS) -c $<
+
 .PHONY: subdirs $(SUBDIRS)
 subdirs: $(SUBDIRS)
 $(SUBDIRS):

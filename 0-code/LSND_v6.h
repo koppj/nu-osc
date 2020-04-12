@@ -14,6 +14,8 @@
 
 using namespace regeneration;
 
+namespace ns_sbl { // JK
+
 class LSND{
 public:
   /* Experimental setup */
@@ -38,6 +40,7 @@ public:
 			  12.69828, 12.54444, 9.617724, 5.6433, 4.803708};
   const double no_beam[11] = {1.48514, 4.37626, 5.31067, 3.76592, 4.22010, 3.60718,
 			      3.58716, 3.48548, 3.53821, 0.99139, 0.75339};
+  const double lsnd_lowpass_width = 5e5; // [eV]
   
 private:
   gsl_interp_accel *acc_e, *acc_ebar, *acc_mu, *acc_mubar_DAR, *acc_mubar_DIF, *acc_finalFlux;
@@ -263,10 +266,10 @@ public:
     
     for(unsigned int i=0; i<N_PTS_INTERP; ++i){
       energies[i] = Elims[10][0] + (Elims[0][1] - Elims[10][0])*i/((double) N_PTS_INTERP - 1);
-      fluxes_01[i] = prb.getFinalFlux(energies[i], L_01)[1][0];
-      fluxes_02[i] = prb.getFinalFlux(energies[i], L_02)[1][0];
-      fluxes_11[i] = prb.getFinalFlux(energies[i], L_11)[1][0];
-      fluxes_12[i] = prb.getFinalFlux(energies[i], L_12)[1][0];
+      fluxes_01[i] = prb.getFinalFlux(energies[i], L_01, lsnd_lowpass_width)[1][0];
+      fluxes_02[i] = prb.getFinalFlux(energies[i], L_02, lsnd_lowpass_width)[1][0];
+      fluxes_11[i] = prb.getFinalFlux(energies[i], L_11, lsnd_lowpass_width)[1][0];
+      fluxes_12[i] = prb.getFinalFlux(energies[i], L_12, lsnd_lowpass_width)[1][0];
     }
       
     gsl_spline_init(spl_finalFlux_L01, energies, fluxes_01, N_PTS_INTERP);
@@ -377,6 +380,8 @@ public:
   LSND(const LSND&) = delete;
   LSND &operator=(const LSND&) = delete;
 };
+
+} // end namespace ns_sbl (JK)
 
 #endif
 

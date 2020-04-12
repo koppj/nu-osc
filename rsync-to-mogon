@@ -2,6 +2,12 @@
 
 BASEDIR=$HOME/papers/sterile-nu/
 
+# Copy main working directory
+rsync --delete -avz $BASEDIR/sim/ mogon:~/sterile-nu/sim/ \
+      --exclude .git/ --exclude *genie/* --exclude *Input* \
+      --exclude results/
+#rsync --delete -avz $BASEDIR/packages/ mogon:~/sterile-nu/packages/
+
 # Copy GLoBES to MOGON
 # To do manually:
 #   - unpack and compile GLoBES
@@ -10,8 +16,4 @@ cd $BASEDIR/packages/globes/Distribution
 make dist
 scp globes-3.*tar.gz mogon:~/sterile-nu/packages/
 
-# Copy main working directory
-rsync --delete -avz $BASEDIR/sim/ mogon:~/sterile-nu/sim/ \
-      --exclude .git/ --exclude *genie/* --exclude *Input*
-rsync --delete -avz $BASEDIR/packages/ mogon:~/sterile-nu/packages/
 

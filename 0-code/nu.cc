@@ -45,7 +45,8 @@ int action = -1;
 int use_nsi_constraints = 0; // Whether to use the constraint \eps^s = \eps^{d\dag} 
 static int n_exps = 0;       // Number of experiments included in the current simulations
 static char *exps[64];       // A list of experiments included in the current simulation
-static char *true_param_def=NULL; // The definition of true osc. params given via the -t option
+static char *true_param_def=NULL; // The definition of true osc. params (-t option)
+static char *input_error_def=NULL; // The definition of external priors (-c option)
 
 // Configuration of parameter scan
 static int n_scan_params = 0;       // Number of parameters to scan over
@@ -63,9 +64,6 @@ static unsigned long prescan_p_flags[32]; // Extra flags for prescan (e.g. DEG_L
 int n_min_params = 0;               // Names of parameters to marginalize over
 static char *min_params[32];        // Names of parameters to marginalize over
 
-static int n_constrained_params=2;  // Number of parameters with external priors
-static const char *constrained_params[32] = {"TH12", "DM21"};
-                                    // Parameter on which priors are imposed
 
 // Experiment numbers 
 int EXP_BEAM_NEAR    = -1;
@@ -74,12 +72,12 @@ int EXP_REACTOR_NEAR = -1;
 int EXP_REACTOR_FAR  = -1;
 
 // True oscillation parameters and external priors 
-double true_theta12, prior_th12;
-double true_theta13, prior_th13;
-double true_theta23, prior_th23;
-double true_deltacp, prior_deltacp;
-double true_sdm, prior_sdm;
-double true_ldm, prior_ldm;
+double true_theta12;
+double true_theta13;
+double true_theta23;
+double true_deltacp;
+double true_sdm;
+double true_ldm;
 static int n_flavors = 5;
 
 // Parameters for WBB analysis 
@@ -130,6 +128,9 @@ long default_degfinder_flags = 0; // Default options for degeneracy finder
 char nu_flags[4096]   = "";       // Miscellaneous options                 
 long ext_flags        = 0;        // Which external inputs should be used? 
 static char output_file[FILENAME_MAX]=""; // Path and base name of output file in MCMC mode
+char mb_tune[FILENAME_MAX] = "";  // MC tune for MiniBooNE backgrounds
+
+
 
 // Definitions for argp
 const char *argp_program_version = "nu 0.1";
@@ -143,6 +144,7 @@ static char argp_option_doc[] = "[options]";
 #define OPT_ATM_DECOUPLE_E 1002
 #define OPT_BF             1003
 #define OPT_THETA_POSITIVE 1004
+#define OPT_MB_TUNE        1005
 static struct argp_option cmdline_options[] = {
   {"flavors",    'f',"NUMBER",0,"Number of flavors to use. Can be 3, 4, or 5)" },
   {"action",     'a',"ACTION",0,"What to do PARAM_SCAN, etc. (see const.c for more)" },
@@ -152,12 +154,13 @@ static struct argp_option cmdline_options[] = {
                                 "<param_name>,<min>,<max>,<steps>,[<flags>]"},
   {"minimize",   'm',"PARAMS",0,"Parameters to marginalize: <param_name>[,<param_name>[, ...]]"},
   {"true_params",'t',"PARAMS",0,"True oscillation parameters: \"NAME=VALUE, ...\""},
-  {"cons",       'c',"PARAMS",0,"Parameters with external priors (CHECK DOCUMENTATION!)"},
+  {"cons",       'c',"PARAMS",0,"External 1\\sigma priors: \"NAME=VALUE, ...\""},
   {"no-ih",       OPT_NO_IH, NULL, 0,"Omit inverted hierarchy in fit"},
   {"no-nh",       OPT_NO_NH, NULL, 0,"Omit normal hierarchy in fit"},
   {"atm-decouple-e", OPT_ATM_DECOUPLE_E, NULL, 0,"Decouple electron neutrinos in ATM code"},
   {"best-fit",    OPT_BF,NULL,0,"Compute best fit point at the end of parameter scan"},
   {"theta-positive", OPT_THETA_POSITIVE, NULL, 0,"Require all mixing angles to be > 0"},
+  {"mb-tune",     OPT_MB_TUNE,"TUNE",0,"MC tune to use for MB backgrounds"},
   {"verbose",    'v',NULL,    0,"Show debug output (use multiple times for more)"},
   {"outfile",    'o',"FILENAME",0,"Path/base name of output files in MCMC mode"},
   { 0 }
@@ -238,6 +241,31 @@ int eval_true_params(char arg[])
     if (eval_osc_param_def(this_param, &param_index, &param_value) < 0)
       return -3;
     glbSetOscParams(true_values, param_value, param_index);
+    this_param = strtok(NULL, delim);
+  }
+  return 0;
+}
+
+
+// -------------------------------------------------------------------------
+int eval_input_errors(char arg[])
+// -------------------------------------------------------------------------
+// Parse external priors (-c option). The expected format for p
+// is "PARAM1=###,PARAM2=###,PARAM3=###" (allowed delimiters are ' ', ',',
+// ';', and '\t')
+// CAUTION: THIS FUNCTION MUST NOT BE CALLED BEFORE THE PARAMETER VECTORS
+// HAVE BEEN ALLOCATED
+// -------------------------------------------------------------------------
+{
+  const char delim[] = " ,;\t";
+  char *this_param = strtok(arg, delim);
+  while (this_param)
+  {
+    int param_index;
+    double param_value;
+    if (eval_osc_param_def(this_param, &param_index, &param_value) < 0)
+      return -3;
+    glbSetOscParams(input_errors, param_value, param_index);
     this_param = strtok(NULL, delim);
   }
   return 0;
@@ -484,14 +512,25 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     // -------------------------------------------------
     case 'c':
     {
-      n_constrained_params = 0;
-      char *p = strtok(arg, delim);
-      while (p)
+      if (!input_error_def)
+        input_error_def = strdup(arg);
+      else
       {
-        constrained_params[n_constrained_params++] = strdup(p);
-        p = strtok(NULL, delim);
+        char s[strlen(input_error_def)+strlen(arg)+1];
+        strcpy(s, input_error_def);
+        strcat(s, ";");
+        free(input_error_def);
+        input_error_def = strdup(strcat(s, arg));
       }
       break;
+//      n_constrained_params = 0;
+//      char *p = strtok(arg, delim);
+//      while (p)
+//      {
+//        constrained_params[n_constrained_params++] = strdup(p);
+//        p = strtok(NULL, delim);
+//      }
+//      break;
     }
 
     // -------------------------------------------------
@@ -533,6 +572,18 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
     case OPT_THETA_POSITIVE:
       theta_positive = 1;
       break;
+
+    case OPT_MB_TUNE:
+    {
+      if (strlen(arg) > FILENAME_MAX-1)
+      {
+        fprintf(stderr, "Name of MB tune too long.\n");
+        return -3;
+      }
+      strncpy(mb_tune, arg, FILENAME_MAX);
+      mb_tune[FILENAME_MAX-1] = '\0';
+      break;
+    }
  
     // -------------------------------------------------
     default:
@@ -1099,6 +1150,34 @@ int main(int argc, char *argv[])
   printf("\n");
   printf("#\n");
 
+  // Initialize MPI 
+  #ifdef NU_MPI
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+    printf("# Initializing thread %d of %d.\n", mpi_rank+1, mpi_size);
+  #elif defined NU_PSEUDO_MPI
+    /* Read environment variables NU_RANK and NU_SIZE that tell us which part
+     * of the job this instance of the program should carry out */
+    if (!getenv("NU_RANK") || !getenv("NU_SIZE"))
+    {
+      mpi_size = 1;
+      mpi_rank = 0;
+      printf("# NU_RANK and/or NU_SIZE not defined. Assuming no parallelization.\n");
+    }
+    else
+    {
+      mpi_size = atoi(getenv("NU_SIZE"));
+      mpi_rank = atoi(getenv("NU_RANK"));
+      if (mpi_rank >= mpi_size)
+      {
+        fprintf(stderr, "Error: NU_RANK must be smaller than NU_SIZE.\n");
+        return -1;
+      }
+      printf("# Computing slice %d of %d in parallel environment.\n", mpi_rank+1, mpi_size);
+    }
+  #endif
+
   // Switch off GSL error handling
   gsl_set_error_handler_off();
 
@@ -1136,34 +1215,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Warning: -m is used only when -a PARAM_SCAN is given.\n");
     fprintf(stderr, "Will ignore all -m options\n");
   }
-
-  // Initialize MPI 
-  #ifdef NU_MPI
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-    printf("# Initializing thread %d of %d.\n", mpi_rank+1, mpi_size);
-  #elif defined NU_PSEUDO_MPI
-    /* Read environment variables NU_RANK and NU_SIZE that tell us which part
-     * of the job this instance of the program should carry out */
-    if (!getenv("NU_RANK") || !getenv("NU_SIZE"))
-    {
-      mpi_size = 1;
-      mpi_rank = 0;
-      printf("# NU_RANK and/or NU_SIZE not defined. Assuming no parallelization.\n");
-    }
-    else
-    {
-      mpi_size = atoi(getenv("NU_SIZE"));
-      mpi_rank = atoi(getenv("NU_RANK"));
-      if (mpi_rank >= mpi_size)
-      {
-        fprintf(stderr, "Error: NU_RANK must be smaller than NU_SIZE.\n");
-        return -1;
-      }
-      printf("# Computing slice %d of %d in parallel environment.\n", mpi_rank+1, mpi_size);
-    }
-  #endif
 
   // Initialize matter profile data 
   if (LoadPREMProfile("data/prem-profile.dat") != 0)
@@ -1208,7 +1259,7 @@ int main(int argc, char *argv[])
 
 #ifdef NU_USE_NUSQUIDS
   glbRegisterNuSQuIDSEngine(nu_hook_probability_matrix_nusquids);
-  printf("# Using NuSQuIDS probability engine.\n");
+  printf("# Using NuSQuIDS probability engine. Majorana=%d\n", OSC_DECAY_MAJORANA);
 #else
   printf("# Using SNU probability engine.\n");
 #endif
@@ -1281,59 +1332,74 @@ int main(int argc, char *argv[])
                               true_deltacp,true_sdm,true_ldm);
   glbSetDensityParams(true_values, 1.0, GLB_ALL);
 
-  // Define input errors
-  //
-  // External priors are dealt with in the following way:
-  // - by default th12 and dm21 carry priors
-  // - if any -c option is given, only the parameters given there will have a prior
-  // - th12 and dm21 priors are omitted if solar neutrinos are included in the fit
-  // - Right now only priors on th12, dm21, th13, th23, dm31 are supported
-//  prior_th12    = 0.05 * true_theta12;
-//  prior_th13    = 0.0;
-//  prior_th23    = 0.0;
-//  prior_deltacp = 0.0;
-//  prior_sdm     = 0.05 * true_sdm;
-//  prior_ldm     = 0.0;
-  prior_th12 = prior_th13 = prior_th23 = prior_deltacp = prior_sdm = prior_ldm = 0.0;
-  for (int i=0; i < n_constrained_params; i++)
-  {
-    if (strcmp(constrained_params[i], "TH12") == 0)
-      prior_th12    = 0.05 * true_theta12;
-    else if (strcmp(constrained_params[i], "DM21") == 0)
-      prior_sdm     = 0.05 * true_sdm;
-    else if (strcmp(constrained_params[i], "TH23") == 0)
-      prior_th23    = 0.09 * true_theta23;
-    else if (strcmp(constrained_params[i], "DM31") == 0)
-      prior_ldm     = 0.09e-3; // 0.05 * true_ldm;
+//  // Define input errors
+//  //
+//  // External priors are dealt with in the following way:
+//  // - by default th12 and dm21 carry priors
+//  // - if any -c option is given, only the parameters given there will have a prior
+//  // - th12 and dm21 priors are omitted if solar neutrinos are included in the fit
+//  // - Right now only priors on th12, dm21, th13, th23, dm31 are supported
+////  prior_th12    = 0.05 * true_theta12;
+////  prior_th13    = 0.0;
+////  prior_th23    = 0.0;
+////  prior_deltacp = 0.0;
+////  prior_sdm     = 0.05 * true_sdm;
+////  prior_ldm     = 0.0;
+//  prior_th12 = prior_th13 = prior_th23 = prior_deltacp = prior_sdm = prior_ldm = 0.0;
+//  for (int i=0; i < glbGetNumOfOscParams(); i++)
+//    glbSetOscParams(input_errors, 0.0, i);
+//  for (int i=0; i < n_constrained_params; i++)
+//  {
+////    if (strcmp(constrained_params[i], "TH12") == 0)
+////      prior_th12    = 0.05 * true_theta12;
+////    else if (strcmp(constrained_params[i], "DM21") == 0)
+////      prior_sdm     = 0.05 * true_sdm;
+////    else if (strcmp(constrained_params[i], "TH23") == 0)
+////      prior_th23    = 0.09 * true_theta23;
+////    else if (strcmp(constrained_params[i], "DM31") == 0)
+////      prior_ldm     = 0.09e-3; // 0.05 * true_ldm;
+//
+//    // NuFit 3.2
+//    if (strcmp(constrained_params[i], "TH12") == 0)
+//      prior_th12    = 0.78 * M_PI/180.;
+//    else if (strcmp(constrained_params[i], "DM21") == 0)
+//      prior_sdm     = 0.21e-5;
+//    else if (strcmp(constrained_params[i], "TH13") == 0)
+//      prior_th13    = 0.15 * M_PI/180.;
+//    else if (strcmp(constrained_params[i], "TH23") == 0)
+//      prior_th23    = 3.9  * M_PI/180.;
+//    else if (strcmp(constrained_params[i], "DM31") == 0)
+//      prior_ldm     = 0.033e-3;
+//
+//    // rough constraints on sterile neutrinos
+//    else if (strcmp(constrained_params[i], "Ue4") == 0)
+//      glbSetOscParamByName(input_errors, 0.164, "Ue4");
+//                                 // solar curve from 1803.10661, fig. 3, 1 dof
+//    else if (strcmp(constrained_params[i], "Um4") == 0)
+//      glbSetOscParamByName(input_errors, 0.0596, "Um4");
+//                                 // based on noevid_noIC2 run, 1 dof
+//  }
+//  if (ext_flags & EXT_SOLAR) // Use prior on solar parameters only if solar data not included in fit
+//  {
+//    printf("# *** Ignoring **** priors on th12 and m21 since solar neutrinos "
+//           "are included in fit.\n");
+//    prior_th12 = prior_sdm = 0.0;
+//  }
+//  glbDefineParams(input_errors, prior_th12, prior_th13, prior_th23, prior_deltacp,
+//                  prior_sdm, prior_ldm);
+//  glbSetDensityParams(input_errors, 0.05, GLB_ALL);
 
-    // NuFit 3.2
-    if (strcmp(constrained_params[i], "TH12") == 0)
-      prior_th12    = 0.78 * M_PI/180.;
-    else if (strcmp(constrained_params[i], "DM21") == 0)
-      prior_sdm     = 0.21e-5;
-    else if (strcmp(constrained_params[i], "TH13") == 0)
-      prior_th13    = 0.15 * M_PI/180.;
-    else if (strcmp(constrained_params[i], "TH23") == 0)
-      prior_th23    = 3.9  * M_PI/180.;
-    else if (strcmp(constrained_params[i], "DM31") == 0)
-      prior_ldm     = 0.033e-3;
-  }
-  for (int i=0; i < glbGetNumOfOscParams(); i++)
-    glbSetOscParams(input_errors, 0.0, i);
-  if (ext_flags & EXT_SOLAR) // Use prior on solar parameters only if solar data not included in fit
-  {
-    printf("# *** Ignoring **** priors on th12 and m21 since solar neutrinos "
-           "are included in fit.\n");
-    prior_th12 = prior_sdm = 0.0;
-  }
-  glbDefineParams(input_errors, prior_th12, prior_th13, prior_th23, prior_deltacp,
-                  prior_sdm, prior_ldm);
-  glbSetDensityParams(input_errors, 0.05, GLB_ALL);
 
-
-  // Evaluate true parameters given on the command line
+  // Evaluate true parameters given on the command line (-t option)
   if (true_param_def  &&  eval_true_params(true_param_def) < 0)
     return -2;
+
+  // Evaluate external priors given on the command line (-c option)
+  for (int i=0; i < glbGetNumOfOscParams(); i++)
+    glbSetOscParams(input_errors, 0.0, i);
+  glbSetDensityParams(input_errors, 0.05, GLB_ALL);
+  if (input_error_def  &&  eval_input_errors(input_error_def) < 0)
+    return -3;
 
   // Copy true params to other parameter vectors AFTER NSI params have been
   // read from the environment variables
@@ -1420,6 +1486,8 @@ int main(int argc, char *argv[])
     printf("#   LSND (Thomas' code)\n");
   if (ext_flags & EXT_LSND_IVAN)
     printf("#   LSND (Ivan's code)\n");
+  if (ext_flags & EXT_KARMEN_IVAN)
+    printf("#   KARMEN (Ivan's code)\n");
   if (ext_flags & EXT_MB_JK)
     printf("#   MiniBooNE (Joachim's code)\n");
 
@@ -1483,6 +1551,10 @@ int main(int argc, char *argv[])
     printf("#   IceCube Deep Core (Michele's simulation)\n");
   if (ext_flags & EXT_SOLAR)
     printf("#   Solar neutrinos (Michele's simulation)\n");
+  if (ext_flags & EXT_DECAY_KINEMATICS)
+    printf("#   Beta decay kinematics\n");
+  if (ext_flags & EXT_FREE_STREAMING)
+    printf("#   Cosmology (free-streaming constraint)\n");
   printf("#\n");
 
   printf("# True oscillation parameters (only nonzero params shown):\n");

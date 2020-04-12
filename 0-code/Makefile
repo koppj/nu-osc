@@ -48,7 +48,7 @@ include $(ROOTSYS)/etc/Makefile.arch
 
 # Profiling?
 #export PROF_FLAGS=-pg -O0 -no-pie
-export EXTRA_FLAGS=$(PROF_FLAGS) -O1
+export EXTRA_FLAGS=$(PROF_FLAGS)
 
 # Determine operating system
 UNAME_S := $(shell uname -s)
@@ -60,20 +60,21 @@ NUSQUIDS_LD_FLAGS=`pkg-config --libs squids nusquids hdf5` -lpthread
 # Set platform-specific variables
 ifeq ($(UNAME_S),Linux)
   ifeq ($(ENVIRONMENT),mogon)
-    export GCC = gcc
-    export GPP = g++
+    export GCC=gcc # mpicc
+    export GPP=g++ # mpic++
     export prefix = ${HOME}/sterile-nu/globes
     INCFLAGS = $(shell $(globesconf) --include) \
 	       -I$(shell $(rootconfig) --incdir) \
 	       $(NUSQUIDS_INC_FLAGS) \
-	       -I${HOME}/sterile-nu/packages/globes/Distribution/source
+	       -I${HOME}/sterile-nu/packages/globes/source \
+               -I${HOME}/sterile-nu/sim/0-code
     export CFLAGS   = -Wall -std=c99 -g -O2 -D_BSD_SOURCE -fgnu89-inline \
                       -Wno-write-strings $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
     export CXXFLAGS = -std=c++11 -Wall -g -O2 -Wno-write-strings \
       		      $(INCFLAGS) $(ROOTCFLAGS) $(EXTRA_FLAGS)
   else
-    export GCC = mpicc # gcc
-    export GPP = mpic++ #g++
+    export GCC = gcc
+    export GPP = g++
     export prefix = ${HOME}/papers/sterile-nu/globes
     INCFLAGS = $(shell $(globesconf) --include) \
 	       -I$(shell $(rootconfig) --incdir) \
@@ -128,20 +129,20 @@ LDFLAGS = $(GLB_LDFLAGS) $(NUSQUIDS_LD_FLAGS) \
 #	  -latmwrapper -latmphysics -latmmathres \
 #      	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun \
 # Link Michele's libraries statically, the rest dynamically
-#LDFLAGS = -Wl,-Bdynamic $(GLB_LDFLAGS) \
+#LDFLAGS = -Wl,-Bdynamic $(GLB_LDFLAGS) -Wl,-Bdynamic $(NUSQUIDS_LD_FLAGS) \
 #	  $(shell $(rootconfig) --glibs) -static \
 #	  -L./atm/LibMath -L./atm/LibPhys -L./atm/LibWrap \
 #	  -L./$(solar_dir)/LibMath -L./$(solar_dir)/LibPhys \
 #	  -L./$(solar_dir)/LibWrap -L./$(solar_dir)/LibProb \
 #	  -latmwrapper -latmphysics -latmmathres \
 #      	  -lsolarwrapper -lsolarphysics -lsolarmathres -lprobsun \
-#          -Wl,-Bdynamic -lmontecubes -lmpi
+#	  -Wl,-Bdynamic -lmpi
 
 BIN     = nu
 OBJ     = nu.o const.o sys.o snu.o nusquids.o degfinder.o sensitivities.o prem.o \
 	  mb.o mb-jk.o e776.o c12.o icarus-2012.o icarus-2014.o opera-2013.o minos.o prior.o \
 	  util.o
-HEADER  = nu.h const.h snu.h LSND.h \
+HEADER  = nu.h const.h snu.h LSND.h KARMEN.h constraints.h \
 	  sbl/definitions.h reactors/definitions.h db-neos/db-neos.h osc_decay/osc_decay.h \
 	  nusquids_decay/nusquids_decay.h
 SUBDIRS = sbl reactors db-neos

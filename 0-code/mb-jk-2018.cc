@@ -15,9 +15,12 @@
 #include "nu.h"
 
 // Flags that affect chi^2 calculation
-#define OSC_NORM       // Take into account impact of \nu_\mu disapp. on normalization
-#define OSC_BG         // Include oscillations of \nu_e backgrounds
-#define OSC_NUMU       // Allow also the \nu_\mu sample to oscillate
+//   OSC_NORM : Take into account impact of \nu_\mu disapp. on normalization
+//   OSC_BG   : Include oscillations of \nu_e backgrounds
+//   OSC_NUMU : Allow also the \nu_\mu sample to oscillate
+#define OSC_NORM       // TAG_DEF - this signals ./compile-and-run
+#define OSC_BG         // TAG_DEF   which #define's to replace
+#define OSC_NUMU       // TAG_DEF
 
 // Data structures from Ivan's oscillation+decay code
 #ifdef NU_USE_NUSQUIDS
@@ -26,6 +29,8 @@
   static regProb prb_nu_bar(OSC_DECAY_MAJORANA);
   static regProb prb_bg_nue_from_mu(OSC_DECAY_MAJORANA);
   static regProb prb_bg_nue_from_K(OSC_DECAY_MAJORANA);
+  static regProb prb_bg_nue_bar_from_mu(OSC_DECAY_MAJORANA);
+  static regProb prb_bg_nue_bar_from_K(OSC_DECAY_MAJORANA);
 #endif
 
 #define MB_DATA_DIR        "glb/mb-jk-2018/"
@@ -73,22 +78,28 @@ static const double pred_mu_bar[] =
   {  9998.957451, 13461.301884, 11298.240453,  7604.960449,
      4331.886940,  2125.537108,   891.222608,   336.987112 };
 
-static double bg_e_unosc[] =               // total neutrino mode BG
+static double bg_e_unosc[] =                // total neutrino mode BG
   { 361.002334, 216.002142, 239.436776, 127.517957, 179.035344, 133.901816,
     139.020389, 113.446978,  81.204519,  98.603919, 137.953204 };
-static double bg_e_frac_nue_from_mu[] =    // fractional contrib. of \nu_e from \mu decay
+static double bg_e_frac_nue_from_mu[] =     // fractional contrib. of \nu_e from \mu decay
   { 0.073, 0.152, 0.241, 0.303, 0.358, 0.463, 0.443, 0.454, 0.452, 0.466, 0.397 };
-static double bg_e_frac_nue_from_K[] =     // fractional contrib. of \nu_e from K decay
+static double bg_e_frac_nue_from_K[] =      // fractional contrib. of \nu_e from K decay
   { 0.034, 0.06, 0.095, 0.178, 0.199, 0.267, 0.306, 0.325, 0.391, 0.462, 0.663 };
-static double bg_e_frac_other[] =          // fractional contrib. of non-\nu_e BG
+static double bg_e_frac_other[] =           // fractional contrib. of non-\nu_e BG
   { 0.894, 0.788, 0.664, 0.519, 0.442, 0.269, 0.251, 0.221, 0.157, 0.072, 0.0 };
 
-static const double bg_e_coherentgamma[] = // official prediction for coherent gamma BG
+static const double bg_e_coherentgamma[] =  // official prediction for coherent gamma BG
   { 40.531, 42.669, 54.947, 17.1765, 13.09, 4.91125, 1.9665, 1.9665, 1.968, 1.6425, 0. };
 
-static double bg_e_bar_unosc[] =          // total antineutrino mode BG
+static double bg_e_bar_unosc[] =            // total antineutrino mode BG
   {  90.289907,  53.077595,  57.098801,  32.937945,  43.159072,  34.174322,
      36.383542,  28.737807,  22.339305,  26.509072,  42.697791 };
+static double bg_e_bar_frac_nue_from_mu[] = // fractional contrib. of \nu_e from \mu decay
+  { 0.092, 0.148, 0.2, 0.253, 0.323, 0.35, 0.345, 0.361, 0.367, 0.319, 0.003 };
+static double bg_e_bar_frac_nue_from_K[] =  // fractional contrib. of \nu_e from K decay
+  { 0.071, 0.135, 0.209, 0.295, 0.343, 0.406, 0.442, 0.452, 0.475, 0.553, 0.81 };
+static double bg_e_bar_frac_other[] =       // fractional contrib. of non-\nu_e BG
+  { 0.837, 0.717, 0.59, 0.451, 0.334, 0.244, 0.213, 0.187, 0.158, 0.128, 0.187 };
 
 // covariance matrix
 #define NCOV6 (n_cov_6)
@@ -213,38 +224,27 @@ int chiMB_jk_init(const char *bg_tune)
   // Initial spectrum for background prediction is just the MiniBooNE BG predictions
   marray<double,3> inistate_bg_nue_from_mu{E_reco_bins_e, 2, 4};
   marray<double,3> inistate_bg_nue_from_K{E_reco_bins_e, 2, 4};
+  marray<double,3> inistate_bg_nue_bar_from_mu{E_reco_bins_e, 2, 4};
+  marray<double,3> inistate_bg_nue_bar_from_K{E_reco_bins_e, 2, 4};
   marray<double,1> E_reco_range{E_reco_bins_e};
   std::fill(inistate_bg_nue_from_mu.begin(), inistate_bg_nue_from_mu.end(), 0.0);
-  std::fill(inistate_bg_nue_from_K.begin(), inistate_bg_nue_from_K.end(), 0.0);
+  std::fill(inistate_bg_nue_from_K.begin(),  inistate_bg_nue_from_K.end(), 0.0);
+  std::fill(inistate_bg_nue_bar_from_mu.begin(), inistate_bg_nue_bar_from_mu.end(), 0.0);
+  std::fill(inistate_bg_nue_bar_from_K.begin(),  inistate_bg_nue_bar_from_K.end(), 0.0);
   std::fill(E_reco_range.begin(), E_reco_range.end(), 0.0);
   for (int ir=0; ir < E_reco_bins_e; ir++)
   {
     E_reco_range[ir] = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]) * units::MeV;
     inistate_bg_nue_from_mu[ir][0][0] = bg_e_unosc[ir] * bg_e_frac_nue_from_mu[ir];
     inistate_bg_nue_from_K[ir][0][0]  = bg_e_unosc[ir] * bg_e_frac_nue_from_K[ir];
+    inistate_bg_nue_bar_from_mu[ir][0][0] = bg_e_bar_unosc[ir] * bg_e_bar_frac_nue_from_mu[ir];
+    inistate_bg_nue_bar_from_K[ir][0][0]  = bg_e_bar_unosc[ir] * bg_e_bar_frac_nue_from_K[ir];
   }
   prb_bg_nue_from_mu.setIniState(E_reco_range, inistate_bg_nue_from_mu);
-  prb_bg_nue_from_K.setIniState(E_reco_range, inistate_bg_nue_from_K);
+  prb_bg_nue_from_K.setIniState(E_reco_range,  inistate_bg_nue_from_K);
+  prb_bg_nue_bar_from_mu.setIniState(E_reco_range, inistate_bg_nue_bar_from_mu);
+  prb_bg_nue_bar_from_K.setIniState(E_reco_range,  inistate_bg_nue_bar_from_K);
 #endif
-
-//  for (int ir=0; ir < E_reco_bins_e; ir++)
-//  {
-//    double E_reco = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]);
-//    marray<double,2> inistate_nue_from_mu;
-//    marray<double,2> inistate_nue_from_K;
-//    marray<double,2> finalstate_nue_from_mu;
-//    marray<double,2> finalstate_nue_from_K;
-//    inistate_nue_from_mu   = prb_bg_nue_from_mu.getInitialFlux(E_reco * units::MeV);
-//    inistate_nue_from_K    = prb_bg_nue_from_K.getInitialFlux(E_reco * units::MeV);
-//    finalstate_nue_from_mu = prb_bg_nue_from_mu.getFinalFlux(E_reco * units::MeV,
-//                                                             MB_baseline * units::km);
-//    finalstate_nue_from_K  = prb_bg_nue_from_K.getFinalFlux(E_reco * units::MeV,
-//                                                            MB_baseline * units::km);
-//    printf("%3d  %10.5g %10.5g   %10.5g %10.5g\n", ir,
-//           finalstate_nue_from_K[0][0], finalstate_nue_from_K[1][0],
-//           inistate_nue_from_K[0][0], inistate_nue_from_K[1][0]); //FIXME
-//  }
-//  getchar();
 
   // Initialize data structures for covariance matrix
   M6    = gsl_matrix_alloc(NCOV6, NCOV6);
@@ -290,6 +290,7 @@ int chiMB_jk_init(const char *bg_tune)
         bg_e_frac_nue_from_K[i]  *= bg_e_unosc[i] / t;
         bg_e_frac_other[i]       *= bg_e_unosc[i] / t;
         bg_e_unosc[i]             = t;
+            // FIXME Do the same also for antineutrino mode
       }
     }
   }
@@ -329,50 +330,6 @@ double chiMB_jk(int print_spectrum)
   double rates_bg_e[E_reco_bins_e];     //                  \nu_e BG (nu mode)
   double rates_bg_e_bar[E_reco_bins_e]; //                  \nu_e BG (anti-nu mode)
 
-  // FIXME FIXME
-//  {
-//    extern Param p_oscdecay;
-//    prb_nu.setParam(p_oscdecay);
-//    prb_nu_bar.setParam(p_oscdecay);
-//    prb_bg_nue_from_mu.setParam(p_oscdecay);
-//    prb_bg_nue_from_K.setParam(p_oscdecay);
-//    marray<double,2> inistate_tmp;
-//    marray<double,2> finalstate_tmp;
-//    double rates_nusquids[E_reco_bins_e];
-//    double rates_globes[E_reco_bins_e];
-//    memset(rates_nusquids, 0, E_reco_bins_e * sizeof(rates_nusquids[0]));
-//    memset(rates_globes,   0, E_reco_bins_e * sizeof(rates_globes[0]));
-//    for (int it=0; it < E_true_bins; it++)
-//    {
-//      double P[3][3];
-//      double rho = 0.0;
-//      double E_true  = E_true_min + (it+0.5) * (E_true_max - E_true_min) / E_true_bins;
-//      snu_probability_matrix(P, +1, 0.001 * E_true, 1, &MB_baseline, &rho, 0., NULL);
-//      inistate_tmp   = prb_nu.getInitialFlux(E_true * units::MeV);
-//      finalstate_tmp = prb_nu.getFinalFlux(E_true * units::MeV, MB_baseline * units::km);
-////      printf("ini %3d %7.5g   %10.5g %10.5g     %10.5g %10.5g %10.5g\n",
-////              it, E_true, P[1][0] / P[1][1], finalstate_tmp[0][0] / finalstate_tmp[0][1],
-////              inistate_tmp[0][1], finalstate_tmp[0][1], finalstate_tmp[0][0]);
-//      for (int ir=0; ir < E_reco_bins_e; ir++)
-//      {
-//        if (finalstate_tmp[0][1] + finalstate_tmp[1][1] > 1e-10)         // neutrino mode
-//          rates_nusquids[ir] += R_nu[it][ir] * (finalstate_tmp[0][0] + finalstate_tmp[1][0])
-//                                        / (finalstate_tmp[0][1] + finalstate_tmp[1][1]);
-//        rates_globes[ir] += R_nu[it][ir] * P[1][0] / P[1][1];
-////        printf("   %3d %3d %10.7g    %10.7g %10.7g\n", it, ir, R_nu[it][ir],
-////               R_nu[it][ir] * (finalstate_tmp[0][0] + finalstate_tmp[1][0])
-////                            / (finalstate_tmp[0][1] + finalstate_tmp[1][1]),
-////               R_nu[it][ir] * P[1][0] / P[1][1]);
-////        printf("     ** %10.7g %10.7g\n", rates_nusquids[ir], rates_globes[ir]);
-//      }
-//    }
-//    for (int ir=0; ir < E_reco_bins_e; ir++)
-//    {
-//      printf("final %3d %10.7g %10.7g\n", ir, rates_nusquids[ir], rates_globes[ir]);
-//    }
-//    getchar(); //FIXME
-//  }
-
   memset(rates_e,     0, E_reco_bins_e * sizeof(rates_e[0]));
   memset(rates_e_bar, 0, E_reco_bins_e * sizeof(rates_e_bar[0]));
   for (int ir=0; ir < E_reco_bins_e; ir++)
@@ -396,6 +353,8 @@ double chiMB_jk(int print_spectrum)
   prb_nu_bar.setParam(p_oscdecay);
   prb_bg_nue_from_mu.setParam(p_oscdecay);
   prb_bg_nue_from_K.setParam(p_oscdecay);
+  prb_bg_nue_bar_from_mu.setParam(p_oscdecay);
+  prb_bg_nue_bar_from_K.setParam(p_oscdecay);
 
   marray<double,2> inistate_nu;
   marray<double,2> inistate_nu_bar;
@@ -435,17 +394,9 @@ double chiMB_jk(int print_spectrum)
           rates_e_bar[ir] += R_nu_bar[it][ir]
                                * (finalstate_nu_bar[0][NU_E] + finalstate_nu_bar[1][NU_E])
                                / inistate_nu_bar[1][NU_MU];
-//        printf("rate e:    %3d   %10.5g %10.5g %10.5g %10.5g   %10.5g\n", ir,
-//               R_nu[it][ir], finalstate_nu[0][NU_E], finalstate_nu[1][NU_E],
-//               inistate_nu[1][NU_MU], rates_e[ir]);//FIXME
-//        printf("rate ebar: %3d   %10.5g %10.5g %10.5g %10.5g\n", ir,
-//               R_nu_bar[it][ir], finalstate_nu_bar[0][NU_E], finalstate_nu_bar[1][NU_E],
-//               inistate_nu_bar[1][NU_MU]);//FIXME
       } // for(ir)
     #endif // ifdef OSC_NORM
-//    printf("\n");//FIXME
   } // for(it)
-//  getchar();//FIXME
 
   // Background oscillations for \nu_e sample
   //   - we compute oscillation probabilities only at the centers of the E_reco bins
@@ -455,22 +406,42 @@ double chiMB_jk(int print_spectrum)
     marray<double,2> inistate_numu;
     marray<double,2> inistate_nue_from_mu;
     marray<double,2> inistate_nue_from_K;
+    marray<double,2> inistate_numu_bar;
+    marray<double,2> inistate_nue_bar_from_mu;
+    marray<double,2> inistate_nue_bar_from_K;
     marray<double,2> finalstate_numu_MB;
     marray<double,2> finalstate_numu_SB;
     marray<double,2> finalstate_nue_from_mu;
     marray<double,2> finalstate_nue_from_K;
+    marray<double,2> finalstate_numu_bar_MB;
+    marray<double,2> finalstate_numu_bar_SB;
+    marray<double,2> finalstate_nue_bar_from_mu;
+    marray<double,2> finalstate_nue_bar_from_K;
     for (int ir=0; ir < E_reco_bins_e; ir++)
     {
       double E_reco = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]);
-      inistate_numu          = prb_nu.getInitialFlux(E_reco * units::MeV);
-      inistate_nue_from_mu   = prb_bg_nue_from_mu.getInitialFlux(E_reco*units::MeV);
-      inistate_nue_from_K    = prb_bg_nue_from_K.getInitialFlux(E_reco*units::MeV);
-      finalstate_numu_MB     = prb_nu.getFinalFlux(E_reco*units::MeV, MB_baseline*units::km);
-      finalstate_numu_SB     = prb_nu.getFinalFlux(E_reco*units::MeV, SB_baseline*units::km);
-      finalstate_nue_from_mu = prb_bg_nue_from_mu.getFinalFlux(E_reco*units::MeV,
-                                                               MB_baseline*units::km);
-      finalstate_nue_from_K  = prb_bg_nue_from_K.getFinalFlux(E_reco*units::MeV,
-                                                              MB_baseline*units::km);
+      inistate_numu              = prb_nu.getInitialFlux(E_reco * units::MeV);
+      inistate_nue_from_mu       = prb_bg_nue_from_mu.getInitialFlux(E_reco*units::MeV);
+      inistate_nue_from_K        = prb_bg_nue_from_K.getInitialFlux(E_reco*units::MeV);
+      inistate_numu_bar          = prb_nu_bar.getInitialFlux(E_reco * units::MeV);
+      inistate_nue_bar_from_mu   = prb_bg_nue_bar_from_mu.getInitialFlux(E_reco*units::MeV);
+      inistate_nue_bar_from_K    = prb_bg_nue_bar_from_K.getInitialFlux(E_reco*units::MeV);
+      finalstate_numu_MB         = prb_nu.getFinalFlux(E_reco*units::MeV,
+                                                       MB_baseline*units::km);
+      finalstate_numu_SB         = prb_nu.getFinalFlux(E_reco*units::MeV,
+                                                       SB_baseline*units::km);
+      finalstate_nue_from_mu     = prb_bg_nue_from_mu.getFinalFlux(E_reco*units::MeV,
+                                                                   MB_baseline*units::km);
+      finalstate_nue_from_K      = prb_bg_nue_from_K.getFinalFlux(E_reco*units::MeV,
+                                                                  MB_baseline*units::km);
+      finalstate_numu_bar_MB     = prb_nu_bar.getFinalFlux(E_reco*units::MeV,
+                                                           MB_baseline*units::km);
+      finalstate_numu_bar_SB     = prb_nu_bar.getFinalFlux(E_reco*units::MeV,
+                                                           SB_baseline*units::km);
+      finalstate_nue_bar_from_mu = prb_bg_nue_bar_from_mu.getFinalFlux(E_reco*units::MeV,
+                                                                       MB_baseline*units::km);
+      finalstate_nue_bar_from_K  = prb_bg_nue_bar_from_K.getFinalFlux(E_reco*units::MeV,
+                                                                      MB_baseline*units::km);
 
       rates_bg_e[ir] = bg_e_unosc[ir]
           * ( bg_e_frac_other[ir]
@@ -485,7 +456,23 @@ double chiMB_jk(int print_spectrum)
                 / (finalstate_numu_SB[0][NU_MU] + finalstate_numu_SB[1][NU_MU])
                 * (inistate_numu[0][NU_MU] + inistate_numu[1][NU_MU])
             );
-      rates_bg_e_bar[ir] = bg_e_bar_unosc[ir];
+      rates_bg_e_bar[ir] = bg_e_bar_unosc[ir]
+          * ( bg_e_bar_frac_other[ir]
+            + bg_e_bar_frac_nue_from_mu[ir] 
+                * (finalstate_nue_bar_from_mu[0][NU_E] + finalstate_nue_bar_from_mu[1][NU_E])
+                / (inistate_nue_bar_from_mu[0][NU_E] + inistate_nue_bar_from_mu[1][NU_E])
+                / (finalstate_numu_bar_MB[0][NU_MU] + finalstate_numu_bar_MB[1][NU_MU])
+                * (inistate_numu_bar[0][NU_MU] + inistate_numu_bar[1][NU_MU])
+            + bg_e_bar_frac_nue_from_K[ir]
+                * (finalstate_nue_bar_from_K[0][NU_E] + finalstate_nue_bar_from_K[1][NU_E])
+                / (inistate_nue_bar_from_K[0][NU_E] + inistate_nue_bar_from_K[1][NU_E])
+                / (finalstate_numu_bar_SB[0][NU_MU] + finalstate_numu_bar_SB[1][NU_MU])
+                * (inistate_numu_bar[0][NU_MU] + inistate_numu_bar[1][NU_MU])
+            );
+        // FIXME FIXME FIXME also for e_bar?
+
+//      printf("%3d  %10.5g %10.5g    %15.10g %15.10g\n", ir, bg_e_unosc[ir], bg_e_bar_unosc[ir],
+//             rates_bg_e[ir], rates_bg_e_bar[ir]);//FIXME
     }
   #endif // ifdef(OSC_BG)
 
@@ -533,15 +520,21 @@ double chiMB_jk(int print_spectrum)
     for (int ir=0; ir < E_reco_bins_e; ir++)
     {
       double P_MB[3][3], P_SB[3][3];
+      double P_bar_MB[3][3], P_bar_SB[3][3];
       double rho = 0.0;
       double E_reco = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]);
       snu_probability_matrix(P_MB, +1, 0.001 * E_reco, 1, &MB_baseline, &rho, 0., NULL);
       snu_probability_matrix(P_SB, +1, 0.001 * E_reco, 1, &SB_baseline, &rho, 0., NULL);
+      snu_probability_matrix(P_bar_MB, -1, 0.001 * E_reco, 1, &MB_baseline, &rho, 0., NULL);
+      snu_probability_matrix(P_bar_SB, -1, 0.001 * E_reco, 1, &SB_baseline, &rho, 0., NULL);
       rates_bg_e[ir] = bg_e_unosc[ir]
           * ( bg_e_frac_other[ir]
             + bg_e_frac_nue_from_mu[ir] * P_MB[NU_E][NU_E] / P_MB[NU_MU][NU_MU]
             + bg_e_frac_nue_from_K[ir]  * P_MB[NU_E][NU_E] / P_SB[NU_MU][NU_MU] );
-      rates_bg_e_bar[ir] = bg_e_bar_unosc[ir];
+      rates_bg_e_bar[ir] = bg_e_bar_unosc[ir]
+          * ( bg_e_bar_frac_other[ir]
+            + bg_e_bar_frac_nue_from_mu[ir] * P_bar_MB[NU_E][NU_E] / P_bar_MB[NU_MU][NU_MU]
+            + bg_e_bar_frac_nue_from_K[ir]  * P_bar_MB[NU_E][NU_E] / P_bar_SB[NU_MU][NU_MU] );
     }
   #endif // ifdef(FULL_OSC)
 
@@ -614,12 +607,6 @@ double chiMB_jk(int print_spectrum)
       _M4[i+2*NE+NMU][j] = _M6[i+4*NE+NMU][j];
   }
 
-  //FIXME
-//  for (int i=0; i < NE + NMU; i++)
-//    for (int j=0; j < NE + NMU; j++)
-//      printf("cov %3d %3d  %10.5g\n", i, j, _M4[i][j]);
-//  getchar();
-
   /* Invert covariance matrix and compute log-likelihood */
   int signum;
   gsl_linalg_LU_decomp(M4, perm, &signum);
@@ -627,51 +614,21 @@ double chiMB_jk(int print_spectrum)
 
   double P4[NCOV4];
   for (int i=0; i < NE; i++)
-  {
     P4[i]          = data_e[i] - (rates_e[i] + rates_bg_e[i]);
-//    P4[i] = P4[i] * P4[i] / data_e[i]; //FIXME
-//    printf("e     %3d  %10.5g  %10.5g  %10.5g\n", i, data_e[i], rates_e[i] + 0*rates_bg_e[i],
-//        P4[i]); //FIXME 
-  }
   for (int i=0; i < NMU; i++)
-  {
     P4[i+NE]       = data_mu[i] - rates_mu[i];
-//    P4[i+NE] = P4[i+NE] * P4[i+NE] / data_mu[i]; //FIXME
-//    printf("mu    %3d  %10.5g  %10.5g  %10.5g\n", i, data_mu[i], rates_mu[i],
-//        P4[i+NE]); //FIXME 
-  }
   for (int i=0; i < NE; i++)
-  {
     P4[i+NE+NMU]   = data_e_bar[i] - (rates_e_bar[i] + rates_bg_e_bar[i]);
-//    P4[i+NE+NMU] = P4[i+NE+NMU] * P4[i+NE+NMU] / data_e_bar[i]; //FIXME
-//    printf("ebar  %3d  %10.5g  %10.5g  %10.5g\n", i, data_e_bar[i],
-//        rates_e_bar[i] + 0*rates_bg_e_bar[i], P4[i+NE+NMU]); //FIXME 
-  }
   for (int i=0; i < NMU; i++)
-  {
     P4[i+2*NE+NMU] = data_mu_bar[i] - rates_mu_bar[i];
-//    P4[i+2*NE+NMU] = P4[i+2*NE+NMU] * P4[i+2*NE+NMU] / data_mu_bar[i]; //FIXME
-//    printf("mubar %3d  %10.5g  %10.5g  %10.5g\n", i, data_mu_bar[i], rates_mu_bar[i],
-//        P4[i+2*NE+NMU]); //FIXME 
-  }
-//  getchar();  //FIXME
 
   double chi2 = 0.0;
-//  for (int i=0; i < NCOV4; i++)
-//    chi2 += P4[i]; 
-//  printf("chi2 = %g\n", chi2); //FIXME
-
   for (int i=0; i < NCOV4; i++)
     for (int j=0; j < NCOV4; j++)
     {
       chi2 += P4[i] * _M4inv[i][j] * P4[j];
-//      if (fabs(P4[i] * _M4inv[i][j] * P4[j]) > 1)//FIXME
-//        printf("%3d %3d   %10.7g  %10.7g\n", i, j, P4[i] * _M4inv[i][j] * P4[j], chi2);//FIXME
     }
   chi2 += gsl_linalg_LU_lndet(M4);
-//  printf(" chi2 = %g\n", chi2); //FIXME
-//  getchar();
-
 
   // Output event spectrum if requested
   // (format is [signal, bg, 0, 0] for compatibility with Pedro's code)
@@ -680,8 +637,9 @@ double chiMB_jk(int print_spectrum)
     for (int ir=0; ir < NE; ir++)
     {
       printf("# MBJKSPECT   %10.7g %10.7g %10.7g %10.7g\n",
-             rates_e[ir], rates_bg_e[ir], 0., 0.);
+             rates_e[ir], rates_bg_e[ir], rates_e_bar[ir], rates_bg_e_bar[ir]);
     }
+    printf("# CHI2   %10.7g\n", chi2);
   }
 
   return chi2;

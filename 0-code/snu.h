@@ -10,7 +10,7 @@ extern glb_probability_nusquids_function nu_hook_probability_matrix_nusquids;
 
 // Options for Ivan's oscillation + decay code
 //Flag removed Oct 2018  #define OSC_DECAY_PSEUDOSCALAR  false   // pseudoscalar or scalar interactions?
-#define OSC_DECAY_MAJORANA      true   // Majorana or Dirac neutrinos?
+#define OSC_DECAY_MAJORANA      false   // Majorana or Dirac neutrinos? FIXME FIXME
 
 
 // Arrangement of oscillation parameters in glb_params data structure:

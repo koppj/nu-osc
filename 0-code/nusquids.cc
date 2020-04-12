@@ -7,9 +7,12 @@
 #include <nuSQuIDS/nuSQuIDS.h>
 #include <nuSQuIDS/marray.h>
 #include <nuSQuIDS/tools.h>
-#include <nusquids_decay/nusquids_decay.h>
+#include "nusquids_decay/nusquids_decay.h"
 #include "osc_decay/osc_decay.h"
 #include "snu.h"
+#include "nu.h"
+
+using namespace nusquids;
 
 #ifdef NU_USE_NUSQUIDS
 
@@ -24,8 +27,6 @@
 
 // Parameter structure for Ivan's code
 regeneration::Param p_oscdecay; // Parameter vector for Ivan's code
-
-using namespace nusquids;
 
 // ----------------------------------------------------------------------------
 //         N u S Q u I D S - B A S E D   P R O B A B I L I T I E S
@@ -284,6 +285,14 @@ int snu_set_oscillation_parameters_osc_decay_internal(int n_flavors, glb_params 
                 "Warning: Both M_A_PRIME and MA_OVER_M4 != 0. Ignoring MA_OVER_M4.\n");
         status = -1001;
       }
+      else if (glbGetOscParamByName(params, "MA_OVER_M4") < 0.)
+      {
+        if (debug_level > 1)
+          fprintf(stderr, "snu_set_oscillation_parameters_osc_decay_internal: "
+                  "Warning: MA_OVER_M4 < 0. Setting to zero.\n");
+        p_oscdecay.m_A = 0.0;
+        status = -1002;
+      }
       else
         p_oscdecay.m_A = p_oscdecay.m_nu[3] * glbGetOscParamByName(params, "MA_OVER_M4");
     }
@@ -294,13 +303,21 @@ int snu_set_oscillation_parameters_osc_decay_internal(int n_flavors, glb_params 
       {
         fprintf(stderr, "snu_set_oscillation_parameters_osc_decay_internal: "
                 "Warning: Both G_PRIME and M4_GAMMA given. Ignoring M4_GAMMA.\n");
-        status = -1002;
+        status = -1010;
+      }
+      else if (glbGetOscParamByName(params, "M4_GAMMA") < 0.)
+      {
+        if (debug_level > 1)
+          fprintf(stderr, "snu_set_oscillation_parameters_osc_decay_internal: "
+                  "Warning: M4_GAMMA < 0. Setting to zero.\n");
+        p_oscdecay.g = 0.0;
+        status = -1011;
       }
       else
         p_oscdecay.g = p_oscdecay.get_g(glbGetOscParamByName(params, "M4_GAMMA"));
     }
   } // if (n_flavors > 3)
- 
+
   return status;
 }
 

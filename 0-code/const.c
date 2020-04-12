@@ -38,6 +38,9 @@ const env_param ext_scenarios[] =
   { "MINOS_2017",       EXT_MINOS2017        },
 #ifdef NU_USE_NUSQUIDS
   { "LSND_IVAN",        EXT_LSND_IVAN        },
+  { "KARMEN_IVAN",      EXT_KARMEN_IVAN      },
+  { "DECAY_KINEMATICS", EXT_DECAY_KINEMATICS },
+  { "FREE_STREAMING",   EXT_FREE_STREAMING   },
 #endif
   { "MB_JK",            EXT_MB_JK            },
   { NULL, -1 }

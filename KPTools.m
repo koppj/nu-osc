@@ -13,6 +13,10 @@ $HistoryLength = 5;
 (* Abbrevitations of Mathematica functions *)
 RegExp = RegularExpression;
 
+(* --------------------------------------------------- *)
+(* P L O T T I N G - R E L A T E D   F U N C T I O N S *)
+(* --------------------------------------------------- *)
+
 (* Commands for plot legends *)
 LegendLine[Style_] := Graphics[{Style,Line[{{-1,0},{1,0}}]},AspectRatio->0.6,ImageSize->30];
 
@@ -52,10 +56,12 @@ LegendDataPoint[opts:OptionsPattern[]] :=
 
 (* Taken from http://forums.wolfram.com/mathgroup/archive/1999/Apr/msg00028.html
    (slightly modified) *)
-JHEPPlot[grObj_Graphics] := Module[{fulopts, tcklst, th = 0.004},
+JHEPPlot[grObj_Graphics] := Module[{fulopts, maxlen, tcklst, th = 0.004},
    fulopts = FullOptions[grObj];
+   maxlen = Max[Flatten[FrameTicks /. fulopts /.
+                          {{loc_, lab_, len : {_, _}, {sty : ___}} :> len}]];
    tcklst = FrameTicks /. fulopts /. {loc_, lab_, len : {_, _}, {sty : ___}}
-          :> {loc, lab, 2*len, {Directive[sty, Thickness[th]]}};
+          :> {loc, lab, If[Max[len]==maxlen, 3*len, 2*len], {Directive[sty, Thickness[th]]}};
    grObj /. Graphics[prims_, (opts__)?OptionQ] :> 
             Graphics[prims, FrameTicks -> tcklst, FrameTicksStyle -> Thickness[th],
                      FrameStyle -> Thickness[th], opts]
@@ -90,85 +96,6 @@ SetOptions[ListDensityPlot,MyOptions];
 SetOptions[RegionPlot,MyOptions];
 SetOptions[ParametricPlot,MyOptions];
 On[SetOptions::optnf];
-
-
-(* Numerical constants *)
-NN = {
-   (* Astrophysics *)
-   GN -> 6.708*^-39/1*^18,    (* eV^-2, Newton's constant *)
-   MPl -> 1.22093*^19 GeV,    (* Planck mass, PDG 2013 *)
-   Msun -> 1.989*^30 kg,
-   Rsun -> 6.9551*^8 meter,
-   MMW -> 7*^11 Msun,         (* Mass of Milky way, Wikipedia article "Milky Way" *)
-
-   (* cosmology *)
-   H0 -> h*100 km/sec/Mpc,    (* Hubble constant *)
-   h -> 0.688,                (* according to Planck, see Wikipedia *)
-   T0 -> 2.73 Kelvin,         (* temperature of the Universe at time t_0 (today) *)
-   T\[Nu]0 -> (4/11)^(1/3) T0,(* neutrino temperature at time t_0 *)
-   \[CapitalOmega]m -> 0.14/h^2, (* total matter energy density *)
-   \[CapitalOmega]b -> 0.022/h^2, (* baryon number density *)
-   zeq -> 3370,               (* redshift of matter-radiation equality (MRE), see Planck 2015 *)
-
-   (* Particle physics *)
-   \[Alpha] -> 1/137, GF -> 1.16637*^-5 / GeV^2,
-   MZ -> 91.19*^9, MW -> 80.398 GeV,
-   MH -> 125. GeV, vev -> 246. GeV, vH -> vev, (* Higgs mass and vev *)
-   mp -> 938*^6,              (* Proton mass *)
-   amu -> 931.494061 MeV,     (* Atomic mass unit *)
-   me -> 511.*^3, mmu -> 105.658367 MeV, mtau -> 1776.82 MeV,  (* Charged lepton masses *)
-   mb -> 4.65 GeV,            (* b quark pole mass *)
-   mbMSbar -> 4.18 GeV,       (* b quark MSbar mass *)
-   mt -> 173.21 GeV,          (* Top quark pole mass *)
-   mtMSbar -> 160 GeV,        (* Top quark MSbar mass *)
-   GammaTop -> 1.5 GeV,       (* Top quark width (SM theory), from 0808.2167 *)
-   BRWlnu -> 0.2155,          (* BR(W -> e \nu) + BR(W -> \mu \nu) *)
-   Mu -> 931.494028 MeV,      (* Atomatic mass unit *)
-   a0 -> 0.529177*^-10 meter, (* Bohr radius *)
-
-   (* Properties of chemical elements *) 
-   QXe -> 54, MXe -> 131.293 mp,
-   QGe -> 32, MGe -> 72.64 mp,
-   QSi -> 14, MSi -> 28.0855 mp,
-
-   (* Material properties *)
-   \[Rho]NaI -> 3.67 grams/cm^3,
-   \[Rho]Xe  -> 3.1  grams/cm^3,
-
-   (* Unit conversion *)
-   eV -> 1., keV -> 1*^3, MeV -> 1*^6, GeV -> 1*^9, TeV -> 1*^12,
-   Kelvin -> 8.6*^-5 eV,
-   Joule -> 1/(1.60218*^-19) eV, Watt -> Joule/sec,
-   erg -> 1*^-7 Joule,
-   Tesla -> 1/(1.4440271*^-3) eV^2,
-   Gauss -> 1*^-4 Tesla,
-   pb -> 2.5766*^-27, (* eV^-2 *)
-   fb -> 1*^-3 pb,
-   meter -> 5.076*^6, km -> 1000*meter,
-   cm -> 5.076*^4, nm -> 1*^-9 meter, fm -> 1*^-15 meter,
-   pc -> 30.857*^15 meter, kpc -> 1*^3 pc, Mpc -> 1*^3 kpc,
-   sec -> 1.523*^15, hours -> 3600 sec, days -> 24 hours, yrs -> 365 days,
-   kg -> 5.62*^35 eV, grams -> 10^-3 kg,
-   c -> 2.9979*^10 (* cm/s *)
-};
-
-
-(* Likelihood for Poisson distributed random variable *)
-PoissonLikelihood[obs_, th_] := 2.0 * (th - obs + If[obs > 0, obs*Log[obs/th], 0])
-
-(* Likelihood for Gauss distributed random variable *)
-GaussLikelihood[obs_, th_, sigma_] := (th - obs)^2/sigma^2
-
-
-(* Compute p value corresponding to given number of sigmas (2-sided) *)
-PValue[sigmas_] := Module[{},
-    Return[2 NIntegrate[1/(Sqrt[2 \[Pi]]) Exp[-x^2/2], {x, sigmas, \[Infinity]}]];
-];
-
-(* Compute chi^2 value for given number of DOF and given p value *)
-\[Chi]2[dof_, pvalue_] := Module[{},
-    Return[x /. FindRoot[1 - CDF[ChiSquareDistribution[dof]][x] == pvalue, {x, 10}]];
-];
 
 
 (* My own histogram plotting function *)
@@ -244,6 +171,7 @@ LogLogErrorList[l_List] := N[{
 (*OptimizeContourPlot[p_] :=  p /. { { EdgeForm[], RGBColor[i1_, i2_, i3_], ii___}
                                -> {EdgeForm[RGBColor[i1, i2, i3]], RGBColor[i1, i2, i3], ii} };*)
 
+
 (* http://mathematica.stackexchange.com/questions/3190/saner-alternative-to-contourplot-fill *)
 (* NOTE: This function clashes with FeynArts, since FeynArts overwrites the Graph function *)
 cleanContourPlot[cp_] :=
@@ -270,6 +198,127 @@ cleanContourPlot[cp_] :=
   lines = Cases[cp, _Tooltip, Infinity];
   Graphics[GraphicsComplex[points, {regions, lines}], 
    Sequence @@ Options[cp]]
+];
+
+(* Fix problems with AbsoluteOptions and PlotRange in v10+ *)
+(* https://mathematica.stackexchange.com/questions/68937/more-ticksticks-errors-in-absoluteoptions-in-v10 *)
+With[{graphic = ListLogPlot[{10, 100}]},
+    If[Quiet @ TrueQ @ Check[FullAxes @ graphic, True],
+        Unprotect[FullAxes];
+        FullAxes[arg_] /; !TrueQ@$FACheck := Block[{$FACheck=True},
+              FullAxes[fixOptions@arg]
+        ];
+        Protect[FullAxes];
+    ]
+]
+
+With[{graphic = Graphics[{}, GridLines->None, PlotRange->{{0, 1}, {All, All}}]},
+    If[Quiet @ TrueQ @ Check[PlotRange[graphic], True],
+        Unprotect[PlotRange];
+        PlotRange[arg_] /; !TrueQ@$FACheck := Block[{$FACheck=True},
+              PlotRange[fixOptions[arg]]
+        ];
+        Protect[PlotRange];
+    ]
+]
+
+fixOptions[x_]:=x
+fixOptions[(tag:Graphics3D|Graphics)[g_,opts__]] := tag[
+      g,
+    Sequence@@ReplaceAll[
+          {opts},
+        Rule[h:Frame|FrameTicks|PlotRange,rhs_] :> h->fixRule[h,rhs]
+    ],
+    Frame->False, Axes->False
+]
+
+fixRule[Frame|FrameTicks, {{l_,r_},{b_,t_}}] := {b,l,t,r}
+fixRule[Frame|FrameTicks, {d_,s_}] := {d,Automatic,s,Automatic}
+
+fixRule[PlotRange, a_List] := Replace[a, {All, All}->All, {1}]
+
+fixRule[_,rhs_]:=rhs
+
+
+(* ------------------------------------- *)
+(* N U M E R I C A L   C O N S T A N T S *)
+(* ------------------------------------- *)
+
+NN = {
+   (* Astrophysics *)
+   GN -> 6.708*^-39/1*^18,    (* eV^-2, Newton's constant *)
+   MPl -> 1.22093*^19 GeV,    (* Planck mass, PDG 2013 *)
+   Msun -> 1.989*^30 kg,
+   Rsun -> 6.9551*^8 meter,
+   MMW -> 7*^11 Msun,         (* Mass of Milky way, Wikipedia article "Milky Way" *)
+
+   (* cosmology *)
+   H0 -> h*100 km/sec/Mpc,    (* Hubble constant *)
+   h -> 0.688,                (* according to Planck, see Wikipedia *)
+   T0 -> 2.73 Kelvin,         (* temperature of the Universe at time t_0 (today) *)
+   T\[Nu]0 -> (4/11)^(1/3) T0,(* neutrino temperature at time t_0 *)
+   \[CapitalOmega]m -> 0.14/h^2, (* total matter energy density *)
+   \[CapitalOmega]b -> 0.022/h^2, (* baryon number density *)
+   zeq -> 3370,               (* redshift of matter-radiation equality (MRE), see Planck 2015 *)
+
+   (* Particle physics *)
+   \[Alpha] -> 1/137, GF -> 1.16637*^-5 / GeV^2,
+   MZ -> 91.19*^9, MW -> 80.398 GeV,
+   MH -> 125. GeV, vev -> 246. GeV, vH -> vev, (* Higgs mass and vev *)
+   mp -> 938*^6,              (* Proton mass *)
+   amu -> 931.494061 MeV,     (* Atomic mass unit *)
+   me -> 511.*^3, mmu -> 105.658367 MeV, mtau -> 1776.82 MeV,  (* Charged lepton masses *)
+   mb -> 4.65 GeV,            (* b quark pole mass *)
+   mbMSbar -> 4.18 GeV,       (* b quark MSbar mass *)
+   mt -> 173.21 GeV,          (* Top quark pole mass *)
+   mtMSbar -> 160 GeV,        (* Top quark MSbar mass *)
+   GammaTop -> 1.5 GeV,       (* Top quark width (SM theory), from 0808.2167 *)
+   BRWlnu -> 0.2155,          (* BR(W -> e \nu) + BR(W -> \mu \nu) *)
+   Mu -> 931.494028 MeV,      (* Atomatic mass unit *)
+   a0 -> 0.529177*^-10 meter, (* Bohr radius *)
+
+   (* Properties of chemical elements *) 
+   QXe -> 54, MXe -> 131.293 mp,
+   QGe -> 32, MGe -> 72.64 mp,
+   QSi -> 14, MSi -> 28.0855 mp,
+
+   (* Material properties *)
+   \[Rho]NaI -> 3.67 grams/cm^3,
+   \[Rho]Xe  -> 3.1  grams/cm^3,
+
+   (* Unit conversion *)
+   eV -> 1., keV -> 1*^3, MeV -> 1*^6, GeV -> 1*^9, TeV -> 1*^12,
+   Kelvin -> 8.6*^-5 eV,
+   Joule -> 1/(1.60218*^-19) eV, Watt -> Joule/sec,
+   erg -> 1*^-7 Joule,
+   Tesla -> 1/(1.4440271*^-3) eV^2,
+   Gauss -> 1*^-4 Tesla,
+   pb -> 2.5766*^-27, (* eV^-2 *)
+   fb -> 1*^-3 pb,
+   meter -> 5.076*^6, km -> 1000*meter,
+   cm -> 5.076*^4, nm -> 1*^-9 meter, fm -> 1*^-15 meter,
+   pc -> 30.857*^15 meter, kpc -> 1*^3 pc, Mpc -> 1*^3 kpc,
+   sec -> 1.523*^15, hours -> 3600 sec, days -> 24 hours, yrs -> 365 days,
+   kg -> 5.62*^35 eV, grams -> 10^-3 kg,
+   c -> 2.9979*^10 (* cm/s *)
+};
+
+
+(* Likelihood for Poisson distributed random variable *)
+PoissonLikelihood[obs_, th_] := 2.0 * (th - obs + If[obs > 0, obs*Log[obs/th], 0])
+
+(* Likelihood for Gauss distributed random variable *)
+GaussLikelihood[obs_, th_, sigma_] := (th - obs)^2/sigma^2
+
+
+(* Compute p value corresponding to given number of sigmas (2-sided) *)
+PValue[sigmas_] := Module[{},
+    Return[2 NIntegrate[1/(Sqrt[2 \[Pi]]) Exp[-x^2/2], {x, sigmas, \[Infinity]}]];
+];
+
+(* Compute chi^2 value for given number of DOF and given p value *)
+\[Chi]2[dof_, pvalue_] := Module[{},
+    Return[x /. FindRoot[1 - CDF[ChiSquareDistribution[dof]][x] == pvalue, {x, 10}]];
 ];
 
 

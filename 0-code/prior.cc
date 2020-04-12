@@ -13,12 +13,14 @@ using namespace std;
 #include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_matrix.h>
 #include <globes/globes.h>   /* GLoBES library */
+#include "LSND.h"
+#include "KARMEN.h"
+#include "constraints.h"
 #include "sbl/definitions.h"
 #include "reactors/definitions.h"
 #include "db-neos/db-neos.h"
 #include "atm/LibWrap/out.interface.hh"
 #include "solar/LibWrap/out.interface.hh"
-#include "LSND.h"
 #include "nu.h"
 #include "const.h"
 
@@ -59,7 +61,9 @@ Neos_DB_class Neos_fitter;
 
 // LSND object for Ivan's code
 #ifdef NU_USE_NUSQUIDS
-LSND *LSND_ivan_fitter = NULL;
+ns_sbl::LSND        *LSND_ivan_fitter   = NULL;
+ns_sbl::KARMEN      *KARMEN_ivan_fitter = NULL;
+ns_sbl::Constraints *ext_constraints    = NULL;
 #endif
 
 
@@ -418,8 +422,22 @@ int ext_init(int ext_flags)
   if (ext_flags & EXT_LSND_IVAN)
   {
     printf("# Initializing Ivan's LSND code ...\n");
-    LSND_ivan_fitter = new LSND();
+    LSND_ivan_fitter = new ns_sbl::LSND();
     if (!LSND_ivan_fitter)
+      return -1;
+  }
+  if (ext_flags & EXT_KARMEN_IVAN)
+  {
+    printf("# Initializing Ivan's KARMEN code ...\n");
+    KARMEN_ivan_fitter = new ns_sbl::KARMEN();
+    if (!KARMEN_ivan_fitter)
+      return -1;
+  }
+  if (ext_flags & EXT_DECAY_KINEMATICS  ||  ext_flags & EXT_FREE_STREAMING)
+  {
+    printf("# Initializing external constraints code (beta decay/cosmo) ...\n");
+    ext_constraints = new ns_sbl::Constraints();
+    if (!ext_constraints)
       return -1;
   }
 #endif
@@ -429,7 +447,7 @@ int ext_init(int ext_flags)
     printf("# Initializing Joachim's MiniBooNE code ...\n");
     if ((status=chiMB_jk_init(NULL)) != 0)
       return status;
-//    if ((status=chiMB_jk_init("gibuu")) != 0)//FIXME
+//    if ((status=chiMB_jk_init("gibuu")) != 0)
 //      return status;
   }
   return 0;
@@ -536,61 +554,78 @@ double my_prior(const glb_params in, void* user_data)
     }
   }
 
+#ifdef NU_USE_NUSQUIDS
+  if (glbGetOscParamByName(params, "MA_OVER_M4") >= 1. ||
+      glbGetOscParamByName(params, "MA_OVER_M4") < 0)
+  {
+    pv += 4e15;
+    goto my_prior_end;
+  }
+  if (glbGetOscParamByName(params, "M4_GAMMA") < 0.)
+  {
+    pv += 5e15;
+    goto my_prior_end;
+  }
+#endif
+
   // Add chi^2 from external codes
   // -----------------------------
   if (pp->ext_flags)
   {
-    // Workaround for Thomas' reactor code allowing only certain ranges for
-    // dm21sq, dm31sq, dm41sq, dm51sq
-    if (n_flavors >= 3)
+    if (pp->ext_flags & EXT_REACTORS)
     {
-      #ifndef LOG_ATM
-        #error "my_prior works only for logarithmic Dmq_atm in reactor code."
-      #endif
-      double dm31 = fabs(glbGetOscParamByName(params, "DM31"));
-      if (dm31 < POW10(ATM_MIN)+1e-10 || dm31 > POW10(ATM_MAX)-1e-10)
+      // Workaround for Thomas' reactor code allowing only certain ranges for
+      // dm21sq, dm31sq, dm41sq, dm51sq
+      if (n_flavors >= 3)
       {
-        pv += 5e11;
-        goto my_prior_end;
-      }
+        #ifndef LOG_ATM
+          #error "my_prior works only for logarithmic Dmq_atm in reactor code."
+        #endif
+        double dm31 = fabs(glbGetOscParamByName(params, "DM31"));
+        if (dm31 < POW10(ATM_MIN)+1e-10 || dm31 > POW10(ATM_MAX)-1e-10)
+        {
+          pv += 5e11;
+          goto my_prior_end;
+        }
 
-      double dm21 = fabs(glbGetOscParamByName(params, "DM21"));
-    #ifdef LOG_SOL
-      if (dm21 < POW10(SOL_MIN)+1e-10 || dm21 > POW10(SOL_MAX)-1e-10)
-    #else
-      if (dm21 < SOL_MIN+1e-10 || dm21 > SOL_MAX-1e-10)
-    #endif
-      {
-        pv += 6e11;
-        goto my_prior_end;
+        double dm21 = fabs(glbGetOscParamByName(params, "DM21"));
+      #ifdef LOG_SOL
+        if (dm21 < POW10(SOL_MIN)+1e-10 || dm21 > POW10(SOL_MAX)-1e-10)
+      #else
+        if (dm21 < SOL_MIN+1e-10 || dm21 > SOL_MAX-1e-10)
+      #endif
+        {
+          pv += 6e11;
+          goto my_prior_end;
+        }
       }
-    }
-    if (n_flavors >= 4)
-    {
-      double dm41 = fabs(glbGetOscParamByName(params, "DM41"));
-    #ifdef Ip3pI // See Thomas' email from 2013-03-08
-      if (dm41 < POW10(ATM_MIN)+1e-10 || dm41 > 0.5*POW10(STE_MAX)-1e-10)
-    #else
-      if (dm41 < POW10(ATM_MIN)+1e-10 || dm41 > POW10(STE_MAX)-1e-10)
-    #endif
+      if (n_flavors >= 4)
       {
-        pv += 7e11;
-        goto my_prior_end;
+        double dm41 = fabs(glbGetOscParamByName(params, "DM41"));
+      #ifdef Ip3pI // See Thomas' email from 2013-03-08
+        if (dm41 < POW10(ATM_MIN)+1e-10 || dm41 > 0.5*POW10(STE_MAX)-1e-10)
+      #else
+        if (dm41 < POW10(ATM_MIN)+1e-10 || dm41 > POW10(STE_MAX)-1e-10)
+      #endif
+        {
+          pv += 7e11;
+          goto my_prior_end;
+        }
       }
-    }
-    if (n_flavors >= 5)
-    {
-      double dm51 = fabs(glbGetOscParamByName(params, "DM51"));
-    #ifdef Ip3pI
-      if (dm51 < POW10(ATM_MIN)+1e-10 || dm51 > 0.5*POW10(STE_MAX)-1e-10)
-    #else
-      if (dm51 < POW10(ATM_MIN)+1e-10 || dm51 > POW10(STE_MAX)-1e-10)
-    #endif
+      if (n_flavors >= 5)
       {
-        pv += 8e11;
-        goto my_prior_end;
-      }
-    }
+        double dm51 = fabs(glbGetOscParamByName(params, "DM51"));
+      #ifdef Ip3pI
+        if (dm51 < POW10(ATM_MIN)+1e-10 || dm51 > 0.5*POW10(STE_MAX)-1e-10)
+      #else
+        if (dm51 < POW10(ATM_MIN)+1e-10 || dm51 > POW10(STE_MAX)-1e-10)
+      #endif
+        {
+          pv += 8e11;
+          goto my_prior_end;
+        }
+      } // if (n_flavors >= 5)
+    } // if (ext_flags & EXT_REACTORS)
 
     // Prepare parameter data structure for Thomas' 2011 code
     struct params sbl_params;
@@ -647,8 +682,8 @@ double my_prior(const glb_params in, void* user_data)
     if (pp->ext_flags & EXT_MINOS2017)
       pv += MINOS_2017_prior(in, 0);
 
-    // Ivan's LSND code
-    // ----------------
+    // Ivan's codes
+    // ------------
   #ifdef NU_USE_NUSQUIDS
     if (pp->ext_flags & EXT_LSND_IVAN)
     {
@@ -659,6 +694,36 @@ double my_prior(const glb_params in, void* user_data)
       }
       else
         pv += 2e33;
+    }
+    if (pp->ext_flags & EXT_KARMEN_IVAN)
+    {
+      if (KARMEN_ivan_fitter)
+      {
+        extern regeneration::Param p_oscdecay;
+        pv += KARMEN_ivan_fitter->getChisq(p_oscdecay);
+      }
+      else
+        pv += 3e33;
+    }
+    if (pp->ext_flags & EXT_DECAY_KINEMATICS)
+    {
+      if (ext_constraints)
+      {
+        extern regeneration::Param p_oscdecay;
+        pv += ext_constraints->getChisq_beta(p_oscdecay);
+      }
+      else
+        pv += 4e33;
+    }
+    if (pp->ext_flags & EXT_FREE_STREAMING)
+    {
+      if (ext_constraints)
+      {
+        extern regeneration::Param p_oscdecay;
+        pv += ext_constraints->getChisq_cosmology(p_oscdecay);
+      }
+      else
+        pv += 5e33;
     }
   #endif
 
@@ -857,7 +922,7 @@ double my_prior(const glb_params in, void* user_data)
 
   // Add oscillation parameter priors
   for (i=0; i < glbGetNumOfOscParams(); i++)
-    if (glbGetProjectionFlag(p,i) == GLB_FREE)
+//FIXME    if (glbGetProjectionFlag(p,i) == GLB_FREE)
     {
       fitvalue     = glbGetOscParams(params,i);
       centralvalue = glbGetOscParams(central_values,i);

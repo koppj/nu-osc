@@ -1,4 +1,4 @@
-# MiniBooNE backgrounds from fig. 1 of 1805.12028
+# MiniBooNE neutrino mode backgrounds from fig. 1 of 1805.12028
 #
 #   Bin             Number of events per MeV (cumulative)
 #         other   +dirt     +Delta  +\pi^0   +\nu_e from K   +\nu_e from \mu    systematics

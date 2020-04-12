@@ -90,11 +90,11 @@
 #include "snu.h"
 
 // Constants
-#define GLB_V_FACTOR        7.5e-14    // Conversion factor for matter potentials
-#define GLB_Ne_MANTLE       0.5        // Effective electron numbers for calculation
-#define GLB_Ne_CORE         0.468      //   of MSW potentials
-#define RHO_THRESHOLD       0.001      // The minimum matter density below which
-                                       // vacuum algorithms are used
+#define GLB_V_FACTOR        7.63247e-14 // Conversion factor for matter potentials
+#define GLB_Ne_MANTLE       0.5         // Effective electron numbers for calculation
+#define GLB_Ne_CORE         0.468       //   of MSW potentials
+#define RHO_THRESHOLD       0.001       // The minimum matter density below which
+                                        // vacuum algorithms are used
 #define M_SQRT3  1.73205080756887729352744634151     // sqrt(3)
 
 // Macros
@@ -773,6 +773,7 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
 // matrix and part of the Hamiltonian.
 // ----------------------------------------------------------------------------
 {
+  // FIXME switch back to setting parameters to NaN in case of inconsistencies?
   gsl_matrix_complex *R = gsl_matrix_complex_alloc(n_flavors, n_flavors);
   gsl_matrix_complex *T = gsl_matrix_complex_alloc(n_flavors, n_flavors);
   double complex (*_R)[n_flavors]
@@ -1268,6 +1269,8 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
     snu_get_oscillation_parameters_osc_decay_internal(n_flavors, tmp_params);
     M_A_prime = glbGetOscParamByName(tmp_params, "M_A_PRIME");
     g_prime   = glbGetOscParamByName(tmp_params, "G_PRIME");
+
+    glbFreeParams(tmp_params);
   }
   else
   {
