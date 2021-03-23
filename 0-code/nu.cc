@@ -107,6 +107,9 @@ int theta_positive = 0;
 // Compute best fit point at end of parameter scan?
 int compute_bf = 0;
 
+// Print rates at best fit point / best grid point at end of parameter scan?
+int compute_bfspect = 0;
+
 /* Density correlations. Lists, for each experiment, the experiment with which
  * the corresponding matter density is correlated */
 int density_corr[GLB_MAX_EXP];
@@ -130,8 +133,6 @@ long ext_flags        = 0;        // Which external inputs should be used?
 static char output_file[FILENAME_MAX]=""; // Path and base name of output file in MCMC mode
 char mb_tune[FILENAME_MAX] = "";  // MC tune for MiniBooNE backgrounds
 
-
-
 // Definitions for argp
 const char *argp_program_version = "nu 0.1";
 const char *argp_program_bug_address = "<jkopp@fnal.gov>";
@@ -142,9 +143,10 @@ static char argp_option_doc[] = "[options]";
 #define OPT_NO_IH          1000
 #define OPT_NO_NH          1001
 #define OPT_ATM_DECOUPLE_E 1002
-#define OPT_BF             1003
-#define OPT_THETA_POSITIVE 1004
-#define OPT_MB_TUNE        1005
+#define OPT_BEST_FIT       1003
+#define OPT_BFSPECTRUM     1004
+#define OPT_THETA_POSITIVE 1005
+#define OPT_MB_TUNE        1006
 static struct argp_option cmdline_options[] = {
   {"flavors",    'f',"NUMBER",0,"Number of flavors to use. Can be 3, 4, or 5)" },
   {"action",     'a',"ACTION",0,"What to do PARAM_SCAN, etc. (see const.c for more)" },
@@ -155,12 +157,14 @@ static struct argp_option cmdline_options[] = {
   {"minimize",   'm',"PARAMS",0,"Parameters to marginalize: <param_name>[,<param_name>[, ...]]"},
   {"true_params",'t',"PARAMS",0,"True oscillation parameters: \"NAME=VALUE, ...\""},
   {"cons",       'c',"PARAMS",0,"External 1\\sigma priors: \"NAME=VALUE, ...\""},
-  {"no-ih",       OPT_NO_IH, NULL, 0,"Omit inverted hierarchy in fit"},
-  {"no-nh",       OPT_NO_NH, NULL, 0,"Omit normal hierarchy in fit"},
+  {"no-ih",      OPT_NO_IH, NULL, 0,"Omit inverted hierarchy in fit"},
+  {"no-nh",      OPT_NO_NH, NULL, 0,"Omit normal hierarchy in fit"},
   {"atm-decouple-e", OPT_ATM_DECOUPLE_E, NULL, 0,"Decouple electron neutrinos in ATM code"},
-  {"best-fit",    OPT_BF,NULL,0,"Compute best fit point at the end of parameter scan"},
+  {"best-fit",   OPT_BEST_FIT,NULL,0,"Compute best fit point at the end of parameter scan"},
+  {"bf-spectrum",OPT_BFSPECTRUM,NULL,0,"Print spectrum at best fit point/best grid point "
+                                "at end of parameter scan"},
   {"theta-positive", OPT_THETA_POSITIVE, NULL, 0,"Require all mixing angles to be > 0"},
-  {"mb-tune",     OPT_MB_TUNE,"TUNE",0,"MC tune to use for MB backgrounds"},
+  {"mb-tune",    OPT_MB_TUNE,"TUNE",0,"MC tune to use for MB backgrounds"},
   {"verbose",    'v',NULL,    0,"Show debug output (use multiple times for more)"},
   {"outfile",    'o',"FILENAME",0,"Path/base name of output files in MCMC mode"},
   { 0 }
@@ -565,8 +569,12 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
       atm_decouple_e = 1;
       break;
 
-    case OPT_BF:
+    case OPT_BEST_FIT:
       compute_bf = 1;
+      break;
+
+    case OPT_BFSPECTRUM:
+      compute_bfspect = 1;
       break;
 
     case OPT_THETA_POSITIVE:
@@ -1607,7 +1615,8 @@ int main(int argc, char *argv[])
 
   if (load_exps(n_exps, exps) < 0)  // Load experiments 
     return -5;
-  ext_init(ext_flags);              // Initialize external codes 
+  if (ext_init(ext_flags) != 0)     // Initialize external codes 
+    return -6;
 
   switch (action)
   {

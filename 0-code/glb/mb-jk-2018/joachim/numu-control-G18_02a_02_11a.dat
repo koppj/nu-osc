@@ -1,0 +1,11 @@
+# MiniBooNE nu-mu event rate
+# calculated using generator G18_02a_02_11a
+#   E [MeV]  BG [events/MeV]
+       250      104.3
+       600     317.65
+       800     269.68
+      1000     185.36
+      1200     108.62
+      1400     54.156
+      1600     23.541
+      1800     10.962

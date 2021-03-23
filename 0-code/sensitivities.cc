@@ -67,6 +67,8 @@ extern glb_projection proj;
 extern glb_projection prescan_proj;
 
 extern int compute_bf;
+extern int compute_bfspect;
+extern long ext_flags;
 
 #define MAX_DEG   1000    // Maximum number of degeneracies to expect 
 #define MAX_PARAMS  20
@@ -314,7 +316,7 @@ int print_rates(const long ext_flags)
 
   if (ext_flags & EXT_MB_JK)
   {
-    chiMB_jk(true);
+    chiMB_jk(2);
   }
 
 #ifdef NU_USE_NUSQUIDS
@@ -675,6 +677,21 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
     {
       printf("Best grid point IH  chi^2 %g  ", global_chi2min_IH);
       my_print_params(global_bf_IH);
+    }
+  }
+
+  // Print spectra at best fit point / best grid point if desired
+  if (compute_bfspect)
+  {
+    if (global_chi2min_NH < 1.e5)
+    {
+      glbCopyParams(global_bf_NH, true_values);
+      print_rates(ext_flags);
+    }
+    if (global_chi2min_IH < 1.e5)
+    {
+      glbCopyParams(global_bf_IH, true_values);
+      print_rates(ext_flags);
     }
   }
 

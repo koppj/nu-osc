@@ -15,13 +15,17 @@
 #include "nu.h"
 
 // Flags that affect chi^2 calculation
-//   OSC_NORM : Take into account impact of \nu_\mu disapp. on normalization
-//   OSC_BG   : Include oscillations of \nu_e backgrounds
-//   OSC_NUMU : Allow also the \nu_\mu sample to oscillate
+//   OSC_NORM     : Take into account impact of \nu_\mu disapp. on normalization
+//   OSC_BG       : Include oscillations of \nu_e backgrounds
+//   OSC_NUMU     : Allow also the \nu_\mu sample to oscillate
+//   OSC_NO_NUBAR : Omit anti-neutrino data from the fit
+//   OSC_NO_NUMU  : Omit muon neutrinos and anti-neutrinos from the fit
+//                  (I'm not sure this is consistent - use for debugging only)
 // TAG_DEFS - This signals ./compile-and-run where to insert new #define's
-#define OSC_NORM  // TAG_DEF - this tells ./compile-and-run which #define's to replace
-#define OSC_BG    // TAG_DEF
-#define OSC_NUMU  // TAG_DEF
+#define OSC_NORM     // TAG_DEF - tells ./compile-and-run which #define's to replace
+#define OSC_BG       // TAG_DEF
+#define OSC_NUMU     // TAG_DEF
+#define OSC_NO_NUBAR // TAG_DEF // FIXME
 
 // Data structures from Ivan's oscillation+decay code
 #ifdef NU_USE_NUSQUIDS
@@ -34,7 +38,7 @@
   static regProb prb_bg_nue_bar_from_K(OSC_DECAY_MAJORANA);
 #endif
 
-#define MB_DATA_DIR        "glb/mb-jk-2018/vedran/"
+#define MB_DATA_DIR        "glb/mb-jk-2018/"
 #define MB_COV_MATRIX_FILE "glb/mb-jk-2018/cov_matrix.h"
 
 static const double MB_baseline = 0.520;   // [km] - MiniBooNE baseline
@@ -74,10 +78,10 @@ static const double data_mu[]     = { 37676.0, 59515.0, 53126.0, 37050.0,
 static const double data_mu_bar[] = {  9481.0, 13581.0, 11308.0,  7667.0,
                                        4682.0,  2371.0,   985.0,   380.0 };
 
-static const double pred_mu[] =
+static double pred_mu[] =
   { 38564.217639, 59339.405335, 53069.519495, 37171.337542,
     23002.153188, 12423.361945,  6012.845025,  2801.295291 };
-static const double pred_mu_bar[] =
+static double pred_mu_bar[] =
   {  9998.957451, 13461.301884, 11298.240453,  7604.960449,
      4331.886940,  2125.537108,   891.222608,   336.987112 };
 
@@ -87,16 +91,19 @@ static double bg_e_unosc[] =                // total neutrino mode BG
 static double bg_e_frac_nue_from_mu[] =     // fractional contrib. of \nu_e from \mu decay
   { 0.073, 0.152, 0.241, 0.303, 0.358, 0.463, 0.443, 0.454, 0.452, 0.466, 0.397 };
 static double bg_e_frac_nue_from_K[] =      // fractional contrib. of \nu_e from K decay
-  { 0.034, 0.06, 0.095, 0.178, 0.199, 0.267, 0.306, 0.325, 0.391, 0.462, 0.663 };
+  { 0.034, 0.06, 0.095, 0.178, 0.199, 0.267, 0.306, 0.325, 0.391, 0.462, 0.603 };
 static double bg_e_frac_other[] =           // fractional contrib. of non-\nu_e BG
   { 0.894, 0.788, 0.664, 0.519, 0.442, 0.269, 0.251, 0.221, 0.157, 0.072, 0.0 };
 
+static const double bg_e_cc[] =             // official prediction for \nu_e CC BG
+  {  39.839,   47.4743, 83.291, 63.1215, 103.11,
+     98.5888, 105.197, 88.962,  63.9345,  86.81, 70.185 };
 static const double bg_e_delta[] =          // official prediction for Delta BG
-  {  40.531, 42.669,  54.947, 17.1765, 13.09,
-      4.91125,  1.9665,  1.9665,  1.968,  1.6425, 0. };
+  {  40.531,   42.669,  54.947, 17.1765, 13.09,
+      4.91125,  1.9665,  1.9665, 1.968,   1.6425, 0. };
 static const double bg_e_pi0[] =            // official prediction for pi^0 BG
-  { 213.771, 90.2422, 70.648, 27.4823, 40.0912,
-     21.2825,  25.5495, 21.6315, 12.789, 11.485,  0.};
+  { 213.771,   90.2422, 70.648, 27.4823, 40.0912,
+     21.2825,  25.5495, 21.6315,12.789,  11.485,  0.};
 
 static double bg_e_bar_unosc[] =            // total antineutrino mode BG
   {  90.289907,  53.077595,  57.098801,  32.937945,  43.159072,  34.174322,
@@ -139,6 +146,14 @@ int chiMB_jk_init(const char *bg_tune)
   #ifdef OSC_NUMU
     printf("OSC_NUMU ");
   #endif
+  #ifdef OSC_NO_NUBAR
+    printf("OSC_NO_NUBAR ");
+  #endif
+  #ifdef OSC_NO_NUMU
+    printf("OSC_NO_NUMU ");
+  #endif
+  if (bg_tune && strlen(bg_tune) > 0)
+    printf("bg_tune=%s", bg_tune);
   printf("\n");
 
   FILE *f;
@@ -260,46 +275,76 @@ int chiMB_jk_init(const char *bg_tune)
   perm  = gsl_permutation_alloc(NCOV4);
 
   // load backgrounds from file
-  if (bg_tune)
+  if (bg_tune && strlen(bg_tune) > 0)
   {
-    const int n_bg = 2;
-    const char *bg[n_bg] = { "delta", "pi0" };
+    const int n_bg = 4;
+    const char *bg[n_bg] = { "pi0", "singlephoton", "beam-nue", "numu-control" };
+      // when adding entries here adjust also correction bg_e_frac_XXX!
+    double *buffer[n_bg][2];
     for (int j=0; j < n_bg; j++)
     {
       char bg_file[512];
-      double *buffer[2];
       int n_rows=-1;
       int status;
-      sprintf(bg_file, "%s/%s-%s", MB_DATA_DIR, bg[j], bg_tune);
-      if ((status=LoadNdAlloc(bg_file, buffer, 2, &n_rows)) != GLB_SUCCESS)
+      sprintf(bg_file, "%s/%s-%s.dat", MB_DATA_DIR "/joachim", bg[j], bg_tune);
+      if ((status=LoadNdAlloc(bg_file, buffer[j], 2, &n_rows)) != GLB_SUCCESS)
         return status;
 
       // check that number of rows and energy binning are correct
-      if (n_rows != E_reco_bins_e)
+      if (strstr(bg[j], "numu"))
       {
-        fprintf(stderr, "chiMB_jk_init: invalid number of rows in file %s.\n", bg_file);
-        return GLBERR_INVALID_FILE_FORMAT;
-      }
-      for (int i=0; i < E_reco_bins_e; i++)
-        if (fabs(buffer[0][i] - 0.5*(E_reco_bin_edges_e[i] + E_reco_bin_edges_e[i+1]))
-                   / buffer[0][i] > 1e-5)
+        if (n_rows != E_reco_bins_mu)
         {
-          fprintf(stderr, "chiMB_jk_init: invalid energy (%g MeV) in row %d of file %s.\n",
-                  buffer[0][i], i+1, bg_file);
+          fprintf(stderr, "chiMB_jk_init: invalid number of rows in file %s.\n", bg_file);
           return GLBERR_INVALID_FILE_FORMAT;
         }
-
-      // adjust BG prediction
-      for (int i=0; i < E_reco_bins_e; i++)
-      {
-        double t = bg_e_unosc[i] - bg_e_delta[i] + buffer[1][i];
-        bg_e_frac_nue_from_mu[i] *= bg_e_unosc[i] / t;
-        bg_e_frac_nue_from_K[i]  *= bg_e_unosc[i] / t;
-        bg_e_frac_other[i]       *= bg_e_unosc[i] / t;
-        bg_e_unosc[i]             = t;
-            // FIXME Do the same also for antineutrino mode
+        for (int i=0; i < E_reco_bins_mu; i++)
+          if (fabs(buffer[j][0][i] - 0.5*(E_reco_bin_edges_mu[i] + E_reco_bin_edges_mu[i+1]))
+                     / buffer[j][0][i] > 1e-5)
+          {
+            fprintf(stderr, "chiMB_jk_init: invalid energy (%g MeV) in row %d of file %s.\n",
+                    buffer[j][0][i], i+1, bg_file);
+            return GLBERR_INVALID_FILE_FORMAT;
+          }
       }
+      else
+      {
+        if (n_rows != E_reco_bins_e)
+        {
+          fprintf(stderr, "chiMB_jk_init: invalid number of rows in file %s.\n", bg_file);
+          return GLBERR_INVALID_FILE_FORMAT;
+        }
+        for (int i=0; i < E_reco_bins_e; i++)
+          if (fabs(buffer[j][0][i] - 0.5*(E_reco_bin_edges_e[i] + E_reco_bin_edges_e[i+1]))
+                     / buffer[j][0][i] > 1e-5)
+          {
+            fprintf(stderr, "chiMB_jk_init: invalid energy (%g MeV) in row %d of file %s.\n",
+                    buffer[j][0][i], i+1, bg_file);
+            return GLBERR_INVALID_FILE_FORMAT;
+          }
+      }
+
+      // convert events/MeV to absolute event numbers
+      for (int i=0; i < E_reco_bins_e; i++)
+        buffer[j][1][i] *= E_reco_bin_edges_e[i+1] - E_reco_bin_edges_e[i];
     }
+
+    // adjust BG prediction
+    // FIXME Do the same also for antineutrino mode
+    for (int i=0; i < E_reco_bins_e; i++)
+    {
+      double t = bg_e_unosc[i] - bg_e_pi0[i]   + buffer[0][1][i]
+                               - bg_e_delta[i] + buffer[1][1][i]
+                               - bg_e_cc[i]    + buffer[2][1][i];
+      bg_e_frac_nue_from_mu[i] *= bg_e_unosc[i] / t;
+      bg_e_frac_nue_from_K[i]  *= bg_e_unosc[i] / t;
+      bg_e_frac_other[i]        = 1 - bg_e_frac_nue_from_mu[i] - bg_e_frac_nue_from_K[i];
+      bg_e_unosc[i]             = t;
+    }
+
+    // adjust predictions for nu_mu control sample
+    for (int i=0; i < E_reco_bins_mu; i++)
+      pred_mu[i] = buffer[3][1][i];
   } // end if (bg_tune)
 
   return 0;
@@ -325,7 +370,9 @@ int chiMB_jk_clear()
  * for the instructions which we loosely follow                            *
  ***************************************************************************
  * Parameters:                                                             *
- *   print_spectrum: whether (1) or not (0) to output the event spectra    *
+ *   print_spectrum: 0: no extra output                                    *
+ *                   1: output signal and total BG rates                   *
+ *                   2: output signal + separate BG rates + osc. params    *
  ***************************************************************************/
 double chiMB_jk(int print_spectrum)
 {
@@ -478,9 +525,6 @@ double chiMB_jk(int print_spectrum)
                 / (finalstate_numu_bar_SB[0][NU_MU] + finalstate_numu_bar_SB[1][NU_MU])
                 * (inistate_numu_bar[0][NU_MU] + inistate_numu_bar[1][NU_MU])
             );
-
-//      printf("%3d  %10.5g %10.5g    %15.10g %15.10g\n", ir, bg_e_unosc[ir], bg_e_bar_unosc[ir],
-//             rates_bg_e[ir], rates_bg_e_bar[ir]);//FIXME
     }
   #endif // ifdef(OSC_BG)
 
@@ -508,21 +552,21 @@ double chiMB_jk(int print_spectrum)
   for (int it=0; it < E_true_bins; it++)
   {
     double E_true = E_true_min + (it+0.5) * (E_true_max - E_true_min) / E_true_bins;
-    double P[3][3], Pbar[3][3];
+    double Pe[3][3], Pbare[3][3];
     double rho = 0.0;
-    snu_probability_matrix(P,    +1, 0.001 * E_true, 1, &MB_baseline, &rho, 0., NULL);
-    snu_probability_matrix(Pbar, -1, 0.001 * E_true, 1, &MB_baseline, &rho, 0., NULL);
+    snu_probability_matrix(Pe,   +1, 0.001*E_true, 1, &MB_baseline, &rho, 0., NULL);
+    snu_probability_matrix(Pbare,-1, 0.001*E_true, 1, &MB_baseline, &rho, 0., NULL);
     for (int ir=0; ir < E_reco_bins_e; ir++)
     {
       #ifdef OSC_NORM
-        rates_e[ir]     += R_nu[it][ir] * P[NU_MU][NU_E] / P[NU_MU][NU_MU];
-        rates_e_bar[ir] += R_nu_bar[it][ir] * Pbar[NU_MU][NU_E] / Pbar[NU_MU][NU_MU];
+        rates_e[ir]     += R_nu[it][ir] * Pe[NU_MU][NU_E] / Pe[NU_MU][NU_MU];
+        rates_e_bar[ir] += R_nu_bar[it][ir] * Pbare[NU_MU][NU_E] / Pbare[NU_MU][NU_MU];
                   /* Pme/Pmm - see discussion with W Louis:
                    * Flux is normalized to \nu_\mu rate, i.e. if there is \nu_\mu
                    * disappearance, the flux is underestimated by 1 / Pmm */
       #else
-        rates_e[ir]     += R_nu[it][ir] * P[NU_MU][NU_E];
-        rates_e_bar[ir] += R_nu_bar[it][ir] * Pbar[NU_MU][NU_E];
+        rates_e[ir]     += R_nu[it][ir] * Pe[NU_MU][NU_E];
+        rates_e_bar[ir] += R_nu_bar[it][ir] * Pbare[NU_MU][NU_E];
       #endif
     } // for (ir)
   } // for (it)
@@ -534,31 +578,31 @@ double chiMB_jk(int print_spectrum)
       double P_bar_MB[3][3], P_bar_SB[3][3];
       double rho = 0.0;
       double E_reco = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]);
-      snu_probability_matrix(P_MB, +1, 0.001 * E_reco, 1, &MB_baseline, &rho, 0., NULL);
-      snu_probability_matrix(P_SB, +1, 0.001 * E_reco, 1, &SB_baseline, &rho, 0., NULL);
-      snu_probability_matrix(P_bar_MB, -1, 0.001 * E_reco, 1, &MB_baseline, &rho, 0., NULL);
-      snu_probability_matrix(P_bar_SB, -1, 0.001 * E_reco, 1, &SB_baseline, &rho, 0., NULL);
+      snu_probability_matrix(P_MB, +1, 0.001*E_reco, 1, &MB_baseline, &rho, 0., NULL);
+      snu_probability_matrix(P_SB, +1, 0.001*E_reco, 1, &SB_baseline, &rho, 0., NULL);
+      snu_probability_matrix(P_bar_MB, -1, 0.001*E_reco, 1, &MB_baseline, &rho, 0., NULL);
+      snu_probability_matrix(P_bar_SB, -1, 0.001*E_reco, 1, &SB_baseline, &rho, 0., NULL);
       rates_bg_e[ir] = bg_e_unosc[ir]
           * ( bg_e_frac_other[ir]
             + bg_e_frac_nue_from_mu[ir] * P_MB[NU_E][NU_E] / P_MB[NU_MU][NU_MU]
             + bg_e_frac_nue_from_K[ir]  * P_MB[NU_E][NU_E] / P_SB[NU_MU][NU_MU] );
       rates_bg_e_bar[ir] = bg_e_bar_unosc[ir]
           * ( bg_e_bar_frac_other[ir]
-            + bg_e_bar_frac_nue_from_mu[ir] * P_bar_MB[NU_E][NU_E] / P_bar_MB[NU_MU][NU_MU]
-            + bg_e_bar_frac_nue_from_K[ir]  * P_bar_MB[NU_E][NU_E] / P_bar_SB[NU_MU][NU_MU] );
+            + bg_e_bar_frac_nue_from_mu[ir]*P_bar_MB[NU_E][NU_E]/P_bar_MB[NU_MU][NU_MU]
+            + bg_e_bar_frac_nue_from_K[ir] *P_bar_MB[NU_E][NU_E]/P_bar_SB[NU_MU][NU_MU] );
     }
-  #endif // ifdef(FULL_OSC)
+  #endif // ifdef(OSC_BG)
 
   #ifdef OSC_NUMU  // Oscillate muon neutrino rates
     for (int ir=0; ir < E_reco_bins_mu; ir++)
     {
       double E_reco = 0.5 * (E_reco_bin_edges_mu[ir] + E_reco_bin_edges_mu[ir+1]);
-      double P[3][3], Pbar[3][3];
+      double Pmu[3][3], Pbarmu[3][3];
       double rho = 0.0;
-      snu_probability_matrix(P,    +1, 0.001 * E_reco, 1, &MB_baseline, &rho, 0., NULL);
-      snu_probability_matrix(Pbar, -1, 0.001 * E_reco, 1, &MB_baseline, &rho, 0., NULL);
-      rates_mu[ir]     *= P[NU_MU][NU_MU];
-      rates_mu_bar[ir] *= P[NU_MU][NU_MU];
+      snu_probability_matrix(Pmu,   +1,0.001 * E_reco,1,&MB_baseline,&rho,0.,NULL);
+      snu_probability_matrix(Pbarmu,-1,0.001 * E_reco,1,&MB_baseline,&rho,0.,NULL);
+      rates_mu[ir]     *= Pmu[NU_MU][NU_MU];
+      rates_mu_bar[ir] *= Pmu[NU_MU][NU_MU];
     }
   #endif // ifdef OSC_NUMU
 #endif // ifdef(NU_USE_NUSQUIDS)
@@ -618,6 +662,44 @@ double chiMB_jk(int print_spectrum)
       _M4[i+2*NE+NMU][j] = _M6[i+4*NE+NMU][j];
   }
 
+  #ifdef OSC_NO_NUBAR
+    for (int i=0; i < NE+NMU; i++)
+      for (int j=NE+NMU; j < NCOV4; j++)
+        _M4[i][j] = 0.;
+    for (int i=NE+NMU; i < NCOV4; i++)
+    {
+      for (int j=0; j < NCOV4; j++)
+        _M4[i][j] = 0.;
+      _M4[i][i] = 1.;
+    }
+  #endif
+
+  #ifdef OSC_NO_NUMU
+    for (int i=0; i < NCOV4; i++)
+    {
+      for (int j=NE; j < NE+NMU; j++)
+        _M4[i][j] = _M4[j][i] = 0.;
+      for (int j=2*NE+NMU; j < NCOV4; j++)
+        _M4[i][j] = _M4[j][i] = 0.;
+    }
+    for (int i=NE; i < NE+NMU; i++)
+      _M4[i][i] = 1.;
+    for (int i=2*NE+NMU; i < NCOV4; i++)
+      _M4[i][i] = 1.;
+  #endif
+    //FIXME FIXME
+//    for (int i=0; i < NCOV4; i++)
+//    {
+//      for (int j=NE; j < NE+2; j++)
+//        _M4[i][j] = _M4[j][i] = 0.;
+//      for (int j=2*NE+NMU; j < 2*NE+NMU+2; j++)
+//        _M4[i][j] = _M4[j][i] = 0.;
+//    }
+//    for (int i=NE; i < NE+2; i++)
+//      _M4[i][i] = 1.;
+//    for (int i=2*NE+NMU; i < 2*NE+NMU+2; i++)
+//      _M4[i][i] = 1.;
+
   /* Invert covariance matrix and compute log-likelihood */
   int signum;
   gsl_linalg_LU_decomp(M4, perm, &signum);
@@ -633,6 +715,23 @@ double chiMB_jk(int print_spectrum)
   for (int i=0; i < NMU; i++)
     P4[i+2*NE+NMU] = data_mu_bar[i] - rates_mu_bar[i];
 
+  #ifdef OSC_NO_NUBAR
+    for (int i=NE+NMU; i < NCOV4; i++)
+      P4[i] = 0.;
+  #endif
+
+  #ifdef OSC_NO_NUMU
+    for (int i=NE; i < NE+NMU; i++)
+      P4[i] = 0.;
+    for (int i=2*NE+NMU; i < NCOV4; i++)
+      P4[i] = 0.;
+  #endif
+    //FIXME FIXME
+//    for (int i=NE; i < NE+2; i++)
+//      P4[i] = 0.;
+//    for (int i=2*NE+NMU; i < 2*NE+NMU+2; i++)
+//      P4[i] = 0.;
+
   double chi2 = 0.0;
   for (int i=0; i < NCOV4; i++)
     for (int j=0; j < NCOV4; j++)
@@ -640,6 +739,19 @@ double chiMB_jk(int print_spectrum)
       chi2 += P4[i] * _M4inv[i][j] * P4[j];
     }
   chi2 += gsl_linalg_LU_lndet(M4);
+
+  // Debug code for printing the covariance matrix
+//  printf("# P4 ");
+//  for (int i=0; i < NCOV4; i++)
+//    printf("%10.5g ", P4[i]);
+//  printf("\n");
+//  for (int i=0; i < NCOV4; i++)
+//  {
+//    printf("# McovInv ");
+//    for (int j=0; j < NCOV4; j++)
+//      printf("%10.5g ", _M4inv[i][j]);
+//    printf("\n");
+//  }
 
   // Output event spectrum if requested
   // (format is [signal, bg, 0, 0] for compatibility with Pedro's code)
@@ -650,6 +762,42 @@ double chiMB_jk(int print_spectrum)
       printf("# MBJKSPECT   %10.7g %10.7g %10.7g %10.7g\n",
              rates_e[ir], rates_bg_e[ir], rates_e_bar[ir], rates_bg_e_bar[ir]);
     }
+
+    // print also individual BG components
+    if (print_spectrum >= 2)
+    {
+      for (int ir=0; ir < NMU; ir++)
+        printf("# MBJKSPECT MU      %10.7g %10.7g\n", rates_mu[ir], rates_mu_bar[ir]);
+
+    #ifndef NU_USE_NUSQUIDS
+      for (int ir=0; ir < NE; ir++)
+      {
+        double P_MB[3][3], P_SB[3][3];
+        double rho = 0.0;
+        double E_reco = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]);
+        snu_probability_matrix(P_MB,+1,0.001 * E_reco,1,&MB_baseline,&rho,0.,NULL);
+        snu_probability_matrix(P_SB,+1,0.001 * E_reco,1,&SB_baseline,&rho,0.,NULL);
+        #ifdef OSC_BG
+          printf("# MBJKSPECT BG      %10.7g %10.7g %10.7g\n",
+            bg_e_unosc[ir]*bg_e_frac_other[ir],
+            bg_e_unosc[ir]*bg_e_frac_nue_from_mu[ir]*P_MB[NU_E][NU_E]/P_MB[NU_MU][NU_MU],
+            bg_e_unosc[ir]*bg_e_frac_nue_from_K[ir] *P_MB[NU_E][NU_E]/P_SB[NU_MU][NU_MU]);
+        #else
+          printf("# MBJKSPECT BG      %10.7g %10.7g %10.7g\n",
+            bg_e_unosc[ir]*bg_e_frac_other[ir],
+            bg_e_unosc[ir]*bg_e_frac_nue_from_mu[ir],
+            bg_e_unosc[ir]*bg_e_frac_nue_from_K[ir]);
+        #endif
+      }
+
+      glb_params p = glbAllocParams();
+      snu_get_oscillation_parameters(p, NULL);
+      printf("# MBJKSPECT PARAMS ");
+      my_print_params(p);
+      glbFreeParams(p);
+    }
+    #endif
+
     printf("# CHI2   %10.7g\n", chi2);
   }
 

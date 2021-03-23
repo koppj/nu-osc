@@ -5,7 +5,7 @@
 #include <globes/globes.h>
 
 // Use NuSQuIDS instead of GLoBES for probabilities
-#define NU_USE_NUSQUIDS
+//#define NU_USE_NUSQUIDS
 extern glb_probability_nusquids_function nu_hook_probability_matrix_nusquids;
 
 // Options for Ivan's oscillation + decay code

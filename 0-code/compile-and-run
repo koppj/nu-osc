@@ -76,7 +76,7 @@ sed -i "/#define.*\/\/ TAG_DEF/d;s/\/\/ TAG_DEFS.*/$CODE/" mb.cc
 
 # Definitions for Joachim's MiniBooNE code
 if [[ -z $MBJKDEFS ]]; then
-  MBDEFS="OSC_NORM OSC_BG OSC_NUMU"
+  MBJKDEFS="OSC_NORM OSC_BG OSC_NUMU"
 fi
 CODE=""
 for D in $MBJKDEFS; do

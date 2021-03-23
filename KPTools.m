@@ -95,6 +95,7 @@ SetOptions[DensityPlot,MyOptions];
 SetOptions[ListDensityPlot,MyOptions];
 SetOptions[RegionPlot,MyOptions];
 SetOptions[ParametricPlot,MyOptions];
+SetOptions[MatrixPlot,MyOptions];
 On[SetOptions::optnf];
 
 

@@ -1,0 +1,13 @@
+# bin boundaries [MeV] for the \nu_\mu control sample in https://arxiv.org/abs/1805.12028
+# read off from fig. 17 in that paper
+   0
+ 500
+ 700
+ 900
+1100
+1300
+1500
+1700
+1900
+
+

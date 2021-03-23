@@ -29,6 +29,7 @@ using namespace std;
 extern gsl_matrix_complex *U;
 extern int n_flavors;
 extern int action;
+extern char mb_tune[];
 
 // Minimum/maximum values of dm21^2 for the solar neutrino code
 extern double true_sdm;
@@ -445,10 +446,8 @@ int ext_init(int ext_flags)
   if (ext_flags & EXT_MB_JK)
   {
     printf("# Initializing Joachim's MiniBooNE code ...\n");
-    if ((status=chiMB_jk_init(NULL)) != 0)
+    if ((status=chiMB_jk_init(mb_tune)) != 0)
       return status;
-//    if ((status=chiMB_jk_init("gibuu")) != 0)
-//      return status;
   }
   return 0;
 }
@@ -731,7 +730,10 @@ double my_prior(const glb_params in, void* user_data)
     // ------------------------
     if (pp->ext_flags & EXT_MB_JK)
     {
-      pv += chiMB_jk(0);
+      if (debug_level > 0)
+        pv += chiMB_jk(2);
+      else
+        pv += chiMB_jk(0);
     }
 
 
