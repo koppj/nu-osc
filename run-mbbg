@@ -1,0 +1,69 @@
+#!/bin/bash
+globes=$HOME/papers/sterile-nu/globes/bin/globes
+SUFFIX=""
+export MBJKDEFS="OSC_NORM OSC_BG OSC_NUMU"
+
+cd 0-code/
+
+echo "******** Warnings in C code **************"
+grep -d skip "FIXME" *
+echo "******************************************"
+grep "FIXME" $(find glb/* -name "*.glb")
+echo "******************************************"
+echo
+
+# FIXME
+# Make sure all the flags in mb-jk.cc (background oscillations etc.) are what
+# you want them to be!
+
+#---------------------------------------------------------------------
+# Debug runs for studying the covariance matrix
+# (make sure to uncomment the corresonding code in mb-jk.cc)
+#---------------------------------------------------------------------
+
+export SP="-f 4 -a PARAM_SCAN --no-ih -v -e MB_JK \
+           -p "DM41,0.8,0.8,0" \
+           -p "s22thmue,-4.,-4.,0,LOGSCALE" \
+           -p "Um4,0.2,0.2,0" "
+export SUFFIX=""
+#MBJKDEFS="OSC_NORM OSC_BG OSC_NUMU OSC_NO_NUBAR" \
+#  OUT_FILE="dm41s22thmueUm4-mbjk-cov-default$SUFFIX.dat" ./compile-and-run -l $SP
+#MBJKDEFS="OSC_NO_NUBAR" \
+#  OUT_FILE="dm41s22thmueUm4-mbjk-cov-default-nobgosc$SUFFIX.dat" ./compile-and-run -l $SP
+
+
+#---------------------------------------------------------------------
+# Exclusion regions in DM41-s22thmue-Um4  -- unprojected
+#---------------------------------------------------------------------
+
+ALL_TUNES="gibuu nuance nuwro G18_01a_02_11a G18_01b_02_11a G18_02a_02_11a \
+           G18_02b_02_11a G18_10a_02_11a G18_10b_02_11a"
+
+#export SP="-f 4 -a PARAM_SCAN --no-ih --bf-spectrum -e MB_JK \
+#           -p "DM41,-2.,2.,15,LOGSCALE" \
+#           -p "s22thmue,-4.,0.,20,LOGSCALE" \
+#           -p "Um4,0.02,0.2,9" "
+export SP="-f 4 -a PARAM_SCAN --no-ih --bf-spectrum -e MB_JK \
+           -p "DM41,-2.,2.,40,LOGSCALE" \
+           -p "s22thmue,-4.,0.,40,LOGSCALE" \
+           -p "Um4,0.025,0.975,38" "
+export SUFFIX=""
+
+# Standard MB backgrounds
+#MBJKDEFS="OSC_NORM OSC_BG OSC_NUMU OSC_NO_NUBAR" \
+#  OUT_FILE="dm41s22thmueUm4-mbjk-default$SUFFIX.dat" ./compile-and-run -l $SP -v
+#MBJKDEFS="OSC_NO_NUBAR" \
+#  OUT_FILE="dm41s22thmueUm4-mbjk-default-nobgosc$SUFFIX.dat" ./compile-and-run -l $SP -v
+
+# backgrounds from first-principles simulations
+#make -j
+#for TUNE in $ALL_TUNES; do
+#  unbuffer ./nu $SP --mb-tune=$TUNE > ../3-3p1/mbbg/dm41s22thmueUm4-mbjk-$TUNE$SUFFIX.dat &
+#done
+
+# backgrounds from data-driven approaches
+for TUNE in $ALL_TUNES; do
+  unbuffer ./nu $SP --mb-tune=$TUNE-dd > ../3-3p1/mbbg/dm41s22thmueUm4-mbjk-$TUNE-dd$SUFFIX.dat &
+done
+
+

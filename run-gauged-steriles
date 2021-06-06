@@ -1,0 +1,26 @@
+#!/bin/bash
+globes=$HOME/software/installed/globes-devel/bin/globes
+SUFFIX=""
+
+cd 0-code/
+
+echo "******** Warnings in C code **************"
+grep "FIXME" *
+echo "******************************************"
+grep "FIXME" $(find glb/* -name *.glb)
+echo "******************************************"
+
+
+# ---------------------------------------------------------------------------
+#           Runs for gauged-steriles project with Johannes Welter
+# ---------------------------------------------------------------------------
+
+export SP="-f 4 -a PARAM_SCAN \
+           -t "TH14=1e-7,TH24=1e-7,TH34=1e-7" \
+           -p "DM41,-1.4,1.4,56,LOGSCALE" \
+           -p "TH24,0.0001,0.6,20" "
+OUT_FILE=dm41th24-gaugedsteriles$SUFFIX.dat   ./compile-and-run -e MINOS_NC $SP $SP2
+unset NU_SIZE
+
+unset SCAN_PARAMS
+

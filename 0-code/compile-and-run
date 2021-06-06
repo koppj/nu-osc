@@ -127,10 +127,10 @@ elif [[ -z $NU_RANK ]]; then
       export OUT_FILE="${OF%%.dat}_${NU_RANK}.dat"
     fi
 
-    if [[ -f ../results/$OUT_FILE ]]; then
-      echo "output file $OUTPUT_FILE exists. skipping slice $NU_RANK."
-      continue
-    fi
+#    if [[ -f ../results/$OUT_FILE ]]; then
+#      echo "output file $OUTPUT_FILE exists. skipping slice $NU_RANK."
+#      continue
+#    fi
 
     if $RUN_LOCALLY; then
       echo "# Running job $EXE locally ..."

@@ -306,7 +306,11 @@ int chiMB_jk_init(const char *bg_tune)
                     buffer[j][0][i], i+1, bg_file);
             return GLBERR_INVALID_FILE_FORMAT;
           }
-      }
+
+        // convert events/MeV to absolute event numbers
+        for (int i=0; i < E_reco_bins_mu; i++)
+          buffer[j][1][i] *= E_reco_bin_edges_mu[i+1] - E_reco_bin_edges_mu[i];
+      } // end (numu)
       else
       {
         if (n_rows != E_reco_bins_e)
@@ -322,12 +326,12 @@ int chiMB_jk_init(const char *bg_tune)
                     buffer[j][0][i], i+1, bg_file);
             return GLBERR_INVALID_FILE_FORMAT;
           }
-      }
 
-      // convert events/MeV to absolute event numbers
-      for (int i=0; i < E_reco_bins_e; i++)
-        buffer[j][1][i] *= E_reco_bin_edges_e[i+1] - E_reco_bin_edges_e[i];
-    }
+        // convert events/MeV to absolute event numbers
+        for (int i=0; i < E_reco_bins_e; i++)
+          buffer[j][1][i] *= E_reco_bin_edges_e[i+1] - E_reco_bin_edges_e[i];
+      }
+    } // end if (numu)
 
     // adjust BG prediction
     // FIXME Do the same also for antineutrino mode
@@ -547,15 +551,15 @@ double chiMB_jk(int print_spectrum)
 
   // Oscillation probabilities from GLoBES
   // -------------------------------------
-  // FIXME Implement low-pass filter also here?
 #else
   for (int it=0; it < E_true_bins; it++)
   {
     double E_true = E_true_min + (it+0.5) * (E_true_max - E_true_min) / E_true_bins;
     double Pe[3][3], Pbare[3][3];
     double rho = 0.0;
-    snu_probability_matrix(Pe,   +1, 0.001*E_true, 1, &MB_baseline, &rho, 0., NULL);
-    snu_probability_matrix(Pbare,-1, 0.001*E_true, 1, &MB_baseline, &rho, 0., NULL);
+    double filter_sigma = 0.0; //0.1 * (E_true_max - E_true_min) / E_true_bins;
+    snu_probability_matrix(Pe,   +1,0.001*E_true,1,&MB_baseline,&rho,filter_sigma,NULL);
+    snu_probability_matrix(Pbare,-1,0.001*E_true,1,&MB_baseline,&rho,filter_sigma,NULL);
     for (int ir=0; ir < E_reco_bins_e; ir++)
     {
       #ifdef OSC_NORM
@@ -574,35 +578,84 @@ double chiMB_jk(int print_spectrum)
   #ifdef OSC_BG
     for (int ir=0; ir < E_reco_bins_e; ir++)
     {
+//      double P_MB[3][3], P_SB[3][3];
+//      double P_bar_MB[3][3], P_bar_SB[3][3];
+//      double rho = 0.0;
+//      double E_reco = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]);
+//      double filter_sigma = 0.0;//0.8 * (E_reco_max_e - E_reco_min_e) / E_reco_bins_e;
+//      snu_probability_matrix(P_MB,+1,0.001*E_reco,1,&MB_baseline,&rho,filter_sigma,NULL);
+//      snu_probability_matrix(P_SB,+1,0.001*E_reco,1,&SB_baseline,&rho,filter_sigma,NULL);
+//      snu_probability_matrix(P_bar_MB,-1,0.001*E_reco,1,&MB_baseline,&rho,filter_sigma,NULL);
+//      snu_probability_matrix(P_bar_SB,-1,0.001*E_reco,1,&SB_baseline,&rho,filter_sigma,NULL);
+//      rates_bg_e[ir] = bg_e_unosc[ir]
+//          * ( bg_e_frac_other[ir]
+//            + bg_e_frac_nue_from_mu[ir] * P_MB[NU_E][NU_E] / P_MB[NU_MU][NU_MU]
+//            + bg_e_frac_nue_from_K[ir]  * P_MB[NU_E][NU_E] / P_SB[NU_MU][NU_MU] );
+//      rates_bg_e_bar[ir] = bg_e_bar_unosc[ir]
+//          * ( bg_e_bar_frac_other[ir]
+//            + bg_e_bar_frac_nue_from_mu[ir]*P_bar_MB[NU_E][NU_E]/P_bar_MB[NU_MU][NU_MU]
+//            + bg_e_bar_frac_nue_from_K[ir] *P_bar_MB[NU_E][NU_E]/P_bar_SB[NU_MU][NU_MU] );
+
+      const int n = 20;
+      double dE = (E_reco_bin_edges_e[ir+1] - E_reco_bin_edges_e[ir]) / n;
+      double P_MB_ee=0., P_MB_mumu=0., P_bar_MB_ee=0., P_bar_MB_mumu=0.;
+      double P_SB_mumu=0., P_bar_SB_mumu=0.;
       double P_MB[3][3], P_SB[3][3];
       double P_bar_MB[3][3], P_bar_SB[3][3];
       double rho = 0.0;
-      double E_reco = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]);
-      snu_probability_matrix(P_MB, +1, 0.001*E_reco, 1, &MB_baseline, &rho, 0., NULL);
-      snu_probability_matrix(P_SB, +1, 0.001*E_reco, 1, &SB_baseline, &rho, 0., NULL);
-      snu_probability_matrix(P_bar_MB, -1, 0.001*E_reco, 1, &MB_baseline, &rho, 0., NULL);
-      snu_probability_matrix(P_bar_SB, -1, 0.001*E_reco, 1, &SB_baseline, &rho, 0., NULL);
+      double filter_sigma = 0.2 * dE;
+      for (int j=0; j < n; j++)
+      {
+        double E = E_reco_bin_edges_e[ir] + (j+0.5) * dE;
+        snu_probability_matrix(P_MB,+1,0.001*E,1,&MB_baseline,&rho,filter_sigma,NULL);
+        snu_probability_matrix(P_SB,+1,0.001*E,1,&SB_baseline,&rho,filter_sigma,NULL);
+        snu_probability_matrix(P_bar_MB,-1,0.001*E,1,&MB_baseline,&rho,filter_sigma,NULL);
+        snu_probability_matrix(P_bar_SB,-1,0.001*E,1,&SB_baseline,&rho,filter_sigma,NULL);
+        P_MB_ee       += P_MB[NU_E][NU_E]       / n;
+        P_MB_mumu     += P_MB[NU_MU][NU_MU]     / n;
+        P_bar_MB_ee   += P_bar_MB[NU_E][NU_E]   / n;
+        P_bar_MB_mumu += P_bar_MB[NU_MU][NU_MU] / n;
+        P_SB_mumu     += P_SB[NU_MU][NU_MU]     / n;
+        P_bar_SB_mumu += P_bar_SB[NU_MU][NU_MU] / n;
+      }
       rates_bg_e[ir] = bg_e_unosc[ir]
           * ( bg_e_frac_other[ir]
-            + bg_e_frac_nue_from_mu[ir] * P_MB[NU_E][NU_E] / P_MB[NU_MU][NU_MU]
-            + bg_e_frac_nue_from_K[ir]  * P_MB[NU_E][NU_E] / P_SB[NU_MU][NU_MU] );
+            + bg_e_frac_nue_from_mu[ir] * P_MB_ee / P_MB_mumu
+            + bg_e_frac_nue_from_K[ir]  * P_MB_ee / P_SB_mumu );
       rates_bg_e_bar[ir] = bg_e_bar_unosc[ir]
           * ( bg_e_bar_frac_other[ir]
-            + bg_e_bar_frac_nue_from_mu[ir]*P_bar_MB[NU_E][NU_E]/P_bar_MB[NU_MU][NU_MU]
-            + bg_e_bar_frac_nue_from_K[ir] *P_bar_MB[NU_E][NU_E]/P_bar_SB[NU_MU][NU_MU] );
-    }
+            + bg_e_bar_frac_nue_from_mu[ir]*P_bar_MB_ee/P_bar_MB_mumu
+            + bg_e_bar_frac_nue_from_K[ir] *P_bar_MB_ee/P_bar_SB_mumu );    }
   #endif // ifdef(OSC_BG)
 
   #ifdef OSC_NUMU  // Oscillate muon neutrino rates
     for (int ir=0; ir < E_reco_bins_mu; ir++)
     {
-      double E_reco = 0.5 * (E_reco_bin_edges_mu[ir] + E_reco_bin_edges_mu[ir+1]);
+//      double E_reco = 0.5 * (E_reco_bin_edges_mu[ir] + E_reco_bin_edges_mu[ir+1]);
+//      double Pmu[3][3], Pbarmu[3][3];
+//      double rho = 0.0;
+//      double filter_sigma = 0.0;//0.8 * (E_reco_max_mu - E_reco_min_mu) / E_reco_bins_mu;
+//      snu_probability_matrix(Pmu,   +1,0.001*E_reco,1,&MB_baseline,&rho,filter_sigma,NULL);
+//      snu_probability_matrix(Pbarmu,-1,0.001*E_reco,1,&MB_baseline,&rho,filter_sigma,NULL);
+//      rates_mu[ir]     *= Pmu[NU_MU][NU_MU];
+//      rates_mu_bar[ir] *= Pbarmu[NU_MU][NU_MU];
+
+      const int n = 20;
+      double P=0., Pbar=0.;
+      double dE = (E_reco_bin_edges_mu[ir+1] - E_reco_bin_edges_mu[ir]) / n;
       double Pmu[3][3], Pbarmu[3][3];
       double rho = 0.0;
-      snu_probability_matrix(Pmu,   +1,0.001 * E_reco,1,&MB_baseline,&rho,0.,NULL);
-      snu_probability_matrix(Pbarmu,-1,0.001 * E_reco,1,&MB_baseline,&rho,0.,NULL);
-      rates_mu[ir]     *= Pmu[NU_MU][NU_MU];
-      rates_mu_bar[ir] *= Pmu[NU_MU][NU_MU];
+      double filter_sigma = 0.2 * dE;
+      for (int j=0; j < n; j++)
+      {
+        double E = E_reco_bin_edges_mu[ir] + (j+0.5) * dE;
+        snu_probability_matrix(Pmu,   +1,0.001*E,1,&MB_baseline,&rho,filter_sigma,NULL);
+        snu_probability_matrix(Pbarmu,-1,0.001*E,1,&MB_baseline,&rho,filter_sigma,NULL);
+        P    += Pmu[NU_MU][NU_MU]    / n;
+        Pbar += Pbarmu[NU_MU][NU_MU] / n;
+      }
+      rates_mu[ir]     *= P;
+      rates_mu_bar[ir] *= Pbar;
     }
   #endif // ifdef OSC_NUMU
 #endif // ifdef(NU_USE_NUSQUIDS)
