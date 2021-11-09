@@ -43,5 +43,6 @@ const env_param ext_scenarios[] =
   { "FREE_STREAMING",   EXT_FREE_STREAMING   },
 #endif
   { "MB_JK",            EXT_MB_JK            },
+  { "MUBOONE",          EXT_MUBOONE          },
   { NULL, -1 }
 };

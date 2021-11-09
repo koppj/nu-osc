@@ -1,14 +1,1 @@
-# MiniBooNE pi0 background (first-principles approach)
-# calculated using generator gibuu
-#   E [MeV]  BG [events/MeV]
-       250     1.1883
-     337.5    0.56579
-       425    0.34625
-     512.5     0.2091
-     612.5    0.15988
-     737.5   0.085836
-       875   0.053615
-      1025   0.064292
-      1175    0.03773
-      1375  0.0067439
-      2250          0
+pi0-mb.dat

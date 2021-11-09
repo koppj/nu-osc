@@ -947,7 +947,28 @@ int snu_set_oscillation_parameters(glb_params p, void *user_data)
 
     if (fabs(glbGetOscParamByName(p, "s22thmue")) > 1e-12)
     {
-      double _th14 = 0.5 * asin( sqrt(glbGetOscParamByName(p, "s22thmue")) / sin(th[2][4]) );
+      double _th14;
+
+      // special treatment in case several of the non-canonical parameters are given.
+      // FIXME in principle, we should do this for all possible combinations ...
+      if (fabs(glbGetOscParamByName(p, "Um4")) > 1e-12)
+      {
+        double _th24;
+        _th14 = asin( 0.5 * sqrt(glbGetOscParamByName(p, "s22thmue"))
+                          / glbGetOscParamByName(p, "Um4") );
+        _th24 = asin(glbGetOscParamByName(p, "Um4")/cos(_th14));
+        if (!isfinite(_th24))
+        {
+          fprintf(stderr, "snu_set_oscillation_parameters: Warning: Inconsistent Um4 set to zero.\n");
+          status = -500;
+          th[2][4] = 0.0;
+        }
+        else
+          th[2][4] = _th24;
+      }
+      else
+        _th14 = 0.5 * asin( sqrt(glbGetOscParamByName(p, "s22thmue")) / sin(th[2][4]) );
+
       if (!isfinite(_th14))
       {
         fprintf(stderr, "snu_set_oscillation_parameters: Warning: inconsistent "
@@ -1355,7 +1376,8 @@ int snu_get_oscillation_parameters(glb_params p, void *user_data)
     glbSetOscParamByName(p, sin(th[1][4]), "Ue4");
     glbSetOscParamByName(p, sin(th[2][4])*cos(th[1][4]), "Um4");
     glbSetOscParamByName(p, sin(th[3][4])*cos(th[1][4])*cos(th[2][4]), "Ut4");
-    glbSetOscParamByName(p, SQR(sin(2.*th[1][4] * sin(th[2][4]))), "s22thmue");
+    glbSetOscParamByName(p, SQR(sin(2.*th[1][4]) * sin(th[2][4])), "s22thmue");
+                        // parentheses here were incorrect. fixed on 06.11.2021 - JK
   }
   else if (n_flavors == 5)
   {
@@ -1758,6 +1780,27 @@ int snu_probability_matrix_all(double P[SNU_MAX_FLAVORS][SNU_MAX_FLAVORS], int c
 //            probability engine which experiment it is being run for)
 // ----------------------------------------------------------------------------
 {
+  // --------------------------------------------------------------------
+  // The following is for debugging the 3x3 matrix diagonalization routines
+//  {
+//    double complex A[3][3] = {{-0.00820883,  0.01365408, -0.00603976},
+//                              { 0.01365408, -0.01874123, -0.0001346},
+//                              {-0.00603976, -0.0001346,  -0.00294713}};
+//    double w[3];
+//    zheevc3(A, w);
+//    printf("%g %g %g\n", w[0], w[1], w[2]);
+//  }
+//  {
+//    double complex A[3][3] = {{-0.00820883,  0.01365408, -0.00603976},
+//                              { 0.01365408, -0.01874123, -0.0001346},
+//                              {-0.00603976, -0.0001346,  -0.00294713}};
+//    double complex Q[3][3];
+//    double w[3];
+//    zheevq3(A, Q, w);
+//    printf("%g %g %g\n", w[0], w[1], w[2]);
+//    exit(1);
+//  }
+
   int status;
   int i, j;
 

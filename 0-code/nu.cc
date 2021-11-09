@@ -110,6 +110,9 @@ int compute_bf = 0;
 // Print rates at best fit point / best grid point at end of parameter scan?
 int compute_bfspect = 0;
 
+// Use Feldman-Cousins method?
+int use_feldman_cousins = 0;
+
 /* Density correlations. Lists, for each experiment, the experiment with which
  * the corresponding matter density is correlated */
 int density_corr[GLB_MAX_EXP];
@@ -140,13 +143,14 @@ static char argp_doc[] = "nu neutrino oscillation simulation";
 static char argp_option_doc[] = "[options]";
 
 // The actual list of command line options we accept
-#define OPT_NO_IH          1000
-#define OPT_NO_NH          1001
-#define OPT_ATM_DECOUPLE_E 1002
-#define OPT_BEST_FIT       1003
-#define OPT_BFSPECTRUM     1004
-#define OPT_THETA_POSITIVE 1005
-#define OPT_MB_TUNE        1006
+#define OPT_NO_IH           1000
+#define OPT_NO_NH           1001
+#define OPT_ATM_DECOUPLE_E  1002
+#define OPT_BEST_FIT        1003
+#define OPT_BFSPECTRUM      1004
+#define OPT_THETA_POSITIVE  1005
+#define OPT_MB_TUNE         1006
+#define OPT_FELDMAN_COUSINS 1007
 static struct argp_option cmdline_options[] = {
   {"flavors",    'f',"NUMBER",0,"Number of flavors to use. Can be 3, 4, or 5)" },
   {"action",     'a',"ACTION",0,"What to do PARAM_SCAN, etc. (see const.c for more)" },
@@ -167,9 +171,10 @@ static struct argp_option cmdline_options[] = {
   {"mb-tune",    OPT_MB_TUNE,"TUNE",0,"MC tune to use for MB backgrounds"},
   {"verbose",    'v',NULL,    0,"Show debug output (use multiple times for more)"},
   {"outfile",    'o',"FILENAME",0,"Path/base name of output files in MCMC mode"},
+  {"feldman-cousins", OPT_FELDMAN_COUSINS, NULL, 0, "use Feldman-Cousins method (only available "
+                              "for some experiments)"},
   { 0 }
 };
-
 
 
 // -------------------------------------------------------------------------
@@ -592,6 +597,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
       mb_tune[FILENAME_MAX-1] = '\0';
       break;
     }
+
+    case OPT_FELDMAN_COUSINS:
+      use_feldman_cousins = 1;
+      break;
  
     // -------------------------------------------------
     default:
@@ -636,6 +645,12 @@ int load_exps(const int n_exps, char **exps)
                        "glb/kamland:glb/lsnd:glb/e776:glb/c12:"
                        "glb/icarus-2012:glb/icarus-2014:glb/opera", 1);
     glb_setup_path();
+
+    if (use_feldman_cousins  &&  strcmp(exps[i], "MUBOONE") != 0)
+    {
+      fprintf(stderr, "ERROR: Feldman-Cousins method not available for %s.\n", exps[i]);
+      return -2;
+    }
 
     // --------------------------------------------------------------
     // Wide band beams
@@ -1069,19 +1084,19 @@ int load_exps(const int n_exps, char **exps)
       if (!p->name)
       {
         fprintf(stderr, "Not a valid experiment: %s.\n", exps[i]);
-        return -2;
+        return -3;
       }
 
       // A few sanity checks
       if (ext_flags & EXT_MB  && ext_flags & EXT_MB_300)
       {
         fprintf(stderr, "Do not use MB and MB_300 analyses simultaneously.\n");
-        return -3;
+        return -4;
       }
       if (ext_flags & EXT_MBANTI  && ext_flags & EXT_MBANTI_200)
       {
         fprintf(stderr, "Do not use MBANTI and MBANTI200 analyses simultaneously.\n");
-        return -4;
+        return -5;
       }
     }
   } // for(i)
@@ -1090,12 +1105,12 @@ int load_exps(const int n_exps, char **exps)
   if (c12_combi_loaded  &&  (karmen_c12_loaded || lsnd_c12_loaded))
   {
     fprintf(stderr, "Do not use combined C-12 analysis together with individual analyses.\n");
-    return -5;
+    return -6;
   }
   if (mb_loaded > 1)
   {
     fprintf(stderr, "Do not load MiniBooNE multiple times - use MBall for combined nu+nubar fit.\n");
-    return -6;
+    return -7;
   }
 
   for (int i=0; i < glb_num_of_exps; i++)
@@ -1105,7 +1120,7 @@ int load_exps(const int n_exps, char **exps)
   if (wbb_params.flags & WBB_NO_1ST_MAX  &&  wbb_params.flags & WBB_NO_2ND_MAX)
   {
     fprintf(stderr, "Cannot exclude 1st and 2nd maximum - no data left.\n");
-    return -7;
+    return -8;
   }
   else if (wbb_params.flags & WBB_NO_1ST_MAX)
     printf("# Including only 2nd oscillation maximum.\n");
@@ -1414,9 +1429,10 @@ int main(int argc, char *argv[])
   glbCopyParams(true_values, test_values);
   glbCopyParams(true_values, central_values);
 
+
   // --------------------------------------------------------------------
   // The following code is used for debugging the implementation of the
-  // 4- and 5-flavor parameterizations TODO: Remove
+  // 4- and 5-flavor parameterizations TODO: Remove FIXME
 //  {
 //    gsl_matrix_complex *U = snu_get_U();
 //    glbSetOscParamByName(true_values, 0.9*M_PI/4, "TH23");
@@ -1457,6 +1473,8 @@ int main(int argc, char *argv[])
 
   // Print true parameter values and various kinds of meta information 
   printf("# Using %d flavor model\n", n_flavors);
+  if (use_feldman_cousins)
+    printf("# Using Feldman-Cousins method\n");
   printf("# Simulating the following experiments:\n");
   for (int i=0; i < n_exps; i++)
     printf("#   %s\n", exps[i]);
@@ -1498,6 +1516,8 @@ int main(int argc, char *argv[])
     printf("#   KARMEN (Ivan's code)\n");
   if (ext_flags & EXT_MB_JK)
     printf("#   MiniBooNE (Joachim's code)\n");
+  if (ext_flags & EXT_MUBOONE)
+    printf("#   microBooNE\n");
 
   if (ext_flags & EXT_REACTORS)
   {
@@ -1615,7 +1635,7 @@ int main(int argc, char *argv[])
 
   if (load_exps(n_exps, exps) < 0)  // Load experiments 
     return -5;
-  if (ext_init(ext_flags) != 0)     // Initialize external codes 
+  if (ext_init(ext_flags, use_feldman_cousins) != 0)     // Initialize external codes 
     return -6;
 
   switch (action)
@@ -1762,6 +1782,7 @@ int main(int argc, char *argv[])
     chiMB_clear();
   #endif
   chiMB_jk_clear();
+  chiMuBooNE_clear();
     
   // Cleanup MPI 
   #ifdef NU_MPI

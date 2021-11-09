@@ -18,40 +18,6 @@ double sys_startval_reactor[MAX_SYS];
 
 extern double true_ldm;
 
-/* Square of real number */
-inline double square(double x)
-{
-  return x*x;
-} 
-
-/* Gauss likelihood (this is sufficient for reactor experiments due to the large event
-   numbers; for other setups, one should use Poisson statistics) */
-inline double gauss_likelihood(double true_rate, double fit_rate, double sqr_sigma)
-{
-  if (sqr_sigma > 0)
-    return square(true_rate - fit_rate) / sqr_sigma;
-  else
-    return 0.0;
-}
-
-/* Poisson likelihood */
-inline double poisson_likelihood(double true_rate, double fit_rate)
-{
-  double res;
-  res = fit_rate - true_rate;
-  if (true_rate > 0)
-  {
-    if (fit_rate <= 0.0)
-      res = 1e100;
-    else
-      res += true_rate * log(true_rate/fit_rate);
-  }
-  else
-    res = fabs(res);
-
-  return 2.0 * res;
-}
-
 
 // -------------------------------------------------------------------------
 void glbShiftAbsoluteEnergy(double b, double *rates_in, double *rates_out,

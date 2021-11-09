@@ -86,6 +86,18 @@ echo "# Extra define's for Joachim's MiniBooNE codes: " $MBJKDEFS
 cp mb-jk.cc mb-jk-orig.cc
 sed -i "/#define.*\/\/ TAG_DEF/d;s/\/\/ TAG_DEFS.*/$CODE/" mb-jk.cc
 
+# Definitions for MicroBooNE code
+if [[ -z $MUBOONEDEFS ]]; then
+  MUBOONEDEFS="OSC_NORM OSC_BG OSC_NUMU"
+fi
+CODE=""
+for D in $MUBOONEDEFS; do
+  CODE="$CODE\n#define "$D
+done
+echo "# Extra define's for MicroBooNE codes: " $MUBOONEDEFS
+cp muboone.cc muboone-orig.cc
+sed -i "/#define.*\/\/ TAG_DEF/d;s/\/\/ TAG_DEFS.*/$CODE/" muboone.cc
+
 
 # Compilation
 echo "# Compiling ..."
@@ -99,6 +111,8 @@ mv mb-orig.cc mb.cc
 touch mb.cc
 mv mb-jk-orig.cc mb-jk.cc
 touch mb-jk.cc
+mv muboone-orig.cc muboone.cc
+touch muboone.cc
 
 
 # Run - possibly in parallel

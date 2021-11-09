@@ -9,6 +9,7 @@
   #include <mpi.h>
 #endif
 
+#include <math.h>
 #include <globes/globes.h>
 #include "glb_smear.h"
 #include "const.h"
@@ -115,7 +116,8 @@ enum { EXT_MB               = 0x000001,
        EXT_KARMEN_IVAN      = 0x010000,
        EXT_DECAY_KINEMATICS = 0x020000,
        EXT_FREE_STREAMING   = 0x040000,
-       EXT_MB_JK            = 0x080000
+       EXT_MB_JK            = 0x080000,
+       EXT_MUBOONE          = 0x100000
 };
 
 /* Experiment and rule numbers */
@@ -249,6 +251,11 @@ int chiMB_jk_init(const char *bg_tune);
 int chiMB_jk_clear();
 double chiMB_jk(int print_spectrum);
 
+/* muboone.cc */
+int chiMuBooNE_init(const char *bg_tune, int __use_feldman_cousins);
+int chiMuBooNE_clear();
+double chiMuBooNE(int print_spectrum);
+
 /* e776.c */
 double chi_E776(int exp, int rule, int n_params, double *x,
               double *errors, void *user_data);
@@ -308,7 +315,7 @@ int GetPREM3LayerApprox(double L, int *n_layers, double *lengths,
                         double *densities);
 
 /* prior.cc */
-int ext_init(int ext_flags);
+int ext_init(int ext_flags, int use_feldman_cousins);
 double my_prior(const glb_params in, void* user_data);
 
 /* iface.c */
@@ -316,6 +323,44 @@ int checkBF(int n_flavors);
 
 /* nu.cc */
 int load_exps(const int n_exps, char **exps);
+
+
+/* Inline functions */
+/* ---------------- */
+
+/* Square of real number */
+static inline double square(double x)
+{
+  return x*x;
+} 
+
+/* Gauss likelihood (this is sufficient for reactor experiments due to the large event
+   numbers; for other setups, one should use Poisson statistics) */
+static inline double gauss_likelihood(double true_rate, double fit_rate, double sqr_sigma)
+{
+  if (sqr_sigma > 0)
+    return square(true_rate - fit_rate) / sqr_sigma;
+  else
+    return 0.0;
+}
+
+/* Poisson likelihood */
+static inline double poisson_likelihood(double true_rate, double fit_rate)
+{
+  double res;
+  res = fit_rate - true_rate;
+  if (true_rate > 0)
+  {
+    if (fit_rate <= 0.0)
+      res = 1e100;
+    else
+      res += true_rate * log(true_rate/fit_rate);
+  }
+  else
+    res = fabs(res);
+
+  return 2.0 * res;
+}
 
 #ifdef __cplusplus
 }

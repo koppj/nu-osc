@@ -140,8 +140,8 @@ LDFLAGS = $(GLB_LDFLAGS) $(NUSQUIDS_LD_FLAGS) \
 
 BIN     = nu
 OBJ     = nu.o const.o sys.o snu.o nusquids.o degfinder.o sensitivities.o prem.o \
-	  mb.o mb-jk.o e776.o c12.o icarus-2012.o icarus-2014.o opera-2013.o minos.o prior.o \
-	  util.o
+	  mb.o mb-jk.o muboone.o e776.o c12.o icarus-2012.o icarus-2014.o \
+          opera-2013.o minos.o prior.o  util.o
 HEADER  = nu.h const.h snu.h LSND.h KARMEN.h constraints.h \
 	  sbl/definitions.h reactors/definitions.h db-neos/db-neos.h osc_decay/osc_decay.h \
 	  nusquids_decay/nusquids_decay.h

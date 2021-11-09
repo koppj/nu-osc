@@ -1,11 +1,1 @@
-# MiniBooNE nu-mu event rate
-# calculated using generator gibuu
-#   E [MeV]  BG [events/MeV]
-       250     82.907
-       600      332.5
-       800     309.68
-      1000     204.95
-      1200     109.62
-      1400     78.178
-      1600     20.336
-      1800     8.5957
+numu-control-mb.dat

@@ -1,14 +1,14 @@
-# MiniBooNE pi0 background (data-driven approach)
+# MiniBooNE single photon background (data-driven approach)
 # calculated using generator nuwro
 #   E [MeV]  BG [events/MeV]
-       250    0.15503
-     337.5    0.29824
-       425    0.35653
-     512.5    0.18349
-     612.5   0.098441
-     737.5   0.051112
-       875   0.016772
-      1025    0.01276
-      1175   0.026568
-      1375  0.0096371
+       250    0.29772
+     337.5    0.43242
+       425    0.48617
+     512.5    0.22198
+     612.5   0.096529
+     737.5    0.02605
+       875   0.014899
+      1025   0.016384
+      1175  0.0049836
+      1375    0.00393
       2250          0

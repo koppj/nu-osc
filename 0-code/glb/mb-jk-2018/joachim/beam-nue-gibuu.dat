@@ -1,14 +1,1 @@
-# MiniBooNE intrinsic nu-e background
-# calculated using generator gibuu
-#   E [MeV]  BG [events/MeV]
-       250    0.47214
-     337.5    0.68366
-       425    0.79387
-     512.5     1.0272
-     612.5    0.84357
-     737.5     1.0445
-       875    0.86572
-      1025     0.5477
-      1175     0.4174
-      1375    0.31025
-      2250   0.045827
+beam-nue-mb.dat

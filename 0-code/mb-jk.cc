@@ -625,7 +625,8 @@ double chiMB_jk(int print_spectrum)
       rates_bg_e_bar[ir] = bg_e_bar_unosc[ir]
           * ( bg_e_bar_frac_other[ir]
             + bg_e_bar_frac_nue_from_mu[ir]*P_bar_MB_ee/P_bar_MB_mumu
-            + bg_e_bar_frac_nue_from_K[ir] *P_bar_MB_ee/P_bar_SB_mumu );    }
+            + bg_e_bar_frac_nue_from_K[ir] *P_bar_MB_ee/P_bar_SB_mumu );
+    }
   #endif // ifdef(OSC_BG)
 
   #ifdef OSC_NUMU  // Oscillate muon neutrino rates
@@ -645,7 +646,7 @@ double chiMB_jk(int print_spectrum)
       double dE = (E_reco_bin_edges_mu[ir+1] - E_reco_bin_edges_mu[ir]) / n;
       double Pmu[3][3], Pbarmu[3][3];
       double rho = 0.0;
-      double filter_sigma = 0.2 * dE;
+      double filter_sigma = 0.2 * dE;// FIXME FIXME MeV -> GeV conversion!!
       for (int j=0; j < n; j++)
       {
         double E = E_reco_bin_edges_mu[ir] + (j+0.5) * dE;
@@ -740,18 +741,6 @@ double chiMB_jk(int print_spectrum)
     for (int i=2*NE+NMU; i < NCOV4; i++)
       _M4[i][i] = 1.;
   #endif
-    //FIXME FIXME
-//    for (int i=0; i < NCOV4; i++)
-//    {
-//      for (int j=NE; j < NE+2; j++)
-//        _M4[i][j] = _M4[j][i] = 0.;
-//      for (int j=2*NE+NMU; j < 2*NE+NMU+2; j++)
-//        _M4[i][j] = _M4[j][i] = 0.;
-//    }
-//    for (int i=NE; i < NE+2; i++)
-//      _M4[i][i] = 1.;
-//    for (int i=2*NE+NMU; i < 2*NE+NMU+2; i++)
-//      _M4[i][i] = 1.;
 
   /* Invert covariance matrix and compute log-likelihood */
   int signum;
@@ -779,11 +768,6 @@ double chiMB_jk(int print_spectrum)
     for (int i=2*NE+NMU; i < NCOV4; i++)
       P4[i] = 0.;
   #endif
-    //FIXME FIXME
-//    for (int i=NE; i < NE+2; i++)
-//      P4[i] = 0.;
-//    for (int i=2*NE+NMU; i < 2*NE+NMU+2; i++)
-//      P4[i] = 0.;
 
   double chi2 = 0.0;
   for (int i=0; i < NCOV4; i++)

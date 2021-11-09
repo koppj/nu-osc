@@ -154,31 +154,6 @@ gsl_permutation *cov_matrix_perm_nc=NULL, *cov_matrix_perm_cc=NULL; // Permutati
 //double data_total_nd_nc, data_total_nd_cc;
 
 
-/* Square of real number */
-inline static double square(double x)
-{
-  return x*x;
-}
-
-/* Poisson likelihood */
-inline static double poisson_likelihood(double true_rate, double fit_rate)
-{
-  double res;
-  res = fit_rate - true_rate;
-  if (true_rate > 0)
-  {
-    if (fit_rate <= 0.0)
-      res = 1e100;
-    else
-      res += true_rate * log(true_rate/fit_rate);
-  }
-  else
-    res = fabs(res);
-
-  return 2.0 * res;
-}
-
-
 #define TOL 1.0E-7
 
 /***************************************************************************

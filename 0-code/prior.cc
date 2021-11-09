@@ -207,7 +207,7 @@ int solar_parameters(gsl_matrix_complex *U, Angles *a)
 /***************************************************************************
  * Initialize external experiments                                         *
  ***************************************************************************/
-int ext_init(int ext_flags)
+int ext_init(int ext_flags, int use_feldman_cousins)
 {
   int status;
 
@@ -447,6 +447,12 @@ int ext_init(int ext_flags)
   {
     printf("# Initializing Joachim's MiniBooNE code ...\n");
     if ((status=chiMB_jk_init(mb_tune)) != 0)
+      return status;
+  }
+  if (ext_flags & EXT_MUBOONE)
+  {
+    printf("# Initializing microBooNE code ...\n");
+    if ((status=chiMuBooNE_init("", use_feldman_cousins)) != 0)
       return status;
   }
   return 0;
@@ -736,6 +742,15 @@ double my_prior(const glb_params in, void* user_data)
         pv += chiMB_jk(0);
     }
 
+    // MicroBooNE
+    // ----------
+    if (pp->ext_flags & EXT_MUBOONE)
+    {
+      if (debug_level > 0)
+        pv += chiMuBooNE(2);
+      else
+        pv += chiMuBooNE(0);
+    }
 
     // SBL reactor experiments + gallium experiments
     // ---------------------------------------------

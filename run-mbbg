@@ -12,9 +12,10 @@ grep "FIXME" $(find glb/* -name "*.glb")
 echo "******************************************"
 echo
 
-# FIXME
+# ******************************************
 # Make sure all the flags in mb-jk.cc (background oscillations etc.) are what
 # you want them to be!
+# ******************************************
 
 #---------------------------------------------------------------------
 # Debug runs for studying the covariance matrix
@@ -36,34 +37,39 @@ export SUFFIX=""
 # Exclusion regions in DM41-s22thmue-Um4  -- unprojected
 #---------------------------------------------------------------------
 
-ALL_TUNES="gibuu nuance nuwro G18_01a_02_11a G18_01b_02_11a G18_02a_02_11a \
-           G18_02b_02_11a G18_10a_02_11a G18_10b_02_11a"
+ALL_TUNES_DD="gibuu nuance nuwro G18_01a_02_11a G18_01b_02_11a G18_02a_02_11a \
+             G18_02b_02_11a G18_10a_02_11a G18_10b_02_11a"
+ALL_TUNES_FP="$ALL_TUNES_DD gibuu-brscan-min gibuu-brscan-max"
 
+##export SP="-f 4 -a PARAM_SCAN --no-ih --bf-spectrum -e MB_JK \
+##           -p "DM41,-2.,2.,15,LOGSCALE" \
+##           -p "s22thmue,-4.,0.,20,LOGSCALE" \
+##           -p "Um4,0.02,0.2,9" "
 #export SP="-f 4 -a PARAM_SCAN --no-ih --bf-spectrum -e MB_JK \
-#           -p "DM41,-2.,2.,15,LOGSCALE" \
-#           -p "s22thmue,-4.,0.,20,LOGSCALE" \
-#           -p "Um4,0.02,0.2,9" "
+#           -p "DM41,-2.,2.,40,LOGSCALE" \
+#           -p "s22thmue,-4.,0.,40,LOGSCALE" \
+#           -p "Um4,0.025,0.975,38" "
 export SP="-f 4 -a PARAM_SCAN --no-ih --bf-spectrum -e MB_JK \
            -p "DM41,-2.,2.,40,LOGSCALE" \
            -p "s22thmue,-4.,0.,40,LOGSCALE" \
-           -p "Um4,0.025,0.975,38" "
+           -p "Um4,0.025,0.775,30" "
 export SUFFIX=""
 
 # Standard MB backgrounds
 #MBJKDEFS="OSC_NORM OSC_BG OSC_NUMU OSC_NO_NUBAR" \
-#  OUT_FILE="dm41s22thmueUm4-mbjk-default$SUFFIX.dat" ./compile-and-run -l $SP -v
+#  OUT_FILE="dm41s22thmueUm4-mbjk-default$SUFFIX.dat" ./compile-and-run -l $SP
 #MBJKDEFS="OSC_NO_NUBAR" \
-#  OUT_FILE="dm41s22thmueUm4-mbjk-default-nobgosc$SUFFIX.dat" ./compile-and-run -l $SP -v
+#  OUT_FILE="dm41s22thmueUm4-mbjk-default-nobgosc$SUFFIX.dat" ./compile-and-run -l $SP
 
 # backgrounds from first-principles simulations
 #make -j
-#for TUNE in $ALL_TUNES; do
+#for TUNE in $ALL_TUNES_FP; do
 #  unbuffer ./nu $SP --mb-tune=$TUNE > ../3-3p1/mbbg/dm41s22thmueUm4-mbjk-$TUNE$SUFFIX.dat &
 #done
-
-# backgrounds from data-driven approaches
-for TUNE in $ALL_TUNES; do
-  unbuffer ./nu $SP --mb-tune=$TUNE-dd > ../3-3p1/mbbg/dm41s22thmueUm4-mbjk-$TUNE-dd$SUFFIX.dat &
-done
+#
+## backgrounds from data-driven approaches
+#for TUNE in $ALL_TUNES_DD; do
+#  unbuffer ./nu $SP --mb-tune=$TUNE-dd > ../3-3p1/mbbg/dm41s22thmueUm4-mbjk-$TUNE-dd$SUFFIX.dat &
+#done
 
 
