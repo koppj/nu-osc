@@ -1,0 +1,24 @@
+# IBD yield per fission versus effective fission fractions f_i.
+#
+# Effective fission fraction values taken from Figure 1, bottom panel, of:
+# “Measurement of Reactor Antineutrino Flux and Spectrum Evolution at Daya Bay.”
+# IBD yield per fission values taken from Figure 2.
+# Uncertainties in IBD yield per fission values are given in cov_stat.txt and cov_syst.txt
+#
+# 239_lo:      lower bin boundary value on Pu239 effective fission fraction
+# 239_hi:      upper bin boundary value of Pu239 effective fission fraction
+# f_239:       average Pu239 effective fission fraction for all data within 239_lo and 239_hi
+# f_235:       average U235 effective fission fraction for all data within 239_lo and 239_hi
+# f_238:       average U238 effective fission fraction for all data within 239_lo and 239_hi
+# f_241:       average Pu241 effective fission fraction for all data within 239_lo and 239_hi
+# sig:         average IBD yield for all data within 239_lo and 239_hi, in units of (x10^-43 cm^2/fission)
+
+239_lo	 239_hi  f_239   f_235   f_238   f_241   sig
+0.339    1.000   0.3445  0.5113  0.0767  0.0675  5.8231
+0.327    0.339   0.3326  0.5279  0.0766  0.0629  5.8397
+0.316    0.327   0.3219  0.5418  0.0764  0.0599  5.8558
+0.305    0.316   0.3113  0.5553  0.0762  0.0572  5.8732
+0.294    0.305   0.2992  0.5699  0.0760  0.0549  5.9105
+0.281    0.294   0.2878  0.5849  0.0758  0.0515  5.9161
+0.266    0.281   0.2744  0.6033  0.0757  0.0466  5.9411
+0.000    0.266   0.2525  0.6304  0.0754  0.0417  6.0094
