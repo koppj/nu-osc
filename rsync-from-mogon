@@ -1,8 +1,0 @@
-#!/bin/bash
-rsync -avz mogon:~/sterile-nu/sim/results/* \
-      $HOME/papers/sterile-nu/sim/results/ \
-      --exclude nu_script* \
-      --exclude nu_tarball* \
-      --exclude *.dat.err \
-      --exclude *.dat.log \
-      --exclude *Inputs*

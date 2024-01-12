@@ -23,9 +23,6 @@ END_C_DECLS
 #include "nu.h"
 #include "sbl/definitions.h"
 #include "reactors/definitions.h"
-#ifdef NU_USE_MONTECUBES
-  #include <montecubes/montecubes.h>
-#endif
 
 #ifdef NU_MPI
   #include <mpi.h>
@@ -1571,18 +1568,18 @@ int main(int argc, char *argv[])
     printf("#   NOMAD\n");
   if (ext_flags & EXT_CDHS)
     printf("#   CDHS\n");
-  if (ext_flags & EXT_ATM_TABLE)
-    printf("#   SuperK Atmospheric neutrinos (tabulated chi^2)\n");
-  if (ext_flags & EXT_ATM_COMP)
-    printf("#   SueprK Atmospheric neutrinos (Michele's simulation)\n");
-  if (ext_flags & EXT_DEEPCORE)
-    printf("#   IceCube Deep Core (Michele's simulation)\n");
-  if (ext_flags & EXT_SOLAR)
-    printf("#   Solar neutrinos (Michele's simulation)\n");
-  if (ext_flags & EXT_DECAY_KINEMATICS)
-    printf("#   Beta decay kinematics\n");
-  if (ext_flags & EXT_FREE_STREAMING)
-    printf("#   Cosmology (free-streaming constraint)\n");
+//  if (ext_flags & EXT_ATM_TABLE)
+//    printf("#   SuperK Atmospheric neutrinos (tabulated chi^2)\n");
+//  if (ext_flags & EXT_ATM_COMP)
+//    printf("#   SueprK Atmospheric neutrinos (Michele's simulation)\n");
+//  if (ext_flags & EXT_DEEPCORE)
+//    printf("#   IceCube Deep Core (Michele's simulation)\n");
+//  if (ext_flags & EXT_SOLAR)
+//    printf("#   Solar neutrinos (Michele's simulation)\n");
+//  if (ext_flags & EXT_DECAY_KINEMATICS)
+//    printf("#   Beta decay kinematics\n");
+//  if (ext_flags & EXT_FREE_STREAMING)
+//    printf("#   Cosmology (free-streaming constraint)\n");
   printf("#\n");
 
   printf("# True oscillation parameters (only nonzero params shown):\n");
@@ -1672,50 +1669,6 @@ int main(int argc, char *argv[])
       break;
     }
 
-    // Markov Chain Monte Carlo
-    case NU_ACTION_MCMC:
-    {
-      printf("# Markov Chain Monte Carlo\n");
-      printf("#\n");
-
-      // Sample over parameters indicated as "scan" parameters (-p) and as
-      // "minimization" parameters (-m) on the command line
-      int n_mcmc_params = n_scan_params + n_min_params;
-      char *mcmc_params[n_mcmc_params];
-      double mcmc_p_min[n_mcmc_params], mcmc_p_max[n_mcmc_params];
-      unsigned long mcmc_p_flags[n_mcmc_params];
-      for (int i=0; i < n_scan_params; i++)
-        mcmc_params[i] = scan_params[i];
-      for (int i=0; i < n_min_params; i++)
-      {
-        mcmc_params[n_scan_params+i] = min_params[i];
-        mcmc_p_min[n_scan_params+i] = 0.0;
-        mcmc_p_max[n_scan_params+i] = 0.0;
-        mcmc_p_flags[n_scan_params+i] = 0;
-      }
-      memcpy(mcmc_p_min, scan_p_min, sizeof(*mcmc_p_min) * n_scan_params);
-      memcpy(mcmc_p_max, scan_p_max, sizeof(*mcmc_p_max) * n_scan_params);
-      memcpy(mcmc_p_flags, scan_p_flags, sizeof(*mcmc_p_flags) * n_scan_params);
-
-      // User-defined prior function to include external input
-      prior_params pp;
-      pp.ext_flags = ext_flags;
-      pp.n_scan_params = n_mcmc_params;
-      for (int i=0; i < n_mcmc_params; i++)
-        pp.scan_params[i] = glbFindParamByName(mcmc_params[i]);
-      memcpy(pp.scan_p_flags, mcmc_p_flags, n_mcmc_params*sizeof(*mcmc_p_flags));
-      glbRegisterPriorFunction(&my_prior, NULL, NULL, &pp);
-
-      // Run Markov chains
-      mcmc_deg(output_file, n_mcmc_params, mcmc_params, mcmc_p_min, mcmc_p_max,
-                 mcmc_p_flags, n_prescan_params, prescan_params,
-                 prescan_p_min, prescan_p_max, prescan_p_steps, prescan_p_flags);
-
-      // Reset prior function to default
-      glbRegisterPriorFunction(NULL, NULL, NULL, NULL);
-      break;
-    }
-
     // Tabulate oscillation probabilities
     case NU_ACTION_PROB_TABLE:
     {
@@ -1757,13 +1710,6 @@ int main(int argc, char *argv[])
       printf("# EXPOSURE SCAN NOT IMPLEMENTED YET!\n");
       break;
     }
-
-//    // Check Thomas' best fit points
-//    case NU_ACTION_CHECK_BF:
-//      printf("# Checking Thomas' best fit point\n");
-//      printf("#\n");
-//      checkBF(n_flavors);
-//      break;
   }
 
   time(&end_time);
