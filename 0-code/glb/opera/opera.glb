@@ -1,0 +1,122 @@
+%!GLoBES
+
+$version="3.0.0"
+
+/*****************************************************************
+ * Author: PAN Machado 
+ * Date: May 2016
+ *
+ * AEDL file for OPERA 1303.3953
+ * The normalisations will be given in the .c file
+ *****************************************************************/
+
+/* ####### flux ####### */
+
+nuflux(#ICARUS_SPECTRUM)<
+        @flux_file = "glb_ICARUS_spectrum.dat"
+        @time      =  1	/* POT */
+        @power     =  1 	/* dummy */
+        @norm      =  1
+>
+
+/* ######## Baseline setting ######## */
+
+$profiletype = 3
+$densitytab  = { 0 }  
+$lengthtab   = { 732  } /* km */
+
+
+/* ####### Detector settings ####### */
+
+$target_mass = 1  /* tons (fiducial mass) - normalization in opera.c */
+
+/* ####### Energy window ####### */
+
+$emin        = 1	/* GeV */
+$emax        = 30	/* GeV */
+//$bins	     = 45
+$binsize     = {9. ,10., 10.}
+
+$sampling_points = 45  /*  */
+
+/* ######## Technical information ######## */
+
+/* For globes probability engine */
+$filter_state = 1		/* check it */
+$filter_value = 2E-1		/* check it */
+
+/* For my probability engine */
+//$filter_state = 1
+//$filter_value = 30
+
+/* ####### Energy resolution ####### */
+
+energy(#RESOPERA)<
+        @type = 1
+        @sigma_e = {0.37, 0.74, 0} /* pg4 of 1303.3953 */
+>
+
+energy(#RESOPMU)<
+        @type = 1
+        @sigma_e = {0.00001, 0, 0} /* pg4 of 1303.3953 */
+>
+
+/* ####### Cross sections ####### */
+
+cross(#XCC)<
+	@cross_file = "XCC.dat"
+>
+
+
+/* ####### Channel definitions ####### */
+
+%bc    = samplingbincenter()
+%energ = {    0.0, 2.84856, 5.12923, 6.96813, 8.97255, 10.8686, 13.2754, 15.2601, 17.2665, 19.101, 
+       	  21.0819, 23.2197, 25.2125, 27.1862, 29.156, 31.4045, 33.1135, 35.3759, 37.186, 39.0599, 
+	  41.0462, 43.0737, 45.1962, 47.1724, 49.1638, 51.0733, 52.9467, 55.2013, 57.0127, 59.0877, 
+	  61.0243, 63.1417, 65.0916, 67.1519, 69.0509, 71.075, 73.0576, 75.0801}
+%effs  = {    0.0, 0.0511073, 0.0945486, 0.10477, 0.158433, 0.270017, 0.287053, 0.305792, 0.362862, 
+       	 0.365417, 0.377342, 0.417376, 0.450596, 0.449744, 0.442078, 0.42845, 0.458262, 0.469336, 
+	 0.42845, 0.424076, 0.429211, 0.40696, 0.452488, 0.439822, 0.453857, 0.423391, 0.429211, 
+	 0.407645, 0.404222, 0.36554, 0.382998, 0.419626, 0.460703, 0.396006, 0.447353, 0.418941, 0.417572, 0.386421}
+
+%ires  = interpolation(%energ,%effs,1,%bc)
+
+/* SIGNALS */
+channel(#mu_e)<
+        @channel   =    #ICARUS_SPECTRUM:      +  :      mu  :      e : #XCC : #RESOPERA
+	@pre_smearing_efficiencies = copy(%ires)
+>
+
+/*channel(#mu_mu)<
+        @channel   =    #ICARUS_SPECTRUM:      +  :      NOSC_mu  :      NOSC_mu : #XCC : #RESOPMU
+>*/
+
+/* ####### Setting the rules ####### */
+
+rule(#NU_E_App)<
+        @signal     = 1@#mu_e
+//        @background = 1E-10@#mu_mu  /* this is for normalization purposes */
+        @background = 0@#mu_e
+
+        @sys_on_function  = "chi_OPERA"
+	@sys_on_errors = {0.15} 
+//	@sys_on_errors = {} 
+        @sys_off_function = "chiZero"
+        @energy_window = 1.0 : 30.0
+>
+
+/*********************************************************************
+			GENERAL COMMENTS
+# SPECTRUM:
+# PAN Machado
+# 2016-july
+# I took the spectrum from the reference
+# Bonesini, Guglielmi, Physics Reports 433 (2006) 65–126
+# (see figure 5) - from my old icarus.glb file
+# UNITS: neutrinos/bins/4E8 POT
+# Filenames: glb_ICARUS_spectrum.dat
+# Addendum 2016: The spectrum for Opera should be exactly the same.
+# cross section taken from globes website
+# energy resolution from paper
+*********************************************************************/
