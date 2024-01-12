@@ -89,10 +89,10 @@ wbb_params_type wbb_params =
 };
 
 // Parameters for Thomas' reactor analysis
-namespace ns_reactor
-{
-  extern int old_new_main;
-}
+//namespace ns_reactor
+//{
+//  extern int old_new_main;
+//}
 
 // Parameters for Michele's atmospheric neutrino analysis
 int atm_decouple_e = 0; // Whether to decouple electron neutrinos by hand
@@ -649,133 +649,6 @@ int load_exps(const int n_exps, char **exps)
     }
 
     // --------------------------------------------------------------
-    // Wide band beams
-    // --------------------------------------------------------------
-
-    // LBNE-like wide band beams (1 detector)
-    if (strcasecmp(exps[i], "WBB_WC_60") == 0)
-    {
-      if (GLB_ISNAN(glbGetAEDLVariable("MASS")))
-        glbDefineAEDLVariable("MASS", 200.0);
-      if (GLB_ISNAN(glbGetAEDLVariable("BEAM_POWER")))
-        glbDefineAEDLVariable("BEAM_POWER", 0.525);
-      glbInitExperiment("wbb_wc_60_near.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_wc_60_far.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_wc_60_anti_near.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_wc_60_anti_far.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbSetFilterStateInExperiment(1, GLB_ON);
-      glbSetFilterStateInExperiment(3, GLB_ON);
-      density_corr[3] = 1; // Matter density for far detector correlated in \nu/\bar{\nu} runs 
-      L_opt[0] = L_opt[2] = 0; // Do not include near detectors in baseline optimization 
-      EXP_BEAM_NEAR = 0;
-      EXP_BEAM_FAR  = 1;
-      struct glb_experiment *ND  = glb_experiment_list[0];
-      struct glb_experiment *NDa = glb_experiment_list[2];
-      for (int i=0; i < ND->numofchannels; i++)  // Set NOSC-flags for all ND channels -> faster
-      {
-        ND->listofchannels[2][i] = (ND->listofchannels[2][i] % 10) + 10;
-        ND->listofchannels[3][i] = (ND->listofchannels[3][i] % 10) + 10;
-      }
-      for (int i=0; i < NDa->numofchannels; i++)
-      {
-        NDa->listofchannels[2][i] = (NDa->listofchannels[2][i] % 10) + 10;
-        NDa->listofchannels[3][i] = (NDa->listofchannels[3][i] % 10) + 10;
-      }
-    }
-
-    else if (strcasecmp(exps[i], "WBB_WC_120") == 0)
-    {
-      if (GLB_ISNAN(glbGetAEDLVariable("MASS")))
-        glbDefineAEDLVariable("MASS", 200.0);
-      if (GLB_ISNAN(glbGetAEDLVariable("BEAM_POWER")))
-        glbDefineAEDLVariable("BEAM_POWER", 0.7);
-      glbInitExperiment("wbb_wc_120_near.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_wc_120_far.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_wc_120_anti_near.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_wc_120_anti_far.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbSetFilterStateInExperiment(1, GLB_ON);
-      glbSetFilterStateInExperiment(3, GLB_ON);
-      density_corr[3] = 1; // Matter density for far detector correlated in \nu/\bar{\nu} runs 
-      L_opt[0] = L_opt[2] = 0;
-      EXP_BEAM_NEAR = 0;
-      EXP_BEAM_FAR  = 1;
-      struct glb_experiment *ND  = glb_experiment_list[0];
-      struct glb_experiment *NDa = glb_experiment_list[2];
-      for (int i=0; i < ND->numofchannels; i++)
-      {
-        ND->listofchannels[2][i] = (ND->listofchannels[2][i] % 10) + 10;
-        ND->listofchannels[3][i] = (ND->listofchannels[3][i] % 10) + 10;
-      }
-      for (int i=0; i < NDa->numofchannels; i++)
-      {
-        NDa->listofchannels[2][i] = (NDa->listofchannels[2][i] % 10) + 10;
-        NDa->listofchannels[3][i] = (NDa->listofchannels[3][i] % 10) + 10;
-      }
-    }
-
-    else if (strcasecmp(exps[i], "WBB_LAR_60") == 0)
-    {
-      if (GLB_ISNAN(glbGetAEDLVariable("MASS")))
-        glbDefineAEDLVariable("MASS", 34.0);
-      if (GLB_ISNAN(glbGetAEDLVariable("BEAM_POWER")))
-        glbDefineAEDLVariable("BEAM_POWER", 0.525);
-      glbInitExperiment("wbb_lar_60_near.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_lar_60_far.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbSetFilterStateInExperiment(1, GLB_ON);
-      L_opt[0] = 0;
-      EXP_BEAM_NEAR = 0;
-      EXP_BEAM_FAR  = 1;
-      struct glb_experiment *ND  = glb_experiment_list[0];
-      for (int i=0; i < ND->numofchannels; i++)
-      {
-        ND->listofchannels[2][i] = (ND->listofchannels[2][i] % 10) + 10;
-        ND->listofchannels[3][i] = (ND->listofchannels[3][i] % 10) + 10;
-      }
-    }
-
-    else if (strcasecmp(exps[i], "WBB_LAR_120") == 0)
-    {
-      if (GLB_ISNAN(glbGetAEDLVariable("MASS")))
-        glbDefineAEDLVariable("MASS", 34.0);
-      if (GLB_ISNAN(glbGetAEDLVariable("BEAM_POWER")))
-        glbDefineAEDLVariable("BEAM_POWER", 0.7);
-      glbInitExperiment("wbb_lar_120_near.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_lar_120_far.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbSetFilterStateInExperiment(1, GLB_ON);
-      L_opt[0] = 0;
-      EXP_BEAM_NEAR = 0;
-      EXP_BEAM_FAR  = 1;
-      struct glb_experiment *ND  = glb_experiment_list[0];
-      for (int i=0; i < ND->numofchannels; i++)
-      {
-        ND->listofchannels[2][i] = (ND->listofchannels[2][i] % 10) + 10;
-        ND->listofchannels[3][i] = (ND->listofchannels[3][i] % 10) + 10;
-      }
-    }
-
-    // LBNE-like wide band beams (2 detectors at different baselines)
-    else if (strcasecmp(exps[i], "WBB_WC_120_2BL") == 0)
-    {
-      if (GLB_ISNAN(glbGetAEDLVariable("MASS")))
-        glbDefineAEDLVariable("MASS", 100.0);
-      if (GLB_ISNAN(glbGetAEDLVariable("BEAM_POWER")))
-        glbDefineAEDLVariable("BEAM_POWER", 0.7);
-      glbInitExperiment("wbb_wc_120.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_wc_120_anti.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_wc_120.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("wbb_wc_120_anti.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbSetBaselineInExperiment(2, 3*glbGetBaselineInExperiment(0));
-      glbSetBaselineInExperiment(3, 3*glbGetBaselineInExperiment(0));
-      glbSetFilterStateInExperiment(1, GLB_ON);
-      glbSetFilterStateInExperiment(3, GLB_ON);
-      density_corr[3] = 1; // Matter density for far detector correlated in \nu/\bar{\nu} runs 
-      L_opt[0] = L_opt[1] = 0; // Baseline optimization for 2nd detector 
-      EXP_BEAM_NEAR = -1;
-      EXP_BEAM_FAR  = 1;
-    }
-
-
-    // --------------------------------------------------------------
     // Reactor experiments
     // --------------------------------------------------------------
 
@@ -927,16 +800,16 @@ int load_exps(const int n_exps, char **exps)
       }
 
       // A few sanity checks
-      if (ext_flags & EXT_MB  && ext_flags & EXT_MB_300)
-      {
-        fprintf(stderr, "Do not use MB and MB_300 analyses simultaneously.\n");
-        return -4;
-      }
-      if (ext_flags & EXT_MBANTI  && ext_flags & EXT_MBANTI_200)
-      {
-        fprintf(stderr, "Do not use MBANTI and MBANTI200 analyses simultaneously.\n");
-        return -5;
-      }
+//      if (ext_flags & EXT_MB  && ext_flags & EXT_MB_300)
+//      {
+//        fprintf(stderr, "Do not use MB and MB_300 analyses simultaneously.\n");
+//        return -4;
+//      }
+//      if (ext_flags & EXT_MBANTI  && ext_flags & EXT_MBANTI_200)
+//      {
+//        fprintf(stderr, "Do not use MBANTI and MBANTI200 analyses simultaneously.\n");
+//        return -5;
+//      }
     }
   } // for(i)
 
@@ -1291,79 +1164,79 @@ int main(int argc, char *argv[])
   print_aedl_variables();
   printf("#\n");
   printf("# External analysis routines included:\n");
-  if (ext_flags & EXT_MB)
-    printf("#   Thomas' MiniBooNE code (neutrino run, E > 475 MeV)\n");
-  if (ext_flags & EXT_MB_300)
-    printf("#   Thomas' MiniBooNE code (neutrino run, E > 300 MeV)\n");
-  if (ext_flags & EXT_MBANTI)
-    printf("#   Thomas' MiniBooNE code (anti-neutrino run, E > 475 MeV)\n");
-  if (ext_flags & EXT_MBANTI_200)
-    printf("#   Thomas' MiniBooNE code (anti-neutrino run, E > 200 MeV)\n");
-  if (ext_flags & EXT_KARMEN)
-    printf("#   KARMEN\n");
-  if (ext_flags & EXT_LSND)
-    printf("#   LSND (Thomas' code)\n");
-  if (ext_flags & EXT_LSND_IVAN)
-    printf("#   LSND (Ivan's code)\n");
-  if (ext_flags & EXT_KARMEN_IVAN)
-    printf("#   KARMEN (Ivan's code)\n");
+//  if (ext_flags & EXT_MB)
+//    printf("#   Thomas' MiniBooNE code (neutrino run, E > 475 MeV)\n");
+//  if (ext_flags & EXT_MB_300)
+//    printf("#   Thomas' MiniBooNE code (neutrino run, E > 300 MeV)\n");
+//  if (ext_flags & EXT_MBANTI)
+//    printf("#   Thomas' MiniBooNE code (anti-neutrino run, E > 475 MeV)\n");
+//  if (ext_flags & EXT_MBANTI_200)
+//    printf("#   Thomas' MiniBooNE code (anti-neutrino run, E > 200 MeV)\n");
+//  if (ext_flags & EXT_KARMEN)
+//    printf("#   KARMEN\n");
+//  if (ext_flags & EXT_LSND)
+//    printf("#   LSND (Thomas' code)\n");
+//  if (ext_flags & EXT_LSND_IVAN)
+//    printf("#   LSND (Ivan's code)\n");
+//  if (ext_flags & EXT_KARMEN_IVAN)
+//    printf("#   KARMEN (Ivan's code)\n");
   if (ext_flags & EXT_MB_JK)
     printf("#   MiniBooNE (Joachim's code)\n");
   if (ext_flags & EXT_MUBOONE)
     printf("#   microBooNE\n");
 
-  if (ext_flags & EXT_REACTORS)
-  {
-    printf("#   \\nu_e disappearance searches: \n");
-    #ifdef USE_SBL
-      printf("#     Bugey, ROVNO, Goesgen, ILL, Kranoyarsk, SRP, Rovno rates\n");
-    #endif
-    #ifdef USE_CHOOZ
-      printf("#     Chooz\n");
-    #endif
-    #ifdef USE_PV
-      printf("#     Palo Verde\n");
-    #endif
-    #ifdef USE_KAML
-      printf("#     KamLAND\n");
-    #endif
-    #ifdef USE_DC
-      printf("#     Double Chooz\n");
-    #endif
-    #ifdef USE_DB
-      printf("#     Daya Bay (sterile neutrino code)\n");
-    #endif
-    #ifdef USE_DB_3F
-      printf("#     Daya Bay (3-flavor code)\n");
-    #endif
-    #ifdef USE_RENO
-      printf("#     RENO\n");
-    #endif
-    #ifdef USE_BUGEY_SP
-      printf("#     Bugey spectrum\n");
-    #endif
-    #ifdef USE_DANSS
-      printf("#     DANSS\n");
-    #endif
-    #ifdef USE_NEOS
-      printf("#     NEOS\n");
-    #endif
-    #ifdef USE_GAL
-      printf("#     Gallium\n");
-    #endif
-
-    #ifdef USE_NEOS_DB_ALVARO
-      printf("#     Combined NEOS+ Daya Bay analysis\n");
-    #endif
-    #ifdef USE_DB_ALVARO
-      printf("#     Daya Bay (Alvaro's implementation)\n");
-    #endif
-  }
-
-  if (ext_flags & EXT_NOMAD)
-    printf("#   NOMAD\n");
-  if (ext_flags & EXT_CDHS)
-    printf("#   CDHS\n");
+//  if (ext_flags & EXT_REACTORS)
+//  {
+//    printf("#   \\nu_e disappearance searches: \n");
+//    #ifdef USE_SBL
+//      printf("#     Bugey, ROVNO, Goesgen, ILL, Kranoyarsk, SRP, Rovno rates\n");
+//    #endif
+//    #ifdef USE_CHOOZ
+//      printf("#     Chooz\n");
+//    #endif
+//    #ifdef USE_PV
+//      printf("#     Palo Verde\n");
+//    #endif
+//    #ifdef USE_KAML
+//      printf("#     KamLAND\n");
+//    #endif
+//    #ifdef USE_DC
+//      printf("#     Double Chooz\n");
+//    #endif
+//    #ifdef USE_DB
+//      printf("#     Daya Bay (sterile neutrino code)\n");
+//    #endif
+//    #ifdef USE_DB_3F
+//      printf("#     Daya Bay (3-flavor code)\n");
+//    #endif
+//    #ifdef USE_RENO
+//      printf("#     RENO\n");
+//    #endif
+//    #ifdef USE_BUGEY_SP
+//      printf("#     Bugey spectrum\n");
+//    #endif
+//    #ifdef USE_DANSS
+//      printf("#     DANSS\n");
+//    #endif
+//    #ifdef USE_NEOS
+//      printf("#     NEOS\n");
+//    #endif
+//    #ifdef USE_GAL
+//      printf("#     Gallium\n");
+//    #endif
+//
+//    #ifdef USE_NEOS_DB_ALVARO
+//      printf("#     Combined NEOS+ Daya Bay analysis\n");
+//    #endif
+//    #ifdef USE_DB_ALVARO
+//      printf("#     Daya Bay (Alvaro's implementation)\n");
+//    #endif
+//  }
+//
+//  if (ext_flags & EXT_NOMAD)
+//    printf("#   NOMAD\n");
+//  if (ext_flags & EXT_CDHS)
+//    printf("#   CDHS\n");
 //  if (ext_flags & EXT_ATM_TABLE)
 //    printf("#   SuperK Atmospheric neutrinos (tabulated chi^2)\n");
 //  if (ext_flags & EXT_ATM_COMP)
@@ -1393,8 +1266,6 @@ int main(int argc, char *argv[])
   printf("#\n");
   printf("# Miscellaneous options:\n");
   printf("#   Constraint \\eps^s = \\eps^{d\\dag}: %s\n", use_nsi_constraints ? "YES" : "NO");
-  printf("#   New reactor fluxes (1101.2663):   %s\n",
-         ns_reactor::old_new_main==NEW ? "YES" : "NO");
   if (n_flavors >= 5)
   {
 #ifdef Ip3pI

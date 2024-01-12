@@ -299,10 +299,10 @@ int print_rates(const long ext_flags)
 
   // Print event rates from (some) external codes
   // --------------------------------------------
-  if (ext_flags & EXT_MINOS2017)
-  {
-    MINOS_2017_prior(true_values, MINOS_2017_PRINT_RATES);
-  }
+//  if (ext_flags & EXT_MINOS2017)
+//  {
+//    MINOS_2017_prior(true_values, MINOS_2017_PRINT_RATES);
+//  }
   if (ext_flags & EXT_MB_JK)
   {
     chiMB_jk(2);
