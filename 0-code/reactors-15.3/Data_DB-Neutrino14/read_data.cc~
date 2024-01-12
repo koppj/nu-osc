@@ -1,0 +1,118 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+inline void error(const char *text) {
+   fputs(text, stderr);
+   fputc('\n', stderr);
+   exit(1);
+}
+
+
+#define NBIN_DB 36
+#define NDET_DB 8
+#define NBG_DB 5
+
+// ***************** DB8 data ******************
+// *** data from slide 16 of NuFact2014 talk ***
+// *********************************************
+
+const double IBD_cand_DB8[NDET_DB] = {
+  202461., 206217., 193356., 190046., 27067., 27389., 27032., 27419.
+};
+// days
+const double DAQ_DB8[NDET_DB] = {
+  374.447, 374.447, 378.407,  378.407, 372.685, 372.685, 372.685, 372.685 
+};
+// multiplying eps_mu * eps_m
+const double eff_DB8[NDET_DB] = {
+  0.8255 * 0.9746,
+  0.8223 * 0.9749,
+  0.8574 * 0.9759,
+  0.8577 * 0.9756,
+  0.9811 * 0.9762,
+  0.9811 * 0.976,
+  0.9808 * 0.9757,
+  0.9811 * 0.9758
+};
+ 
+// bg rate per day
+const double bg_DB8_data[NBG_DB][NDET_DB] = {
+  {8.62, 8.76, 6.43, 6.86, 1.07, 0.94, 0.94, 1.26},  // accidentals
+  {0.78, 0.78, 0.54, 0.54, 0.05, 0.05, 0.05, 0.05},  // fast neutron
+  {2.80, 2.80, 1.70, 1.70, 0.27, 0.27, 0.27, 0.27},  // Li, He
+  {0.20, 0.21, 0.18, 0.22, 0.06, 0.04, 0.04, 0.07},  // Am-C
+  {0.08, 0.07, 0.05, 0.07, 0.05, 0.05, 0.05, 0.05}   // CO
+};
+
+
+// ***************** DB6 data ******************
+// *** data from slide 7 of NuFact2013 talk  ***
+// *********************************************
+
+const double IBD_cand_DB6[NDET_DB] = {
+  101290., 102519., 92912., 0., 13964., 13894., 13731., 0.
+};
+// days
+const double DAQ_DB6[NDET_DB] = {
+  191.001, 191.001, 189.645, 0., 189.779, 189.779, 189.779, 0.
+};
+const double eff_DB6[NDET_DB] = {
+  0.7957, 0.7927, 0.8282, 1., 0.9577, 0.9568, 0.9566, 1.
+};
+ 
+// bg rate per day
+const double bg_DB6_data[NBG_DB][NDET_DB] = {
+  {9.54, 9.36, 7.44, 0., 2.96, 2.92, 2.87, 0.},  // accidentals
+  {0.92, 0.92, 0.62, 0., 0.04, 0.04, 0.04, 0.},  // fast neutron
+  {2.40, 2.40, 1.20, 0., 0.22, 0.22, 0.22, 0.},  // Li, He
+  {0.26, 0.26, 0.26, 0., 0.26, 0.26, 0.26, 0.},  // Am-C
+  {0.08, 0.07, 0.05, 0., 0.04, 0.04, 0.04, 0.}   // CO
+};
+
+
+int main(void)
+{
+
+  // reading data
+  FILE *fp_data = fopen("DB_observed.txt","r");
+  FILE *fp_noos = fopen("DB_no-osc.txt","r");
+
+  double DB_data[NBIN_DB], DB_noosc[NBIN_DB];
+
+  for(int i = 0; i < NBIN_DB; i++){
+    if(fscanf(fp_data, "%le", &DB_data[i]) != 1)
+      error("cannot read DB data");
+    if(fscanf(fp_noos, "%le", &DB_noosc[i]) != 1)
+      error("cannot read DB no oscillation data");
+  }
+  fclose(fp_data);
+  fclose(fp_noos);
+
+  double sum = 0.;
+  for(int i = 0; i < NBIN_DB; i++)
+    sum += DB_data[i];
+
+  printf("sum spectrum = %f\n\n", sum); 
+
+  double ev6 = 0., ev8 = 0., rate = 0.;
+
+  // sum over far detectors
+  for(int i = 4; i < NDET_DB; i++){
+
+    ev6 = IBD_cand_DB6[i];
+    ev8 = IBD_cand_DB8[i];
+
+    for(int j = 0; j < NBG_DB; j++){
+      ev6 -= bg_DB6_data[j][i] * DAQ_DB6[i] * eff_DB6[i];
+      ev8 -= bg_DB8_data[j][i] * DAQ_DB8[i] * eff_DB8[i];
+    }
+
+    //printf("%f %f\n", ev6/DAQ_DB6[i], ev8/DAQ_DB8[i]);
+
+    rate += (ev6 + ev8) / (DAQ_DB6[4] + DAQ_DB8[4]);
+  }
+  printf("%e\n", rate  );
+
+  return 0;
+}

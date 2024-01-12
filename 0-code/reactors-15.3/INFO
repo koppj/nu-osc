@@ -1,0 +1,99 @@
+
+version 15.3
+
+corrected analysis of Daya Bay flux measurment from 1704.01082
+using data from the supplementary material provided with the corresponding PRL
+
+--------------------------------------------------------------------------------------
+version 15.2
+
+several changes in SBL/sterile analysis
+
+- added RENO, DC, and Krasnoyarsk_4 data points to SBL data following Giunti 1608.04096
+
+- removed DB data point from SBL but added new data set DB_FLUX based on U235 and Pu239 measurment 1704.01082
+
+- DANSS included from Moriond 2017
+
+- for the Bugey spectral analysis two options are added:
+  * for BUG_SPECT_FREE a bin-per-bin free normalization is introduced (independent pull for each energy bin)
+  * for BUGEY_BUMP a large (correlated) error for the bins with the bump is added
+
+- IMPORTANT: do not use DB and DC for sterile neutrino analysis: gives non-sense results!
+  It is also recommended not to use Chooz for sterile fit
+
+- introduced global define option FLUX_FREE to perform a fit with free flux normalization
+  (U239 and Pu241 are constrained at 20%)
+  this implies also BUG_SPECT_FREE, i.e., no info on spectral shape is used
+
+
+-----------------------------------------------------------------
+version 14
+
+derived from version 13
+
+updates:
+
+Double Chooz data from CERN seminar Sept 2016 (A. Cabrera)
+
+
+TO BE DONE:
+update DB flux measurment from 1607.05378
+
+------------------------------------------------------------
+
+
+version 13 used for NuFit 2.2 and 3.0
+
+updated as of Neutrino 2016
+derived from version 12
+
+updates:
+
+Daya Bay talk at Neutrino 2016 - 1230 days
+
+------------------------------------------------------------
+
+version 12 used for NuFit 2.1
+
+updated as of Moriond 2016
+derived from version 11.1
+
+updates:
+
+Double Chooz: near-far data from Moriond 2016
+
+
+------------------------------------------------
+
+version 11.1 used for NuFit 2.0
+
+updated as of Neutrino 2014 conference
+derived from version 09.2-NuFit1.2
+
+updates:
+
+Daya Bay: using spectral data (36 data points) given at Neutrino 2014
+
+SBL: added Daya Bay data point given at Neutrino 2014 to the SBL data
+
+RENO: updated rate analysis for RENO based on Neutrino 2014 talk
+
+-------------------------------------------------------------------------
+
+version 09.2 used for NuFit 1.2
+
+Update wrt to NuFit 1.1:
+
+* Daya Bay data from NuFact 13 (rate only analysis, spectrum not yet implemented)
+
+* RENO WIN13 (TAUP13) same statistics as at NeuTel but improved Li/He background estimate
+
+------------------------------------------------------------------------
+
+version used for NuFit 1.1
+
+Update wrt to NuFit 1.0:
+
+* RENO from NeuTel 2013 conference Venice
+* switched to joint version of sterile and 3nu code
