@@ -352,7 +352,7 @@ double parse_expr(const char *str)
   char cmd[strlen(str) + 100];
   double result;
 
-  sprintf(cmd, "python -c 'from math import *; print %s'", str);
+  sprintf(cmd, "python -c 'from math import *; print(%s)'", str);
   f = popen(cmd, "r");
   fscanf(f, "%lf", &result);
   pclose(f);

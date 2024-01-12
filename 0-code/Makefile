@@ -95,7 +95,7 @@ SUBDIRS = db-neos
 all: $(BIN)
 
 $(BIN): $(OBJ) $(SUBDIRS)
-	${GPP} $(CFLAGS) $(INCFLAGS) $(shell ls *.o sbl/*.o reactors/*.o db-neos/*.o) \
+	${GPP} $(CFLAGS) $(INCFLAGS) $(shell ls *.o db-neos/*.o) \
 	 	 $(LDFLAGS) -o $(BIN)
 
 %.o : %.c $(HEADER)
