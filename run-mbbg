@@ -38,22 +38,21 @@ export SUFFIX=""
 #---------------------------------------------------------------------
 
 ALL_TUNES_DD="gibuu nuance nuwro G18_01a_02_11a G18_01b_02_11a G18_02a_02_11a \
-             G18_02b_02_11a G18_10a_02_11a G18_10b_02_11a"
+              G18_02b_02_11a G18_10a_02_11a G18_10b_02_11a"
+#ALL_TUNES_DD=""
 ALL_TUNES_FP="$ALL_TUNES_DD gibuu-brscan-min gibuu-brscan-max"
 
-##export SP="-f 4 -a PARAM_SCAN --no-ih --bf-spectrum -e MB_JK \
-##           -p "DM41,-2.,2.,15,LOGSCALE" \
-##           -p "s22thmue,-4.,0.,20,LOGSCALE" \
-##           -p "Um4,0.02,0.2,9" "
-#export SP="-f 4 -a PARAM_SCAN --no-ih --bf-spectrum -e MB_JK \
-#           -p "DM41,-2.,2.,40,LOGSCALE" \
-#           -p "s22thmue,-4.,0.,40,LOGSCALE" \
-#           -p "Um4,0.025,0.975,38" "
 export SP="-f 4 -a PARAM_SCAN --no-ih --bf-spectrum -e MB_JK \
            -p "DM41,-2.,2.,40,LOGSCALE" \
            -p "s22thmue,-4.,0.,40,LOGSCALE" \
            -p "Um4,0.025,0.775,30" "
 export SUFFIX=""
+
+#export SP="-f 4 -a PARAM_SCAN --no-ih --bf-spectrum -e MB_JK \
+#           -p "DM41,-8.,-8.,0,LOGSCALE" \
+#           -p "s22thmue,-8.,-8.,0,LOGSCALE" \
+#           -p "Um4,1e-4,1e-4,0" "
+#export SUFFIX="-noosc"
 
 # Standard MB backgrounds
 #MBJKDEFS="OSC_NORM OSC_BG OSC_NUMU OSC_NO_NUBAR" \
@@ -62,12 +61,12 @@ export SUFFIX=""
 #  OUT_FILE="dm41s22thmueUm4-mbjk-default-nobgosc$SUFFIX.dat" ./compile-and-run -l $SP
 
 # backgrounds from first-principles simulations
-#make -j
-#for TUNE in $ALL_TUNES_FP; do
-#  unbuffer ./nu $SP --mb-tune=$TUNE > ../3-3p1/mbbg/dm41s22thmueUm4-mbjk-$TUNE$SUFFIX.dat &
-#done
-#
-## backgrounds from data-driven approaches
+make -j
+for TUNE in $ALL_TUNES_FP; do
+  unbuffer ./nu $SP --mb-tune=$TUNE > ../3-3p1/mbbg/dm41s22thmueUm4-mbjk-$TUNE$SUFFIX.dat &
+done
+
+# backgrounds from data-driven approaches
 #for TUNE in $ALL_TUNES_DD; do
 #  unbuffer ./nu $SP --mb-tune=$TUNE-dd > ../3-3p1/mbbg/dm41s22thmueUm4-mbjk-$TUNE-dd$SUFFIX.dat &
 #done

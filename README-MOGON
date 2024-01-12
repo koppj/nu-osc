@@ -1,0 +1,13 @@
+To run code on Mogon
+- nuSQuIDS requires HDF5. Replace all h5cc with h5pcc in ./configure
+- in .bashrc:
+    module load compiler/GCC/6.3.0
+    module load numlib/GSL/2.5-iccifort-2018.3.222-GCC-6.3.0
+    module load data/HDF5/1.10.2-intel-2018.03
+- in the ~/software/installed/lib directory:
+    ln -sf /usr/lib64/libpcre.so.1 libpcre.so.0
+    ln -sf /usr/lib64/libssl.so.1.0.2k libssl.so.1.0.0
+    ln -sf /usr/lib64/libcrypto.so.1.0.2k libcrypto.so.1.0.0
+
+
+

@@ -3,7 +3,8 @@
  * based heavily on my MiniBooNE fit                                       *
  * and of course on https://arxiv.org/abs/2110.14080                       *
  ***************************************************************************
- * Author: Joachim Kopp                                                    *
+ * Author: Joachim Kopp, CERN (jkopp@cern.ch)                              *
+ * Date:   December 2021                                                   *
  ***************************************************************************/
 #include <stdio.h>
 #include <math.h>
@@ -13,10 +14,11 @@
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_interp.h>
 #include <gsl/gsl_roots.h>
+#include <gsl/gsl_multimin.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <globes/globes.h>
-#include "glb_error.h"
-#include "osc_decay/osc_decay.h"
 #include "nu.h"
 
 // Flags that affect chi^2 calculation
@@ -32,9 +34,6 @@
 //#define OSC_NUMU     // TAG_DEF
 #define OSC_NO_NUBAR // TAG_DEF // FIXME
 #define OSC_NO_NUMU  // TAG_DEF // FIXME
-//#define MUBOONE_SIMPLE_RESCALING // TAG_DEF 
-                                 // use simple rescaling of MB -> muBooNE excess,
-                                 //   rather than proper unfolding/re-refolding?
 //#define MUBOONE_SENSITIVITY  // TAG_DEF - set data=BG prediction to compute sensitivity
                              //           rather than doing a real fit
 
@@ -47,9 +46,10 @@
   #error "ERROR: Both MUBOONE_CHI2_POISSON and MUBOONE_CHI2_CNP defined in muboone.cc"
 #endif
 
-#define MUBOONE_DATA_DIR         "glb/muboone/"
-#define MUBOONE_COV_MATRIX_FILE  "glb/muboone/1e1pCCQE-cov-matrix-total.h"
-#define MB_MIGRATION_MATRIX_FILE "glb/muboone/mb-migration-matrix-11bins.h"
+#define MUBOONE_DATA_DIR          "glb/muboone/"
+#define MUBOONE_COV_MATRIX_FILE   "glb/muboone/1e1pCCQE-cov-matrix-total.h"
+#define MB_MIGRATION_MATRIX_FILE  "glb/muboone/mb-migration-matrix-11bins.h"
+#define MUB_MIGRATION_MATRIX_FILE "glb/muboone/mub-migration-matrix-ccqe.h"
 
 static const double MB_baseline = 0.520;   // [km] - MiniBooNE baseline
 static const double SB_baseline = 0.100;   // [km] - SciBooNE baseline
@@ -138,12 +138,10 @@ static const double mb_E_true_bin_edges_e[] = // binning for d'Agostini's unfold
 static const double mb_true_nue[] = // MB true \nu_e spectrum, fig.3 in MICROBOONE-NOTE-1043-PUB
                                  { 0.782, 1.448, 1.973, 2.688, 3.292, 3.757, 4.502,
                                    5.314, 5.717, 5.131, 3.653, 2.419, 1.466 };
-#ifdef MUBOONE_SIMPLE_RESCALING
-static double mig[E_reco_bins_e][mb_E_reco_bins_e]; // MB -> muBooNE migration matrix
-#endif
 static double sm[E_reco_bins_e][mb_E_true_bins_e];  // muBooNE energy smearing matrix
 //static double eff[E_reco_bins_e];                   // extra efficiency factors
 #include MB_MIGRATION_MATRIX_FILE
+#include MUB_MIGRATION_MATRIX_FILE
 
 // microBooNE efficiencies
 // from Ivan, based on comparing Fig. 1 in arXiv:2110.13978 with MC binned in true energy;
@@ -274,7 +272,8 @@ int dAgostini_unfolding(const double *d, double *rates_muboone)
   {
     rates_muboone[ir] = 0.;
     for (int it=0; it < mb_E_true_bins_e; it++)
-      rates_muboone[ir] += sm[ir][it] * u[it];
+      rates_muboone[ir] += mub_migration_matrix[ir][it] * u[it];
+//      rates_muboone[ir] += sm[ir][it] * u[it];
   }
 
   return 0;
@@ -303,9 +302,6 @@ int chiMuBooNE_init(const char *bg_tune, int __use_feldman_cousins)
   #endif
   #ifdef OSC_NO_NUMU
     printf("OSC_NO_NUMU ");
-  #endif
-  #ifdef MUBOONE_SIMPLE_RESCALING
-    printf("MUBOONE_SIMPLE_RESCALING ");
   #endif
   #ifdef MUBOONE_SENSITIVITY
     printf("MUBOONE_SENSITIVITY ");
@@ -337,7 +333,7 @@ int chiMuBooNE_init(const char *bg_tune, int __use_feldman_cousins)
     status = fscanf(f, "%lg %lg %lg %lg", &E_true, &mb_E_reco, &L, &w);
     if (status == EOF)
       break;
-    i_true = mb_E_true_bins_e * (E_true - E_true_min) / (E_true_max   - E_true_min);
+    i_true = E_true_bins * (E_true - E_true_min) / (E_true_max   - E_true_min);
     i_reco = mb_E_reco_bins_e;
     while (mb_E_reco < mb_E_reco_bin_edges_e[i_reco])
         i_reco--;
@@ -382,38 +378,6 @@ int chiMuBooNE_init(const char *bg_tune, int __use_feldman_cousins)
       R_nu_bar[it][ir] /= n_nu_bar;
     }
 
-  // compute factors by which a MiniBooNE signal prediction needs to be rescaled
-  // to obtain a microBooNE signal prediction. We obtain these factors by comparing
-  // the low-E excess in MiniBooNE to the eLEE template in microBooNE, accounting
-  // for the different binning in energy
-  #ifdef MUBOONE_SIMPLE_RESCALING
-    memset(mig, 0, E_reco_bins_e*mb_E_reco_bins_e*sizeof(mig[0][0]));
-    for (int imu=0; imu < E_reco_bins_e; imu++)      // loop over all microBooNE bins
-    {
-      double n_mb  = 0.;             // no. of MiniBooNE LEE events that fall into bin imu
-      double n_mub = sig_e_LEE[imu]; // no. of microBooNE LEE template events in that bin
-      for (int imb=0; imb < mb_E_reco_bins_e; imb++) // loop over all MiniBooNE bins
-      {
-        // what fraction of this MB bin overlaps with current muB bin?
-        double x = ( MIN(mb_E_reco_bin_edges_e[imb+1], E_reco_bin_edges_e[imu+1])
-                     - MAX(mb_E_reco_bin_edges_e[imb], E_reco_bin_edges_e[imu]) )
-                 / (mb_E_reco_bin_edges_e[imb+1] - mb_E_reco_bin_edges_e[imb]);
-        if (x > 0)
-        {
-          mig[imu][imb] = x;
-          n_mb += x * (mb_data_e[imb] - mb_bg_e[imb]);
-        }
-      }
-      printf("# MUB-TO-MB-MIGRATION ");
-      for (int imb=0; imb < mb_E_reco_bins_e; imb++)
-      {
-        mig[imu][imb] *= n_mub / n_mb;
-        printf("%8.3g, ", mig[imu][imb]);
-      }
-      printf("\n");
-    }
-  #endif
-
   // construct Gaussian smeaaring matrix for muBooNE
   const double sigma = 0.165; // see https://arxiv.org/abs/2110.14054
   for (int ir=0; ir < E_reco_bins_e; ir++)
@@ -427,17 +391,17 @@ int chiMuBooNE_init(const char *bg_tune, int __use_feldman_cousins)
   // determine extra muBooNE efficiency factors (deviations from flat efficiency)
   // by applying d'Agostini's method to the observed MiniBooNE excess and comparing
   // the result to muBooNE's eLEE template
-//  double d[] = { 174.648704,   112.55166925, 152.975656, 100.406957, 103.62124375,
-//                 126.55393375, 103.5530225,   88.392172,  82.187173,  85.783805, 111.19639 };
-  double d[mb_E_reco_bins_e];
-  double rates_e[E_reco_bins_e];
-  for (int ir=0; ir < mb_E_reco_bins_e; ir++)
-//    d[ir] = mb_data_e[ir] - (mb_bg_e[ir] - mb_bg_e_cc[ir]);
-    d[ir] = mb_data_e[ir] - mb_bg_e[ir];
-  dAgostini_unfolding(d, rates_e);
-  for (int ir=0; ir < E_reco_bins_e; ir++)
-    printf("%10g %10g\n", sig_e_LEE[ir], rates_e[ir]); //FIXME
-  getchar();
+////  double d[] = { 174.648704,   112.55166925, 152.975656, 100.406957, 103.62124375,
+////                 126.55393375, 103.5530225,   88.392172,  82.187173,  85.783805, 111.19639 };
+//  double d[mb_E_reco_bins_e];
+//  double rates_e[E_reco_bins_e];
+//  for (int ir=0; ir < mb_E_reco_bins_e; ir++)
+////    d[ir] = mb_data_e[ir] - (mb_bg_e[ir] - mb_bg_e_cc[ir]);
+//    d[ir] = mb_data_e[ir] - mb_bg_e[ir];
+//  dAgostini_unfolding(d, rates_e);
+//  for (int ir=0; ir < E_reco_bins_e; ir++)
+//    printf("%10g %10g\n", sig_e_LEE[ir], rates_e[ir]); //FIXME
+//  getchar();
 
 //  for (int ir=0; ir < E_reco_bins_e; ir++)
 //    if (ir <= 4)
@@ -522,7 +486,7 @@ int MuBooNE_rates(
     for (int imb=0; imb < mb_E_reco_bins_e; imb++)
     {
       #ifdef OSC_NORM
-        rates_e_mb[imb]     += R_nu[it][imb] * Pe[NU_MU][NU_E] / Pe[NU_MU][NU_MU];
+        rates_e_mb[imb]     += R_nu[it][imb] * Pe[NU_MU][NU_E];//FIXME FIXME/ Pe[NU_MU][NU_MU];
 //        rates_e_bar_mb[imb] += R_nu_bar[it][imb] * Pbare[NU_MU][NU_E] / Pbare[NU_MU][NU_MU];
                   /* Pme/Pmm - see discussion with W Louis:
                    * Flux is normalized to \nu_\mu rate, i.e. if there is \nu_\mu
@@ -534,28 +498,17 @@ int MuBooNE_rates(
     } // for (imb)
   } // for (it)
 
-  // ... then convert them to MicroBooNE rates
-  // either using simple rescaling ...
-  #ifdef MUBOONE_SIMPLE_RESCALING
-    for (int ir=0; ir < E_reco_bins_e; ir++)
-    {
-      rates_e[ir] = 0.;
-      for (int imb=0; imb < mb_E_reco_bins_e; imb++)
-        rates_e[ir] += mig[ir][imb] * rates_e_mb[imb];
-    }
-
-  // ... or using d'Agostini's method,  eq. (11) in
+  // ... then convert them to MicroBooNE rates using d'Agostini's method,  eq. (11) in
   //   https://microboone.fnal.gov/wp-content/uploads/MICROBOONE-NOTE-1043-PUB.pdf
-  #else
-    double d[mb_E_reco_bins_e];  // MB signal plus intrinsic \nu_e background
-    for (int ir=0; ir < mb_E_reco_bins_e; ir++)
-      d[ir] = rates_e_mb[ir] + mb_bg_e_cc[ir];
+  double d[mb_E_reco_bins_e];  // MB signal plus intrinsic \nu_e background
+  for (int ir=0; ir < mb_E_reco_bins_e; ir++)
+//    d[ir] = rates_e_mb[ir] + mb_bg_e_cc[ir];
+    d[ir] = rates_e_mb[ir];
 
-    dAgostini_unfolding(d, rates_e);
+  dAgostini_unfolding(d, rates_e);
 
 //    for (int ir=0; ir < E_reco_bins_e; ir++)
 //      rates_e[ir] *= eff[ir];
-  #endif
 
 
   // Backgrounds

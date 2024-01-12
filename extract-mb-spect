@@ -1,0 +1,18 @@
+#!/bin/bash
+# extract the MiniBooNE spectra from the microBooNE code's output
+# and print them in a format useful for Kevin's Python code
+
+if [[ $# < 1 ]]; then
+  echo "Usage ./extract-mb-spect <Filename>"
+  exit
+fi
+
+INFILE=$1
+OUTFILE=${1%%.dat}-mbspect.dat
+
+sed -n 's/\(# Command line.*\)/\1/p' $INFILE         >  $OUTFILE
+echo "#"                                             >> $OUTFILE
+echo "# dm41  s22thmue   Um4    MB signal (11 bins)" >> $OUTFILE
+sed -n 's/# MB *\(.*\)/\1/p' $INFILE                 >> $OUTFILE
+
+
