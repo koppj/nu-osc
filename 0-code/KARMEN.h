@@ -5,7 +5,6 @@
 #include <utility>
 #include <algorithm>
 //JK#include "prob_v15_scalar.h"
-#include "osc_decay/osc_decay.h" // JK
 //#include "snu.h"    // JK
 
 #ifdef NU_USE_NUSQUIDS // JK

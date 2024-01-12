@@ -617,7 +617,6 @@ int load_exps(const int n_exps, char **exps)
   int karmen_c12_loaded = 0;
   int lsnd_c12_loaded   = 0;
   int c12_combi_loaded  = 0;
-  int mb_loaded         = 0;
 
   // Default density correlations: Every experiment independent 
   for (int i=0; i < GLB_MAX_EXP; i++)
@@ -838,118 +837,6 @@ int load_exps(const int n_exps, char **exps)
 
 
     // --------------------------------------------------------------
-    // MINOS
-    // --------------------------------------------------------------
-
-    // MINOS NC analysis (http://arxiv.org/abs/1607.01176)
-//    else if (strcasecmp(exps[i], "MINOS_NC_2016") == 0)
-//    {
-//      MINOS_2016_init();
-//      setenv("GLB_PATH", "glb/minos-2016", 1);
-//      glb_setup_path();
-//      glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-//      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-//      L_opt[1] = L_opt[3] = 0;
-//      
-//      for (int i=glb_num_of_exps-3; i < glb_num_of_exps; i+=2)  // Loop over ND for CC, NC
-//      {
-//        glb_experiment *e = glb_experiment_list[i];
-//        e->probability_user_data  = new int(MINOS_ND_PROBABILITY);
-//      }
-//    }
-//
-//    // MINOS CC \nu_\mu analysis (based on http://arxiv.org/abs/1607.01176)
-//    else if (strcasecmp(exps[i], "MINOS_CC_2016") == 0)
-//    {
-//      setenv("GLB_PATH", "glb/minos-2016", 1);
-//      glb_setup_path();
-//      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-//      L_opt[1] = 0;
-//    }
-
-
-    // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
-    else if (strcasecmp(exps[i], "MINOS_NC_2011_noDecayPipe") == 0)
-    {
-      setenv("GLB_PATH", "glb/minos-2011", 1);
-      glb_setup_path();
-      glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      L_opt[1] = L_opt[3] = 0;
-    }
-
-    // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
-    else if (strcasecmp(exps[i], "MINOS_NC_2011") == 0)
-    {
-      setenv("GLB_PATH", "glb/minos-2011", 1);
-      glb_setup_path();
-      glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      L_opt[1] = L_opt[3] = 0;
-      
-      for (int i=glb_num_of_exps-3; i < glb_num_of_exps; i+=2)  // Loop over ND for CC and NC analysis
-      {
-        glb_experiment *e = glb_experiment_list[i];
-        e->probability_user_data  = new int(MINOS_ND_PROBABILITY);
-//        for (int j=0; j < e->num_of_sm; j++)
-//          minos_smear(e->smear_data[j], e->smear[j], e->lowrange[j], e->uprange[j]);
-//        glbPrintExp(i);
-//        getchar();
-      }
-    }
-
-    // MINOS Neutral Current analysis (http://arxiv.org/abs/1001.0336, Nu2010, and 1103.0340)
-    // without oscillations in near detector
-    else if (strcasecmp(exps[i], "MINOS_NC_2011_noNDosc") == 0)
-    {
-      setenv("GLB_PATH", "glb/minos-2011", 1);
-      glb_setup_path();
-      glbInitExperiment("minos-nc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      L_opt[1] = L_opt[3] = 0;
-
-      for (int i=glb_num_of_exps-3; i < glb_num_of_exps; i+=2)  // Loop over ND for CC and NC analysis
-      {
-        glb_experiment *e = glb_experiment_list[i];
-        for (int j=0; j < e->numofchannels; j++) // Loop over channels
-        {
-          if (e->listofchannels[2][j] < 10)
-            e->listofchannels[2][j] += 10;
-          if (e->listofchannels[3][j] < 10)
-            e->listofchannels[3][j] += 10;
-        }
-      }
-    }
-
-    // MINOS CC \nu_\mu analysis (http://arxiv.org/abs/1103.0340)
-    else if (strcasecmp(exps[i], "MINOS_CC_2011") == 0)
-    {
-      setenv("GLB_PATH", "glb/minos-2011", 1);
-      glb_setup_path();
-      glbInitExperiment("minos-cc.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      L_opt[1] = 0;
-    }
-
-    // 2010 MINOS NC+CC analysis (http://arxiv.org/abs/1001.0336 and Neutrino 2010)
-    else if (strcasecmp(exps[i], "MINOS_2010") == 0)
-    {
-      setenv("GLB_PATH", "glb/minos-2011/1001.0336", 1);
-      glb_setup_path();
-      glbInitExperiment("MINOS-NC-far.glb",  &glb_experiment_list[0], &glb_num_of_exps);
-      glbInitExperiment("MINOS-NC-near.glb", &glb_experiment_list[0], &glb_num_of_exps);
-      L_opt[1] = 0;
-    }
-
-    // MINOS ND nu_e test
-    else if (strcasecmp(exps[i], "MINERVA_TEST") == 0)
-    {
-      setenv("GLB_PATH", "glb/minerva-test", 1);
-      glb_setup_path();
-      glbInitExperiment("minerva-test.glb",  &glb_experiment_list[0], &glb_num_of_exps);
-    }
-
-
-    // --------------------------------------------------------------
     // Other beam experiments
     // --------------------------------------------------------------
 
@@ -1009,51 +896,6 @@ int load_exps(const int n_exps, char **exps)
       init_OPERA();
     }
 
-    // Pedro's MiniBooNE simulation
-    #ifdef NU_USE_NUSQUIDS
-    else if (strcasecmp(exps[i], "MBall200") == 0)
-    {
-      chiMB_init(0);
-      mb_loaded++;
-    }
-    else if (strcasecmp(exps[i], "MBall475") == 0)
-    {
-      chiMB_init(1);
-      mb_loaded++;
-    }
-    #endif
-
-//    else if (strcasecmp(exps[i], "MBall") == 0  ||  strcasecmp(exps[i], "MBneutrino200.glb") == 0)
-//    {
-//      chiMB_init(1, 1); // 0=off, 1=full E range, 2=only E > 475 MeV, 1st number for nu, 2nd for nubar
-//      mb_loaded++;
-//    }
-//    else if (strcasecmp(exps[i], "MBall475") == 0)
-//    {
-//      chiMB_init(2, 2);
-//      mb_loaded++;
-//    }
-//    else if (strcasecmp(exps[i], "MB") == 0  ||  strcasecmp(exps[i], "MBnu") == 0)
-//    {
-//      chiMB_init(2, 0);
-//      mb_loaded++;
-//    }
-//    else if (strcasecmp(exps[i], "MBanti") == 0  ||  strcasecmp(exps[i], "MBnubar") == 0)
-//    {
-//      chiMB_init(0, 2);
-//      mb_loaded++;
-//    }
-//    else if (strcasecmp(exps[i], "MB300") == 0  ||  strcasecmp(exps[i], "MBnu300") == 0)
-//    {
-//      chiMB_init(1, 0);
-//      mb_loaded++;
-//    }
-//    else if (strcasecmp(exps[i], "MBanti200") == 0  ||  strcasecmp(exps[i], "MBnubar200") == 0)
-//    {
-//      chiMB_init(0, 1);
-//      mb_loaded++;
-//    }
-
     // Dummy scenario that doesn't do anything
     else if (strcasecmp(exps[i], "DUMMY") == 0)
     {
@@ -1103,11 +945,6 @@ int load_exps(const int n_exps, char **exps)
   {
     fprintf(stderr, "Do not use combined C-12 analysis together with individual analyses.\n");
     return -6;
-  }
-  if (mb_loaded > 1)
-  {
-    fprintf(stderr, "Do not load MiniBooNE multiple times - use MBall for combined nu+nubar fit.\n");
-    return -7;
   }
 
   for (int i=0; i < glb_num_of_exps; i++)
@@ -1277,52 +1114,20 @@ int main(int argc, char *argv[])
   glbRegisterProbabilityEngine(n_params, &snu_probability_matrix,
     &snu_set_oscillation_parameters, &snu_get_oscillation_parameters, NULL);
 
-#ifdef NU_USE_NUSQUIDS
-  glbRegisterNuSQuIDSEngine(nu_hook_probability_matrix_nusquids);
-  printf("# Using NuSQuIDS probability engine. Majorana=%d\n", OSC_DECAY_MAJORANA);
-#else
   printf("# Using SNU probability engine.\n");
-#endif
 
   for (int j=0; j < glbGetNumOfOscParams(); j++)
-  {
     glbSetParamName(snu_param_strings[j], j);
-#ifdef NU_USE_MONTECUBES
-    mcb_setVarName(j, snu_param_strings[j]);
-#endif
-  }
   
-  // Initialize user-defined chi^2 functions (chiMB_init has to be called after the
-  // number of oscillation parameters has been fixed
-  int minos_nc = MINOS_NC;
-  int minos_cc = MINOS_CC;
+  // Initialize user-defined chi^2 functions
   glbDefineChiFunction(&chiNOvA,         18, "chiNOvA",          NULL);
-  glbDefineChiFunction(&chiWBB_WCfast,   10, "chiWBB_WCfast",    &wbb_params);
-  glbDefineChiFunction(&chiWBB_LAr,      10, "chiWBB_LAr",       &wbb_params);
   glbDefineChiFunction(&chiDCNorm,        5, "chiDCNorm",        NULL);
   glbDefineChiFunction(&chiKamLAND,       1, "chiKamLAND",       NULL);
-
-  glbDefineChiFunction(&chiMINOS_2016,    5, "chiMINOS-NC-2016", &minos_nc);
-  glbDefineChiFunction(&chiMINOS_2016,    5, "chiMINOS-CC-2016", &minos_cc);
-  glbDefineChiFunction(&chiMINOS_2016,    0, "chiMINOS-nosys-NC-2016",&minos_nc);
-  glbDefineChiFunction(&chiMINOS_2016,    0, "chiMINOS-nosys-CC-2016",&minos_cc);
-
-  glbDefineChiFunction(&chiMINOS_2011,    5, "chiMINOS-NC-2011", &minos_nc);
-  glbDefineChiFunction(&chiMINOS_2011,    5, "chiMINOS-CC-2011", &minos_cc);
-  glbDefineChiFunction(&chiMINOS_2011,    0, "chiMINOS-nosys-NC-2011",&minos_nc);
-  glbDefineChiFunction(&chiMINOS_2011,    0, "chiMINOS-nosys-CC-2011",&minos_cc);
-
-  glbDefineChiFunction(&chiMINOS_2010,    5, "chiMINOS-NC-2010", &minos_nc);
-  glbDefineChiFunction(&chiMINOS_2010,    5, "chiMINOS-CC-2010", &minos_cc);
-  glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-NC-2010",&minos_nc);
-  glbDefineChiFunction(&chiMINOS_2010,    0, "chiMINOS-nosys-CC-2010",&minos_cc);
 
   glbDefineChiFunction(&chiT2K_FDonly,    7, "chiT2K",       NULL);
   glbDefineChiFunction(&chiT2K_FDonly,    0, "chiT2K-nosys", NULL);
 
   glbDefineChiFunction(&chiLSNDspectrum,  2, "chiLSNDspectrum",  NULL);
-//  chiMB_init(); // for 2010 version of MiniBooNE code
-//  glbDefineChiFunction(&chiMBanti_nu2010, 0, "chiMBanti_nu2010", NULL);
   glbDefineChiFunction(&chi_E776,         4, "chi_E776",         NULL);
   glbDefineChiFunction(&chi_E776_rates,   4, "chi_E776_rates",   NULL);
   glbDefineChiFunction(&chi_karmen_c12,   1, "chi_karmen_c12",   NULL);
@@ -1480,15 +1285,6 @@ int main(int argc, char *argv[])
   {
     printf("#   %s (version %s)", glbGetFilenameOfExperiment(i),
            glbVersionOfExperiment(i));
-    #ifdef NU_USE_NUSQUIDS
-      if (strcasecmp(glbGetFilenameOfExperiment(i), "MBneutrino200.glb") == 0)
-      {
-//        extern double Eminnu, Eminbar;
-//        printf("; nu mode E > %g, nu-bar mode E > %g", Eminnu, Eminbar);
-        extern double Emin;
-        printf("; E > %g MeV", Emin);
-      }
-    #endif
     printf("\n");
   }
   printf("#\n");
@@ -1669,45 +1465,10 @@ int main(int argc, char *argv[])
       break;
     }
 
-    // Tabulate oscillation probabilities
-    case NU_ACTION_PROB_TABLE:
-    {
-      printf("# Tabulating oscillation probabilities\n");
-      printf("#\n");
-
-      for (int i=0; i < glb_num_of_exps; i++)
-      {
-        // Prepare data structures
-        char fname[1024];
-        sprintf(fname, "%s-%s", output_file, basename(glb_experiment_list[i]->filename));
-        struct snu_probability_table p;
-        p.default_values = glbAllocParams();
-        glbCopyParams(true_values, p.default_values);
-        p.n_p = n_scan_params;
-        for (int j=0; j < p.n_p; j++)
-        {
-          p.params[j]  = strdup(scan_params[j]);
-          p.p_min[j]   = scan_p_min[j];
-          p.p_max[j]   = scan_p_max[j];
-          p.p_steps[j] = scan_p_steps[j];
-          p.p_flags[j] = scan_p_flags[j];
-        }
-
-        // Compute probability table
-        snu_compute_probability_table(i, &p, fname);
-
-
-        // FIXME FIXME Read probability table again
-        struct snu_probability_table *p2 = snu_alloc_probability_table();
-        snu_load_probability_table(fname, p2);
-      }
-      break;
-    }
-
     // Scan over parameters and over exposure
-    case NU_ACTION_EXPOSURE_SCAN:
+    default:
     {
-      printf("# EXPOSURE SCAN NOT IMPLEMENTED YET!\n");
+      printf("# Unknown command!\n");
       break;
     }
   }
@@ -1724,9 +1485,6 @@ int main(int argc, char *argv[])
   glbFreeProjection(prescan_proj);
   glbFreeProjection(proj);
 
-  #ifdef NU_USE_NUSQUIDS
-    chiMB_clear();
-  #endif
   chiMB_jk_clear();
   chiMuBooNE_clear();
     

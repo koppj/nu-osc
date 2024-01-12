@@ -295,16 +295,6 @@ int print_rates(const long ext_flags)
     if (exp < glb_num_of_exps-1)
       glbPrintDelimiter(stream,'m');
     fprintf(stream,"\n");
-
-    // Special treatment for Pedro's MiniBooNE code: call dedicated
-    // print function; requires one prior call to chiMB to compute spectrum
-    #ifdef NU_USE_NUSQUIDS
-    if (strcmp(glbGetFilenameOfExperiment(exp), "MBneutrino200.glb") == 0)
-    {
-      chiMB(exp, GLB_ALL, 0, NULL, NULL, NULL);
-      getMBspectrum("../1-spectra/mb-spectrum.dat");
-    }
-    #endif
   }
 
   // Print event rates from (some) external codes
@@ -321,21 +311,6 @@ int print_rates(const long ext_flags)
   {
     chiMuBooNE(2);
   }
-
-#ifdef NU_USE_NUSQUIDS
-  if (ext_flags & EXT_LSND_IVAN)
-  {
-    extern ns_sbl::LSND *LSND_ivan_fitter;
-    extern regeneration::Param p_oscdecay;
-    LSND_ivan_fitter->print_spectrum(p_oscdecay);
-  }
-//  if (ext_flags & EXT_KARMEN_IVAN)
-//  {
-//    extern ns_sbl::KARMEN *KARMEN_ivan_fitter;
-//    extern regeneration::Param p_oscdecay;
-//    KARMEN_ivan_fitter->print_spectrum(p_oscdecay);
-//  }
-#endif
 
   glbPrintDelimiter(stream,'r');
   fprintf(stream, "\n");

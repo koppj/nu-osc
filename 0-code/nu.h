@@ -208,12 +208,6 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
 /* sys.c */
 double chiNOvA(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
-double chiWBB_WC(int exp, int rule, int n_params, double *x, double *errors,
-              void *user_data);
-double chiWBB_WCfast(int exp, int rule, int n_params, double *x, double *errors,
-              void *user_data);
-double chiWBB_LAr(int exp, int rule, int n_params, double *x, double *errors,
-              void *user_data);
 double chiDCNorm(int exp, int rule, int n_params, double *x, double *errors,
               void *user_data);
 double chiKamLAND(int exp, int rule, int n_params, double *x, double *errors,

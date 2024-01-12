@@ -1,8 +1,0 @@
-The data in this directory is based on fig. 2
-of https://arxiv.org/abs/1607.01174
-
-Errors are given as the lower edge of the error bar
-
-Note that the last bin is omitted, as it is outside the plot range
-for the EH2/EH1 ratio, so we don't have a value for it.
-

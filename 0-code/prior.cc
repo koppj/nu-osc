@@ -60,13 +60,6 @@ int old_new_main = NEW; // Use OLD or NEW reactor neutrino fluxes?
 DB_class DB_fitter;
 Neos_DB_class Neos_fitter;
 
-// LSND object for Ivan's code
-#ifdef NU_USE_NUSQUIDS
-ns_sbl::LSND        *LSND_ivan_fitter   = NULL;
-ns_sbl::KARMEN      *KARMEN_ivan_fitter = NULL;
-ns_sbl::Constraints *ext_constraints    = NULL;
-#endif
-
 
 /***************************************************************************
  * Two helper functions for solar_parameters, adapted from Michele's       *
@@ -407,41 +400,11 @@ int ext_init(int ext_flags, int use_feldman_cousins)
 #endif
   }
 
-  if (ext_flags & EXT_MINOS2016)      // MINOS 2016
-  {
-    printf("# Initializing MINOS 2016 code ...\n");
-    MINOS_2016_init();
-  }
-
   if (ext_flags & EXT_MINOS2017)      // MINOS 2017
   {
     printf("# Initializing MINOS/MINOS+ 2017 code ...\n");
     MINOS_2017_init();
   }
-
-#ifdef NU_USE_NUSQUIDS
-  if (ext_flags & EXT_LSND_IVAN)
-  {
-    printf("# Initializing Ivan's LSND code ...\n");
-    LSND_ivan_fitter = new ns_sbl::LSND();
-    if (!LSND_ivan_fitter)
-      return -1;
-  }
-  if (ext_flags & EXT_KARMEN_IVAN)
-  {
-    printf("# Initializing Ivan's KARMEN code ...\n");
-    KARMEN_ivan_fitter = new ns_sbl::KARMEN();
-    if (!KARMEN_ivan_fitter)
-      return -1;
-  }
-  if (ext_flags & EXT_DECAY_KINEMATICS  ||  ext_flags & EXT_FREE_STREAMING)
-  {
-    printf("# Initializing external constraints code (beta decay/cosmo) ...\n");
-    ext_constraints = new ns_sbl::Constraints();
-    if (!ext_constraints)
-      return -1;
-  }
-#endif
 
   if (ext_flags & EXT_MB_JK)
   {
@@ -559,20 +522,6 @@ double my_prior(const glb_params in, void* user_data)
     }
   }
 
-#ifdef NU_USE_NUSQUIDS
-  if (glbGetOscParamByName(params, "MA_OVER_M4") >= 1. ||
-      glbGetOscParamByName(params, "MA_OVER_M4") < 0)
-  {
-    pv += 4e15;
-    goto my_prior_end;
-  }
-  if (glbGetOscParamByName(params, "M4_GAMMA") < 0.)
-  {
-    pv += 5e15;
-    goto my_prior_end;
-  }
-#endif
-
   // Add chi^2 from external codes
   // -----------------------------
   if (pp->ext_flags)
@@ -682,55 +631,8 @@ double my_prior(const glb_params in, void* user_data)
       pv += chi2cdhs(sbl_params);
     if (pp->ext_flags & EXT_ATM_TABLE)
       pv += chi2atm(sbl_params);
-    if (pp->ext_flags & EXT_MINOS2016)
-      pv += MINOS_2016_prior(in);
     if (pp->ext_flags & EXT_MINOS2017)
       pv += MINOS_2017_prior(in, 0);
-
-    // Ivan's codes
-    // ------------
-  #ifdef NU_USE_NUSQUIDS
-    if (pp->ext_flags & EXT_LSND_IVAN)
-    {
-      if (LSND_ivan_fitter)
-      {
-        extern regeneration::Param p_oscdecay;
-        pv += LSND_ivan_fitter->getChisq(p_oscdecay);
-      }
-      else
-        pv += 2e33;
-    }
-    if (pp->ext_flags & EXT_KARMEN_IVAN)
-    {
-      if (KARMEN_ivan_fitter)
-      {
-        extern regeneration::Param p_oscdecay;
-        pv += KARMEN_ivan_fitter->getChisq(p_oscdecay);
-      }
-      else
-        pv += 3e33;
-    }
-    if (pp->ext_flags & EXT_DECAY_KINEMATICS)
-    {
-      if (ext_constraints)
-      {
-        extern regeneration::Param p_oscdecay;
-        pv += ext_constraints->getChisq_beta(p_oscdecay);
-      }
-      else
-        pv += 4e33;
-    }
-    if (pp->ext_flags & EXT_FREE_STREAMING)
-    {
-      if (ext_constraints)
-      {
-        extern regeneration::Param p_oscdecay;
-        pv += ext_constraints->getChisq_cosmology(p_oscdecay);
-      }
-      else
-        pv += 5e33;
-    }
-  #endif
 
     // Joachim's MiniBooNE code
     // ------------------------

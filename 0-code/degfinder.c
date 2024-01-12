@@ -80,6 +80,21 @@ double ChiNPWrapper(glb_params base_values, int hierarchy, glb_params fit_values
 }
 
 
+/* Function for converting one-dimensional indices to a multi-dimensional
+ * index for (d+1)-th dimension */
+int convert_index(int j, int d, unsigned long n_prescan_points, int *p_steps)
+{
+  int k = n_prescan_points;
+  for (int i=0; i <= d; i++)
+  {
+    j %= k;
+    k /= p_steps[i] + 1;
+  }
+  j /= k;
+  return j;
+}
+
+
 /* ---------------------------------------------------------------------------- */
 int degfinder(const glb_params base_values, const int n_prescan_params,
       const int *prescan_params, const double *prescan_min,
@@ -240,20 +255,6 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
   for (int i=0; i < n_p_params; i++)
     n_prescan_points *= p_steps[i] + 1;
 
-  /* Function for converting one-dimensional indices to a multi-dimensional
-   * index for (d+1)-th dimension */
-  int convert_index(int j, int d)
-  {
-    int k = n_prescan_points;
-    for (int i=0; i <= d; i++)
-    {
-      j %= k;
-      k /= p_steps[i] + 1;
-    }
-    j /= k;
-    return j;
-  }
-
   if (debug_level > 1)
     printf("#   Using %lu prescan points.\n", n_prescan_points);
   
@@ -308,27 +309,29 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
       {
         if (p_flags[i] & DEG_PLUS_MINUS)
         {
-          int k = convert_index(j,i);
+          int k = convert_index(j,i,n_prescan_points,p_steps);
           if (k <= (p_steps[i]-1) / 2)
             x =  -POW10( p_max[i] - k * (p_max[i]-p_min[i])/(p_steps[i]/2) );
           else
             x =   POW10( p_min[i] + (k - (p_steps[i]+1)/2) * (p_max[i]-p_min[i])/(p_steps[i]/2) );
         }
         else
-          x = POW10( p_min[i] + convert_index(j,i) * (p_max[i]-p_min[i])/p_steps[i] );
+          x = POW10( p_min[i] + convert_index(j,i,n_prescan_points,p_steps)
+                                    * (p_max[i]-p_min[i])/p_steps[i] );
       }
       else                                  /* Otherwise: linear distribution */
       {
         if (p_flags[i] & DEG_PLUS_MINUS)
         {
-          int k = convert_index(j,i);
+          int k = convert_index(j,i,n_prescan_points,p_steps);
           if (k <= (p_steps[i]-1) / 2)
             x = -( p_max[i] - k * (p_max[i]-p_min[i])/(p_steps[i]/2) );
           else
             x =    p_min[i] + (k - (p_steps[i]+1)/2) * (p_max[i]-p_min[i])/(p_steps[i]/2);
         }
         else
-          x = p_min[i] + convert_index(j,i) * (p_max[i]-p_min[i])/p_steps[i];
+          x = p_min[i] + convert_index(j,i,n_prescan_points,p_steps)
+                             * (p_max[i]-p_min[i])/p_steps[i];
 
         prescan_test_values[i] = x;
       }
@@ -425,7 +428,8 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
       {
         printf("#   Degeneracy NH at: ");
         for (int k=0; k < n_p_params; k++)
-          printf("%d (%s = %g)    ", convert_index(j, k), snu_param_strings[p_params[k]],
+          printf("%d (%s = %g)    ", convert_index(j,k,n_prescan_points,p_steps),
+                 snu_param_strings[p_params[k]],
                  glbGetOscParams(param_table_NH[j], p_params[k]));
         printf("\n");
         printf("#     Prescan: ");
@@ -466,7 +470,8 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
       {
         printf("#   Degeneracy IH at: ");
         for (int k=0; k < n_p_params; k++)
-          printf("%d (%s = %g)    ", convert_index(j, k), snu_param_strings[p_params[k]],
+          printf("%d (%s = %g)    ", convert_index(j,k,n_prescan_points,p_steps),
+                 snu_param_strings[p_params[k]],
                  glbGetOscParams(param_table_IH[j], p_params[k]));
         printf("\n");
         printf("#     Prescan: ");
@@ -503,68 +508,6 @@ int degfinder(const glb_params base_values, const int n_prescan_params,
   } // for(j)
 
 
-  // MCMC mode: tell MonteCUBES about degeneracies, run MCMC
-  // -------------------------------------------------------
-  if (flags & DEG_MCMC)
-  {
-#ifdef NU_USE_MONTECUBES
-    mcb_setChainNo(4);                             // Number of MCMC chains
-    mcb_setBurnNo(MCB_DYNAMIC_BURN);
-    mcb_setLengthMax(1e7);                         // Max. length of each chain
-//    mcb_setLengthMin(5000);                        // Min. length of each chain
-    mcb_setLengthMin(50);                        // Min. length of each chain
-    mcb_setVerbosity(5);
-    mcb_addStartPosition(base_values);
-    int deg_pos_ind[*n_deg];
-    for (int i=0; i < *n_deg; i++)
-      deg_pos_ind[i] = i;
-    mcb_setDegeneracySteps(deg_pos, deg_pos_ind, *n_deg); // Tell MonteCUBES about degeneracies
-//    mcb_setVerbosity(100);
-//    mcb_seedMersenne(777);
-    for (int i=0; i < glbGetNumOfOscParams(); i++) // MonteCUBES convergence criteria
-//      glbSetOscParams(mcb_conv_crit, 0.025, i);
-      glbSetOscParams(mcb_conv_crit, 2.0, i);
-    glbSetDensityParams(mcb_conv_crit, 1.0, GLB_ALL);
-    mcb_setConvergenceCriteria(mcb_conv_crit);
-
-    for (int i=0; i < glbGetNumOfOscParams(); i++) // MonteCUBES step size
-    {
-      char *p = glbGetParamName(i);
-      if (strstr(p, "TH") != NULL)
-        glbSetOscParams(mcb_steps, M_PI/30., i);
-      else if (strstr(p, "DM") != NULL)
-        if (glbGetOscParams(base_values, i) < 1e-20)
-          glbSetOscParams(mcb_steps, 0.3, i);
-        else
-          glbSetOscParams(mcb_steps, 0.01*glbGetOscParams(base_values, i), i);
-      else if (strstr(p, "ARG") != NULL  ||  strstr(p, "DELTA") != NULL)
-        glbSetOscParams(mcb_steps, M_PI/5., i);
-      else
-        glbSetOscParams(mcb_steps, 0.001, i);
-      free(p);
-    }
-    glbSetDensityParams(mcb_steps, 0.001, GLB_ALL);
-    mcb_setStepSizes(mcb_steps);
-
-    char s[FILENAME_MAX];
-    if (!output_file)
-      snprintf(s, FILENAME_MAX, "nu-mcmc");
-    else
-    {
-      if (strlen(output_file) > FILENAME_MAX-1)
-        fprintf(stderr, "degfinder: name of output file too long.\n");
-      strncpy(s, output_file, FILENAME_MAX);
-      s[FILENAME_MAX-1] = '\0';
-    }
-
-    mcb_full_MCMC(s, GLB_ALL, GLB_ALL, MCB_FULL_MARGIN);
-//    mcb_MCMC("/temp/jkopp/sterile-nu/mcmc/mcb-test-oldmcmc.dat", GLB_ALL, GLB_ALL);
-#else
-    fprintf(stderr, "degfinder: MonteCUBES support not compiled.\n");
-#endif
-  }
-  
-  
   /* Clean up */
   if (private_flags & DEG_NO_SYS)
   {

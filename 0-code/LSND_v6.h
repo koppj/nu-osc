@@ -5,7 +5,6 @@
 #include <utility>
 // JK #include <array>
 #include <algorithm>
-#include "osc_decay/osc_decay.h" // JK
 #include "snu.h"    // JK
 
 #ifdef NU_USE_NUSQUIDS // JK

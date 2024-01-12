@@ -4,15 +4,6 @@
 #include <gsl/gsl_matrix.h>
 #include <globes/globes.h>
 
-// Use NuSQuIDS instead of GLoBES for probabilities
-//#define NU_USE_NUSQUIDS
-extern glb_probability_nusquids_function nu_hook_probability_matrix_nusquids;
-
-// Options for Ivan's oscillation + decay code
-//Flag removed Oct 2018  #define OSC_DECAY_PSEUDOSCALAR  false   // pseudoscalar or scalar interactions?
-#define OSC_DECAY_MAJORANA      false   // Majorana or Dirac neutrinos? FIXME FIXME
-
-
 // Arrangement of oscillation parameters in glb_params data structure:
 //   th12,    th13,    th23,    deltaCP,
 //   dm21,    dm31,    dm41,    dm51,    ...,
@@ -90,13 +81,6 @@ int snu_filtered_probability_matrix_m_to_f(double P[SNU_MAX_FLAVORS][SNU_MAX_FLA
 gsl_matrix_complex *snu_get_U();
 int snu_print_gsl_matrix_complex(gsl_matrix_complex *A);
 
-int snu_probability_matrix_nusquids(double P[][2][3],
-      unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
-      int psteps, const double *length, const double *density, const double filter_value);
-int snu_probability_matrix_osc_decay(double P[][2][3],
-      unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
-      int psteps, const double *length, const double *density, const double filter_value);
-
 struct snu_probability_table *snu_alloc_probability_table();
 int snu_free_probability_table(struct snu_probability_table *p);
 int snu_compute_probability_table(int experiment, struct snu_probability_table *p,
@@ -105,14 +89,6 @@ int snu_load_probability_table(const char *input_file, struct snu_probability_ta
 int snu_tabulated_probability_matrix(double _P[3][3], int cp_sign, double E,
     int psteps, const double *length, const double *density,
     double filter_sigma, void *user_data);
-
-// nusquids.cc
-int snu_probability_matrix_nusquids_internal(double P[][2][SNU_MAX_FLAVORS],
-      unsigned n_E, double *E, double ini_state_nu[][3], double ini_state_nubar[][3],
-      int psteps, const double *length, const double *density,
-      unsigned n_flavors, double th[SNU_MAX_FLAVORS+1][SNU_MAX_FLAVORS+1],
-      double delta[SNU_MAX_PHASES], double dmsq[SNU_MAX_FLAVORS-1],
-      double M_A_prime, double g_prime);
 
 int snu_set_oscillation_parameters_osc_decay_internal(int n_flavors, glb_params params);
 int snu_get_oscillation_parameters_osc_decay_internal(int n_flavors, glb_params params);

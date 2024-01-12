@@ -1,5 +1,0 @@
-For each experiment to be included define USE_ex with ex = SBL, CHOOZ, PV, KAML, DC, DB, RENO, BUGEY_SP, GAL
-using: SBL Bugey-spectr Chooz PaloV DC DayaB RENO Gallium 
-total number of data points: 121
-
-chisq_min = 293.933154, sq2t = 0.098855, dmq = 1.714426 Dchisq_no-osc = 11.88

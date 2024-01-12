@@ -11,7 +11,6 @@
 #include <gsl/gsl_linalg.h>
 #include <globes/globes.h>
 #include "glb_error.h"
-#include "osc_decay/osc_decay.h"
 #include "nu.h"
 
 // Flags that affect chi^2 calculation
@@ -26,17 +25,6 @@
 #define OSC_BG       // TAG_DEF
 #define OSC_NUMU     // TAG_DEF
 #define OSC_NO_NUBAR // TAG_DEF // FIXME
-
-// Data structures from Ivan's oscillation+decay code
-#ifdef NU_USE_NUSQUIDS
-  using namespace regeneration;
-  static regProb prb_nu(OSC_DECAY_MAJORANA);
-  static regProb prb_nu_bar(OSC_DECAY_MAJORANA);
-  static regProb prb_bg_nue_from_mu(OSC_DECAY_MAJORANA);
-  static regProb prb_bg_nue_from_K(OSC_DECAY_MAJORANA);
-  static regProb prb_bg_nue_bar_from_mu(OSC_DECAY_MAJORANA);
-  static regProb prb_bg_nue_bar_from_K(OSC_DECAY_MAJORANA);
-#endif
 
 #define MB_DATA_DIR        "glb/mb-jk-2018/"
 #define MB_COV_MATRIX_FILE "glb/mb-jk-2018/cov_matrix.h"
@@ -224,50 +212,6 @@ int chiMB_jk_init(const char *bg_tune)
       R_nu_bar[it][ir] /= n_nu_bar;
     }
 
-#ifdef NU_USE_NUSQUIDS
-  // Compute initial spectrum for signal prediction by projecting R
-  marray<double,3> inistate_nu{E_true_bins, 2, 4};
-  marray<double,3> inistate_nu_bar{E_true_bins, 2, 4};
-  std::fill(inistate_nu.begin(), inistate_nu.end(), 0.0);
-  std::fill(inistate_nu_bar.begin(), inistate_nu_bar.end(), 0.0);
-  for (int it=0; it < E_true_bins; it++)
-    for (int ir=0; ir < E_reco_bins_e; ir++)
-    {
-      inistate_nu[it][0][1]     += R_nu[it][ir];
-      inistate_nu_bar[it][1][1] += R_nu_bar[it][ir];
-    }
-  marray<double,1> E_true_range = regeneration::linspace(
-      (E_true_min + 0.5 * (E_true_max - E_true_min) / E_true_bins) * units::MeV,
-      (E_true_max - 0.5 * (E_true_max - E_true_min) / E_true_bins) * units::MeV,
-      E_true_bins);                                     // Array of E_true bin centers
-  prb_nu.setIniState(E_true_range, inistate_nu);
-  prb_nu_bar.setIniState(E_true_range, inistate_nu_bar);
-
-  // Initial spectrum for background prediction is just the MiniBooNE BG predictions
-  marray<double,3> inistate_bg_nue_from_mu{E_reco_bins_e, 2, 4};
-  marray<double,3> inistate_bg_nue_from_K{E_reco_bins_e, 2, 4};
-  marray<double,3> inistate_bg_nue_bar_from_mu{E_reco_bins_e, 2, 4};
-  marray<double,3> inistate_bg_nue_bar_from_K{E_reco_bins_e, 2, 4};
-  marray<double,1> E_reco_range{E_reco_bins_e};
-  std::fill(inistate_bg_nue_from_mu.begin(), inistate_bg_nue_from_mu.end(), 0.0);
-  std::fill(inistate_bg_nue_from_K.begin(),  inistate_bg_nue_from_K.end(), 0.0);
-  std::fill(inistate_bg_nue_bar_from_mu.begin(), inistate_bg_nue_bar_from_mu.end(), 0.0);
-  std::fill(inistate_bg_nue_bar_from_K.begin(),  inistate_bg_nue_bar_from_K.end(), 0.0);
-  std::fill(E_reco_range.begin(), E_reco_range.end(), 0.0);
-  for (int ir=0; ir < E_reco_bins_e; ir++)
-  {
-    E_reco_range[ir] = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]) * units::MeV;
-    inistate_bg_nue_from_mu[ir][0][0] = bg_e_unosc[ir] * bg_e_frac_nue_from_mu[ir];
-    inistate_bg_nue_from_K[ir][0][0]  = bg_e_unosc[ir] * bg_e_frac_nue_from_K[ir];
-    inistate_bg_nue_bar_from_mu[ir][0][0] = bg_e_bar_unosc[ir] * bg_e_bar_frac_nue_from_mu[ir];
-    inistate_bg_nue_bar_from_K[ir][0][0]  = bg_e_bar_unosc[ir] * bg_e_bar_frac_nue_from_K[ir];
-  }
-  prb_bg_nue_from_mu.setIniState(E_reco_range, inistate_bg_nue_from_mu);
-  prb_bg_nue_from_K.setIniState(E_reco_range,  inistate_bg_nue_from_K);
-  prb_bg_nue_bar_from_mu.setIniState(E_reco_range, inistate_bg_nue_bar_from_mu);
-  prb_bg_nue_bar_from_K.setIniState(E_reco_range,  inistate_bg_nue_bar_from_K);
-#endif
-
   // Initialize data structures for covariance matrix
   M6    = gsl_matrix_alloc(NCOV6, NCOV6);
   M4    = gsl_matrix_alloc(NCOV4, NCOV4);
@@ -403,155 +347,8 @@ double chiMB_jk(int print_spectrum)
 
   // FIXME Sub-dominant wrong-sign contributions may oscillate differently
 
-  // Neutrino oscillations from Ivan's code
-  // --------------------------------------
-#ifdef NU_USE_NUSQUIDS
-  extern Param p_oscdecay;
-  prb_nu.setParam(p_oscdecay);
-  prb_nu_bar.setParam(p_oscdecay);
-  prb_bg_nue_from_mu.setParam(p_oscdecay);
-  prb_bg_nue_from_K.setParam(p_oscdecay);
-  prb_bg_nue_bar_from_mu.setParam(p_oscdecay);
-  prb_bg_nue_bar_from_K.setParam(p_oscdecay);
-
-  marray<double,2> inistate_nu;
-  marray<double,2> inistate_nu_bar;
-  marray<double,2> finalstate_nu;
-  marray<double,2> finalstate_nu_bar;
-  for (int it=0; it < E_true_bins; it++)
-  {
-    double E_true     = E_true_min + (it+0.5) * (E_true_max - E_true_min) / E_true_bins;
-    inistate_nu       = prb_nu.getInitialFlux(E_true * units::MeV);
-    inistate_nu_bar   = prb_nu_bar.getInitialFlux(E_true * units::MeV);
-    finalstate_nu     = prb_nu.getFinalFlux(E_true * units::MeV, MB_baseline * units::km,
-                                            mb_lowpass_width * units::MeV);
-    finalstate_nu_bar = prb_nu_bar.getFinalFlux(E_true * units::MeV, MB_baseline * units::km,
-                                                mb_lowpass_width * units::MeV);
-
-    #ifdef OSC_NORM   // Including adjustment of normalization due to oscillations
-      for (int ir=0; ir < E_reco_bins_e; ir++)
-      {
-        if (finalstate_nu[0][NU_MU] + finalstate_nu[1][NU_MU] > 1e-10)         // nu mode
-          rates_e[ir] += R_nu[it][ir] * (finalstate_nu[0][NU_E]  + finalstate_nu[1][NU_E])
-                                      / (finalstate_nu[0][NU_MU] + finalstate_nu[1][NU_MU]);
-        if (finalstate_nu_bar[0][NU_MU] + finalstate_nu_bar[1][NU_MU] > 1e-10) // nubar mode
-          rates_e_bar[ir] += R_nu_bar[it][ir]
-                               * (finalstate_nu_bar[0][NU_E]  + finalstate_nu_bar[1][NU_E])
-                               / (finalstate_nu_bar[0][NU_MU] + finalstate_nu_bar[1][NU_MU]);
-                  /* Pme/Pmm - see discussion with W Louis:
-                   * Flux is normalized to \nu_\mu rate, i.e. if there is \nu_\mu
-                   * disappearance, the flux is underestimated by 1 / Pmm */
-      } // for(ir)
-
-    #else    // Onlye \nu_\mu -> \nu_e oscillations as in the official MiniBooNE analysis
-      for (int ir=0; ir < E_reco_bins_e; ir++)
-      {
-        if (inistate_nu[0][1] > 1e-10)                    // neutrino mode
-          rates_e[ir]     += R_nu[it][ir]
-                               * (finalstate_nu[0][NU_E] + finalstate_nu[1][NU_E])
-                               / inistate_nu[0][NU_MU];
-        if (inistate_nu_bar[1][1] > 1e-10)                // antineutrino mode
-          rates_e_bar[ir] += R_nu_bar[it][ir]
-                               * (finalstate_nu_bar[0][NU_E] + finalstate_nu_bar[1][NU_E])
-                               / inistate_nu_bar[1][NU_MU];
-      } // for(ir)
-    #endif // ifdef OSC_NORM
-  } // for(it)
-
-  // Background oscillations for \nu_e sample
-  //   - we compute oscillation probabilities only at the centers of the E_reco bins
-  //   - \nu_e BG from muon decays is normalized to \nu_\mu rate at MiniBooNE
-  //   - \nu_e BG from kaon decays is normalized to \nu_\mu rate at SciBooNE
-  #ifdef OSC_BG
-    marray<double,2> inistate_numu;
-    marray<double,2> inistate_nue_from_mu;
-    marray<double,2> inistate_nue_from_K;
-    marray<double,2> inistate_numu_bar;
-    marray<double,2> inistate_nue_bar_from_mu;
-    marray<double,2> inistate_nue_bar_from_K;
-    marray<double,2> finalstate_numu_MB;
-    marray<double,2> finalstate_numu_SB;
-    marray<double,2> finalstate_nue_from_mu;
-    marray<double,2> finalstate_nue_from_K;
-    marray<double,2> finalstate_numu_bar_MB;
-    marray<double,2> finalstate_numu_bar_SB;
-    marray<double,2> finalstate_nue_bar_from_mu;
-    marray<double,2> finalstate_nue_bar_from_K;
-    for (int ir=0; ir < E_reco_bins_e; ir++)
-    {
-      double E_reco = 0.5 * (E_reco_bin_edges_e[ir] + E_reco_bin_edges_e[ir+1]);
-      inistate_numu              = prb_nu.getInitialFlux(E_reco * units::MeV);
-      inistate_nue_from_mu       = prb_bg_nue_from_mu.getInitialFlux(E_reco*units::MeV);
-      inistate_nue_from_K        = prb_bg_nue_from_K.getInitialFlux(E_reco*units::MeV);
-      inistate_numu_bar          = prb_nu_bar.getInitialFlux(E_reco * units::MeV);
-      inistate_nue_bar_from_mu   = prb_bg_nue_bar_from_mu.getInitialFlux(E_reco*units::MeV);
-      inistate_nue_bar_from_K    = prb_bg_nue_bar_from_K.getInitialFlux(E_reco*units::MeV);
-      finalstate_numu_MB         = prb_nu.getFinalFlux(E_reco*units::MeV,
-                                     MB_baseline*units::km, mb_lowpass_width*units::MeV);
-      finalstate_numu_SB         = prb_nu.getFinalFlux(E_reco*units::MeV,
-                                     SB_baseline*units::km, mb_lowpass_width*units::MeV);
-      finalstate_nue_from_mu     = prb_bg_nue_from_mu.getFinalFlux(E_reco*units::MeV,
-                                     MB_baseline*units::km, mb_lowpass_width*units::MeV);
-      finalstate_nue_from_K      = prb_bg_nue_from_K.getFinalFlux(E_reco*units::MeV,
-                                     MB_baseline*units::km, mb_lowpass_width*units::MeV);
-      finalstate_numu_bar_MB     = prb_nu_bar.getFinalFlux(E_reco*units::MeV,
-                                     MB_baseline*units::km, mb_lowpass_width*units::MeV);
-      finalstate_numu_bar_SB     = prb_nu_bar.getFinalFlux(E_reco*units::MeV,
-                                     SB_baseline*units::km, mb_lowpass_width*units::MeV);
-      finalstate_nue_bar_from_mu = prb_bg_nue_bar_from_mu.getFinalFlux(E_reco*units::MeV,
-                                     MB_baseline*units::km, mb_lowpass_width*units::MeV);
-      finalstate_nue_bar_from_K  = prb_bg_nue_bar_from_K.getFinalFlux(E_reco*units::MeV,
-                                     MB_baseline*units::km, mb_lowpass_width*units::MeV);
-
-      rates_bg_e[ir] = bg_e_unosc[ir]
-          * ( bg_e_frac_other[ir]
-            + bg_e_frac_nue_from_mu[ir] 
-                * (finalstate_nue_from_mu[0][NU_E] + finalstate_nue_from_mu[1][NU_E])
-                / (inistate_nue_from_mu[0][NU_E] + inistate_nue_from_mu[1][NU_E])
-                / (finalstate_numu_MB[0][NU_MU] + finalstate_numu_MB[1][NU_MU])
-                * (inistate_numu[0][NU_MU] + inistate_numu[1][NU_MU])
-            + bg_e_frac_nue_from_K[ir]
-                * (finalstate_nue_from_K[0][NU_E] + finalstate_nue_from_K[1][NU_E])
-                / (inistate_nue_from_K[0][NU_E] + inistate_nue_from_K[1][NU_E])
-                / (finalstate_numu_SB[0][NU_MU] + finalstate_numu_SB[1][NU_MU])
-                * (inistate_numu[0][NU_MU] + inistate_numu[1][NU_MU])
-            );
-      rates_bg_e_bar[ir] = bg_e_bar_unosc[ir]
-          * ( bg_e_bar_frac_other[ir]
-            + bg_e_bar_frac_nue_from_mu[ir] 
-                * (finalstate_nue_bar_from_mu[0][NU_E] + finalstate_nue_bar_from_mu[1][NU_E])
-                / (inistate_nue_bar_from_mu[0][NU_E] + inistate_nue_bar_from_mu[1][NU_E])
-                / (finalstate_numu_bar_MB[0][NU_MU] + finalstate_numu_bar_MB[1][NU_MU])
-                * (inistate_numu_bar[0][NU_MU] + inistate_numu_bar[1][NU_MU])
-            + bg_e_bar_frac_nue_from_K[ir]
-                * (finalstate_nue_bar_from_K[0][NU_E] + finalstate_nue_bar_from_K[1][NU_E])
-                / (inistate_nue_bar_from_K[0][NU_E] + inistate_nue_bar_from_K[1][NU_E])
-                / (finalstate_numu_bar_SB[0][NU_MU] + finalstate_numu_bar_SB[1][NU_MU])
-                * (inistate_numu_bar[0][NU_MU] + inistate_numu_bar[1][NU_MU])
-            );
-    }
-  #endif // ifdef(OSC_BG)
-
-  #ifdef OSC_NUMU  // Oscillate muon neutrino rates
-    for (int ir=0; ir < E_reco_bins_mu; ir++)
-    {
-      double E_reco = 0.5 * (E_reco_bin_edges_mu[ir] + E_reco_bin_edges_mu[ir+1]);
-      inistate_nu       = prb_nu.getInitialFlux(E_reco*units::MeV);
-      inistate_nu_bar   = prb_nu_bar.getInitialFlux(E_reco*units::MeV);
-      finalstate_nu     = prb_nu.getFinalFlux(E_reco*units::MeV, MB_baseline*units::km,
-                                              mb_lowpass_width*units::MeV);
-      finalstate_nu_bar = prb_nu_bar.getFinalFlux(E_reco*units::MeV, MB_baseline*units::km,
-                                                  mb_lowpass_width*units::MeV);
-      rates_mu[ir]     *= (finalstate_nu[0][NU_MU] + finalstate_nu[1][NU_MU])
-                        / (inistate_nu[0][NU_MU] + inistate_nu[1][NU_MU]);
-      rates_mu_bar[ir] *= (finalstate_nu_bar[0][NU_MU] + finalstate_nu_bar[1][NU_MU])
-                        / (inistate_nu_bar[0][NU_MU] + inistate_nu_bar[1][NU_MU]);
-    }
-  #endif // ifdef OSC_NUMU
-
   // Oscillation probabilities from GLoBES
   // -------------------------------------
-#else
   for (int it=0; it < E_true_bins; it++)
   {
     double E_true = E_true_min + (it+0.5) * (E_true_max - E_true_min) / E_true_bins;
@@ -659,7 +456,6 @@ double chiMB_jk(int print_spectrum)
       rates_mu_bar[ir] *= Pbar;
     }
   #endif // ifdef OSC_NUMU
-#endif // ifdef(NU_USE_NUSQUIDS)
 
 
   /* Construct covariance matrix in 3x3 block form */
@@ -806,7 +602,6 @@ double chiMB_jk(int print_spectrum)
       for (int ir=0; ir < NMU; ir++)
         printf("# MBJKSPECT MU      %10.7g %10.7g\n", rates_mu[ir], rates_mu_bar[ir]);
 
-    #ifndef NU_USE_NUSQUIDS
       for (int ir=0; ir < NE; ir++)
       {
         double P_MB[3][3], P_SB[3][3];
@@ -833,7 +628,6 @@ double chiMB_jk(int print_spectrum)
       my_print_params(p);
       glbFreeParams(p);
     }
-    #endif
 
     printf("# CHI2   %10.7g\n", chi2);
   }
