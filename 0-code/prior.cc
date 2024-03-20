@@ -813,10 +813,12 @@ double my_prior(const glb_params in, void* user_data)
     }
 
   // Add matter parameter priors
+  // NOTE: since glbGetOscillationParameters() does not set the density parameters,
+  //       we need to use in instead of params here.
   for (i=0; i < glb_num_of_exps; i++)
     if (glbGetDensityProjectionFlag(p,i) == GLB_FREE)
     {
-      fitvalue     = glbGetDensityParams(params,i);
+      fitvalue     = glbGetDensityParams(in,i);
       centralvalue = 1.0;
       inputerror   = glbGetDensityParams(input_errors,i);
       if(inputerror > 1e-12)

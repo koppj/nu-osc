@@ -637,7 +637,7 @@ int load_exps(const int n_exps, char **exps)
     // Set some paths (for some experiments the path is set only when they are
     // actually loaded to avoid conflicts)
     setenv("GLB_PATH", "glb/nova:glb/t2k:glb/bbeam:glb/dchooz:glb/wbb_wc:"
-                       "glb/wbb_lar:glb/nufact:glb/mb-2012:"
+                       "glb/dune:glb/wbb_lar:glb/nufact:glb/mb-2012:"
                        "glb/kamland:glb/lsnd:glb/e776:glb/c12:"
                        "glb/icarus-2012:glb/icarus-2014:glb/opera", 1);
     glb_setup_path();
@@ -1308,7 +1308,7 @@ int main(int argc, char *argv[])
     case NU_ACTION_SPECTRUM:
       printf("# Printing event rates.\n");
       printf("#\n");
-      print_rates(ext_flags);
+      print_rates(ext_flags, "python");
       break;
 
     // General parameter scan

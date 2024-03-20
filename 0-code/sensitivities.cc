@@ -252,7 +252,7 @@ static void my_channel_printf_mathematica(FILE *stream, const double *energy,
 /*************************************************************************** 
  * Print event rates                                                       *
  ***************************************************************************/
-int print_rates(const long ext_flags)
+int print_rates(const long ext_flags, const char *output_format)
 {
   FILE *stream = stdout;
   int exp, rule;
@@ -264,8 +264,13 @@ int print_rates(const long ext_flags)
   glbSetOscillationParameters(true_values);
   glbSetRates();
 
-  // Setup output in Mathematica format 
-  glbSetPrintDelimiters("{", ", ", "}");
+  // Setup output in Mathematica format
+  if (!output_format)
+    return -1;
+  else if (strcmp(output_format, "mathematica") == 0)
+    glbSetPrintDelimiters("{", ", ", "}");
+  else
+    glbSetPrintDelimiters("[", ", ", "]");
   glbSetChannelPrintFunction((void *)my_channel_printf_mathematica);
 
   // Print lists 
@@ -314,7 +319,6 @@ int print_rates(const long ext_flags)
 
   glbPrintDelimiter(stream,'r');
   fprintf(stream, "\n");
-
 
   return 0;
 }
@@ -455,7 +459,7 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
   for (int i=0; i < n_min_params; i++)
     glbSetProjectionFlagByName(proj, GLB_FREE, min_params[i]);
   glbSetDensityProjectionFlag(proj, GLB_FIXED, GLB_ALL);
-//  DecideOnDensityProjection(proj);
+  DecideOnDensityProjection(proj);
 
   // Compute true rates 
   glbSetOscillationParameters(true_values);
@@ -664,12 +668,12 @@ int param_scan(const char *key_string, int n_p, char *params[], double p_min[], 
     if (global_chi2min_NH < 1.e5)
     {
       glbCopyParams(global_bf_NH, true_values);
-      print_rates(ext_flags);
+      print_rates(ext_flags, "python");
     }
     if (global_chi2min_IH < 1.e5)
     {
       glbCopyParams(global_bf_IH, true_values);
-      print_rates(ext_flags);
+      print_rates(ext_flags, "python");
     }
   }
 

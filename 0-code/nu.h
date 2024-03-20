@@ -289,7 +289,7 @@ double chi_OPERA(int exp, int rule, int n_params, double *x, double *errors,
 double sample(double min, double max, int steps, int i);
 typedef int (*sens_func)(const char *, double, double, int, double, double, int);
 int RestrictWBBEnergyWindow(wbb_params_type *wbb_params);
-int print_rates(const long ext_flags);
+int print_rates(const long ext_flags, const char *output_format);
 int my_print_params(glb_params p);
 int param_scan(const char *key_string, int n_p, char *params[], double p_min[], double p_max[],
        int p_steps[], unsigned long p_flags[], int n_min_params, char *min_params[],
